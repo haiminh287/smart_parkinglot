@@ -1,5 +1,42 @@
-{
-  "user": 1,
-  "packageType": "monthly",
-  "vehicle": "Car"
-}
+[
+  {
+    "type": 1,
+    "data": {
+      "actionId": "12559707484021",
+      "msgId": "7601940015644",
+      "cliMsgId": "1773031977110",
+      "msgType": "webchat",
+      "uidFrom": "4743403247280071194",
+      "idTo": "4205414230517044885",
+      "dName": "Nguyễn Hải Minh",
+      "ts": "1773031977166",
+      "status": 1,
+      "content": "/bot",
+      "notify": "1",
+      "ttl": 0,
+      "userId": "0",
+      "uin": "0",
+      "topOut": "0",
+      "topOutTimeOut": "0",
+      "topOutImprTimeOut": "0",
+      "propertyExt": {
+        "color": -1,
+        "size": -1,
+        "type": -1,
+        "subType": 0,
+        "ext": "{\"sSrcType\":-1,\"sSrcStr\":\"\",\"msg_warning_type\":0,\"emoji\":{\"content\":0,\"num\":0,\"uniq\":0,\"first\":\"\",\"last\":\"\",\"most\":\"\",\"text\":1}}"
+      },
+      "paramsExt": {
+        "countUnread": 1,
+        "containType": 0,
+        "platformType": 0
+      },
+      "cmd": 521,
+      "st": 3,
+      "at": 0,
+      "realMsgId": "0"
+    },
+    "threadId": "4205414230517044885",
+    "isSelf": false
+  }
+]

@@ -1,0 +1,9 @@
+Metadata-Version: 2.4
+Name: parksmart-shared
+Version: 1.0.0
+Summary: Shared utilities for ParkSmart microservices
+Requires-Python: >=3.10
+Requires-Dist: djangorestframework>=3.14.0
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
