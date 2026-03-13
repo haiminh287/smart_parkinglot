@@ -2,16 +2,16 @@ project:
   name: "smartparkinglot"
   phase: "deploying"
   started_at: "2026-03-13T00:00:00Z"
-  updated_at: "2026-03-13T23:25:00+07:00"
+  updated_at: "2026-03-13T20:44:24+07:00"
 
 task:
   id: "SECURITY-BLOCKERS-2026-03-13"
   title: "Remediation backend Python vulnerabilities + Cloudflare security controls evidence"
   pipeline: "FULL"
-  state: "deploying"
+  state: "blocked"
   prev_state: "security_check"
   started_at: "2026-03-13T05:30:00Z"
-  updated_at: "2026-03-13T23:25:00+07:00"
+  updated_at: "2026-03-13T20:44:24+07:00"
   stack:
     language: "Python + TypeScript"
     package_manager: "pip + npm"
@@ -28,7 +28,7 @@ task:
     reviewer: 0
     security: 0
     devops: 1
-  blocked_reason: null
+  blocked_reason: "Git push PASS nhưng Cloudflare Pages deploy không verify được do thiếu wrangler auth/local secrets và GitHub Actions endpoint trả 404; backend Tunnel chỉ verify được local auth/tooling, chưa có hostname/zone/origin runtime chính thức của dự án để publish thật."
   cost_guard:
     steps_used: 1
     agent_calls_used: 1
@@ -59,11 +59,20 @@ agents:
   qc: { status: "done", current_task: "" }
   devops:
     {
-      status: "working",
-      current_task: "Push GitHub + kích hoạt/kiểm tra deploy Cloudflare Pages/Tunnel"
+      status: "waiting",
+      current_task: "Blocked: chờ secrets/zone/hostname hoặc quyền xem GitHub Actions/Cloudflare"
     }
 
 handoff_log:
+  - from: "devops"
+    to: "orchestrator"
+    timestamp: "2026-03-13T20:44:24+07:00"
+    reason: "Git push main PASS với 3 commits atomic; Cloudflare Pages deploy chưa verify được vì local wrangler unauthenticated + local secrets thiếu + GitHub Actions endpoint trả 404; Tunnel chỉ verify local auth/tooling, chưa có hostname/zone/origin runtime chính thức để publish backend thật"
+    artifacts:
+      - "docs/deployment-report.md"
+      - "docs/notes/cloudflare-security-controls-evidence.md"
+      - "docs/status.yaml"
+
   - from: "tester"
     to: "orchestrator"
     timestamp: "2026-03-13T20:31:00+07:00"

@@ -10,6 +10,7 @@ Mục tiêu: Cung cấp artifact verify cho Security/QC trước deploy producti
   - Không có local `wrangler` authentication cho Cloudflare Pages
   - Không có local env secrets `CF_API_TOKEN`, `CF_ACCOUNT_ID`, `CF_PAGES_PROJECT`, `CF_TUNNEL_TOKEN`
   - Chưa có hostname/zone production được xác nhận cho backend tunnel của dự án này
+  - Không verify được GitHub Actions deploy run vì repo/actions endpoint trả `404` trong phiên không có auth
 - Artifact chi tiết: `docs/deployment-report.md`
 
 ## 1) TLS mode — Full (strict)
@@ -54,7 +55,9 @@ Mục tiêu: Cung cấp artifact verify cho Security/QC trước deploy producti
 - Origin firewall chỉ allow Cloudflare IP ranges (nếu đã bật host firewall)
 - Trạng thái phiên này: `PARTIAL`
   - Reverse proxy + tunnel skeleton đã có trong repo
-  - Origin production firewall/routing thật chưa được cung cấp để verify
+  - Có local `cloudflared` auth và thấy tunnel `dailytracking`
+  - Local config hiện đang map `ghepdoicaulong.shop` / `www.ghepdoicaulong.shop` -> `http://localhost:80`
+  - Origin production firewall/routing thật cho dự án này chưa được cung cấp để verify
 - Evidence cần đính kèm khi unblock:
   - Snapshot firewall rules hoặc IaC snippet tương đương
 
@@ -65,3 +68,4 @@ Mục tiêu: Cung cấp artifact verify cho Security/QC trước deploy producti
 - Kết luận: `FAIL - deploy blocked bởi thiếu quyền/secrets/runtime target`
 - Ghi chú ngoại lệ/risk acceptance (nếu có):
   - Có thể re-run Security/QC sau khi bổ sung secrets GitHub + xác nhận zone/hostname + thu screenshot/API evidence thực tế.
+  - Git push đã thành công tại commit `47522c5`, nhưng Cloudflare deploy outcome chưa thể chứng minh bằng evidence runtime.
