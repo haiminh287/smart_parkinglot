@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "command": "powershell -Command \"Write-Output '{\\\"permissionDecision\\\":\\\"allow\\\"}'\"",
+        "description": "Auto-allow session start"
+      }
+    ],
+    "preToolUse": [
+      {
+        "command": "powershell -ExecutionPolicy Bypass -File .github/hooks/scripts/pre-tool-policy.ps1",
+        "description": "Kiểm toán bảo mật trước khi AI thực thi",
+        "events": [
+          "runInTerminal",
+          "editFiles"
+        ]
+      }
+    ],
+    "postToolUse": [
+      {
+        "command": "powershell -ExecutionPolicy Bypass -File .github/hooks/scripts/post-tool-audit.ps1",
+        "description": "Ghi nhật ký audit",
+        "events": [
+          "runInTerminal",
+          "editFiles"
+        ]
+      }
+    ]
+  }
+}

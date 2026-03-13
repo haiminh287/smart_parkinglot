@@ -1,0 +1,87 @@
+timestamp=2026-03-13T20:28:48.9306228+07:00
+===== booking-service manage.py check =====
+System check identified no issues (0 silenced).
+
+BOOKING_MANAGE_CHECK_EXIT=0
+
+===== chatbot-service-fastapi pytest tests/test_smoke.py =====
+============================= test session starts =============================
+platform win32 -- Python 3.10.5, pytest-9.0.2, pluggy-1.6.0
+rootdir: C:\Users\MINH\Documents\Zalo_Received_Files\Project_Main\backend-microservices\chatbot-service-fastapi
+configfile: pytest.ini
+plugins: anyio-4.12.1, asyncio-1.3.0
+asyncio: mode=auto, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 18 items
+
+tests\test_smoke.py ..................                                   [100%]
+
+============================== warnings summary ===============================
+app\config.py:5
+  C:\Users\MINH\Documents\Zalo_Received_Files\Project_Main\backend-microservices\chatbot-service-fastapi\app\config.py:5: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class Settings(BaseSettings):
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================== 18 passed, 1 warning in 0.18s ========================
+
+SMOKE_EXIT=0
+
+===== payment-service-fastapi pytest tests/test_smoke.py =====
+============================= test session starts =============================
+platform win32 -- Python 3.10.5, pytest-9.0.2, pluggy-1.6.0
+rootdir: C:\Users\MINH\Documents\Zalo_Received_Files\Project_Main\backend-microservices\payment-service-fastapi
+configfile: pytest.ini
+plugins: anyio-4.12.1, asyncio-1.3.0
+asyncio: mode=auto, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 3 items
+
+tests\test_smoke.py ...                                                  [100%]
+
+============================== warnings summary ===============================
+app\config.py:5
+  C:\Users\MINH\Documents\Zalo_Received_Files\Project_Main\backend-microservices\payment-service-fastapi\app\config.py:5: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class Settings(BaseSettings):
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================== 3 passed, 1 warning in 0.04s =========================
+
+SMOKE_EXIT=0
+
+===== notification-service-fastapi pytest tests/test_smoke.py =====
+============================= test session starts =============================
+platform win32 -- Python 3.10.5, pytest-9.0.2, pluggy-1.6.0
+rootdir: C:\Users\MINH\Documents\Zalo_Received_Files\Project_Main\backend-microservices\notification-service-fastapi
+configfile: pytest.ini
+plugins: anyio-4.12.1, asyncio-1.3.0
+asyncio: mode=auto, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 4 items
+
+tests\test_smoke.py ....                                                 [100%]
+
+============================== warnings summary ===============================
+app\config.py:8
+  C:\Users\MINH\Documents\Zalo_Received_Files\Project_Main\backend-microservices\notification-service-fastapi\app\config.py:8: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class Settings(BaseSettings):
+
+app\main.py:41
+  C:\Users\MINH\Documents\Zalo_Received_Files\Project_Main\backend-microservices\notification-service-fastapi\app\main.py:41: DeprecationWarning: 
+          on_event is deprecated, use lifespan event handlers instead.
+  
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+          
+    @app.on_event("startup")
+
+..\venv\lib\site-packages\fastapi\applications.py:4599
+  C:\Users\MINH\Documents\Zalo_Received_Files\Project_Main\backend-microservices\venv\lib\site-packages\fastapi\applications.py:4599: DeprecationWarning: 
+          on_event is deprecated, use lifespan event handlers instead.
+  
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+          
+    return self.router.on_event(event_type)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================== 4 passed, 3 warnings in 0.04s ========================
+
+SMOKE_EXIT=0
+

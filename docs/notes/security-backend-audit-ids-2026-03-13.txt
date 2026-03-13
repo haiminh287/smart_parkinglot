@@ -1,0 +1,8 @@
+ai-service-fastapi|exit=1|report_missing=1
+auth-service|exit=1|vuln_count=1|ids=CVE-2024-47081
+booking-service|exit=1|vuln_count=1|ids=CVE-2024-47081
+chatbot-service-fastapi|exit=1|vuln_count=2|ids=CVE-2024-47874,CVE-2025-54121
+notification-service-fastapi|exit=1|vuln_count=2|ids=CVE-2025-54121,CVE-2025-62727
+parking-service|exit=1|vuln_count=1|ids=CVE-2024-47081
+payment-service-fastapi|exit=1|vuln_count=2|ids=CVE-2025-54121,CVE-2025-62727
+vehicle-service|exit=1|vuln_count=1|ids=CVE-2024-47081

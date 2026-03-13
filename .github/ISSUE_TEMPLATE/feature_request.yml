@@ -1,0 +1,56 @@
+---
+name: ✨ Yêu cầu Tính năng (Feature Request)
+description: Đề xuất tính năng mới cho dự án
+title: "[FEATURE] "
+labels: ["enhancement", "triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Cảm ơn bạn đã đề xuất tính năng! Hãy mô tả ý tưởng của bạn bên dưới.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Vấn đề cần giải quyết
+      description: Mô tả rõ ràng vấn đề mà tính năng này sẽ giải quyết
+      placeholder: Tôi thường gặp khó khăn khi...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Giải pháp đề xuất
+      description: Mô tả giải pháp bạn muốn
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Các phương án thay thế
+      description: Mô tả các giải pháp khác bạn đã cân nhắc
+    validations:
+      required: false
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Mức độ ưu tiên (theo bạn)
+      options:
+        - 🔴 Critical (Cần thiết cho MVP)
+        - 🟠 High (Rất quan trọng)
+        - 🟡 Medium (Nice to have)
+        - 🟢 Low (Có thể chờ)
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Bối cảnh bổ sung
+      description: Thêm thông tin, screenshots, mockups, hoặc tài liệu tham khảo
+    validations:
+      required: false

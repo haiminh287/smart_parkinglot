@@ -1,0 +1,39 @@
+timestamp=2026-03-13T20:28:29.6279407+07:00
+===== npm run test =====
+
+> vite_react_shadcn_ts@0.0.0 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.4 [39m[90mC:/Users/MINH/Documents/Zalo_Received_Files/Project_Main/spotlove-ai[39m
+
+ [32m✓[39m src/test/example.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m src/test/chatbot-api.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 106[2mms[22m[39m
+ [32m✓[39m src/test/ai-api.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 49[2mms[22m[39m
+ [32m✓[39m src/test/banknote-detection-page.test.tsx [2m([22m[2m20 tests[22m[2m)[22m[33m 1022[2mms[22m[39m
+ [32m✓[39m src/test/support-page.test.tsx [2m([22m[2m16 tests[22m[2m)[22m[33m 1465[2mms[22m[39m
+ [32m✓[39m src/test/smoke.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 101[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m6 passed[39m[22m[90m (6)[39m
+[2m      Tests [22m [1m[32m65 passed[39m[22m[90m (65)[39m
+[2m   Start at [22m 20:28:30
+[2m   Duration [22m 16.03s[2m (transform 2.92s, setup 2.84s, collect 13.75s, tests 2.75s, environment 20.26s, prepare 11.93s)[22m
+
+
+FE_TEST_EXIT=0
+
+===== npm run build =====
+
+> vite_react_shadcn_ts@0.0.0 build
+> vite build
+
+failed to load config from C:\Users\MINH\Documents\Zalo_Received_Files\Project_Main\spotlove-ai\vite.config.ts
+error during build:
+Error: VITE_GATEWAY_SECRET is required outside development mode
+    at file:///C:/Users/MINH/Documents/Zalo_Received_Files/Project_Main/spotlove-ai/vite.config.ts.timestamp-1773408528639-b39433c9d3f1.mjs:14:11
+    at loadConfigFromFile (file:///C:/Users/MINH/Documents/Zalo_Received_Files/Project_Main/spotlove-ai/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:66822:62)
+    at async resolveConfig (file:///C:/Users/MINH/Documents/Zalo_Received_Files/Project_Main/spotlove-ai/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:66416:24)
+    at async build (file:///C:/Users/MINH/Documents/Zalo_Received_Files/Project_Main/spotlove-ai/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:65503:18)
+    at async CAC.<anonymous> (file:///C:/Users/MINH/Documents/Zalo_Received_Files/Project_Main/spotlove-ai/node_modules/vite/dist/node/cli.js:829:5)
+
+FE_BUILD_EXIT=1

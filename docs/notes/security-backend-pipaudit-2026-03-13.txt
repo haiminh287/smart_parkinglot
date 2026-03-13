@@ -1,0 +1,8 @@
+ai-service-fastapi|critical=0|high=0|exit=1
+auth-service|critical=0|high=0|exit=1
+booking-service|critical=0|high=0|exit=1
+chatbot-service-fastapi|critical=0|high=0|exit=1
+notification-service-fastapi|critical=0|high=0|exit=1
+parking-service|critical=0|high=0|exit=1
+payment-service-fastapi|critical=0|high=0|exit=1
+vehicle-service|critical=0|high=0|exit=1

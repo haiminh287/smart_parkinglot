@@ -1,0 +1,4 @@
+?? docs/notes/devops-cleanup-git-snapshot.txt
+?? docs/notes/devops-git-summary.txt
+?? docs/notes/devops-push-check.txt
+?? docs/status.yaml

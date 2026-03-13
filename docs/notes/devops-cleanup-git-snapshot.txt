@@ -1,0 +1,116 @@
+timestamp=2026-03-13T14:19:17.9599385+07:00
+branch=main
+upstream=NONE
+--- remotes ---
+origin	https://github.com/haiminh287/smart_parkinglot.git (fetch)
+origin	https://github.com/haiminh287/smart_parkinglot.git (push)
+--- status-short ---
+ D smart_parking/bienso.jpg
+ D smart_parking/booking_app/__init__.py
+ D smart_parking/booking_app/admin.py
+ D smart_parking/booking_app/apps.py
+ D smart_parking/booking_app/migrations/0001_initial.py
+ D smart_parking/booking_app/migrations/0002_initial.py
+ D smart_parking/booking_app/migrations/0003_remove_booking_selected_days_alter_booking_car_slot.py
+ D smart_parking/booking_app/migrations/0004_remove_booking_is_checked_in_and_more.py
+ D smart_parking/booking_app/migrations/0005_packagepricing_booking_price.py
+ D smart_parking/booking_app/migrations/0006_packagepricing_vehicle_type.py
+ D smart_parking/booking_app/migrations/0007_alter_booking_payment_type.py
+ D smart_parking/booking_app/migrations/0008_alter_booking_check_in_status.py
+ D smart_parking/booking_app/migrations/0009_rfidtag_bookingrfid.py
+ D smart_parking/booking_app/migrations/__init__.py
+ D smart_parking/booking_app/models.py
+ D smart_parking/booking_app/serializers.py
+ D smart_parking/booking_app/services.py
+ D smart_parking/booking_app/tests.py
+ D smart_parking/booking_app/urls.py
+ D smart_parking/booking_app/views.py
+ D smart_parking/camera/__init__.py
+ D smart_parking/camera/admin.py
+ D smart_parking/camera/ai/slot_detector.py
+ D smart_parking/camera/ai/yolo.py
+ D smart_parking/camera/apps.py
+ D smart_parking/camera/migrations/__init__.py
+ D smart_parking/camera/ml_models/license-plate-finetune-v1m.pt
+ D smart_parking/camera/models.py
+ D smart_parking/camera/services/license_plate.py
+ D smart_parking/camera/tests.py
+ D smart_parking/camera/urls.py
+ D smart_parking/camera/views.py
+ D smart_parking/carslots.json
+ D smart_parking/chatbot/__init__.py
+ D smart_parking/chatbot/admin.py
+ D smart_parking/chatbot/apps.py
+ D smart_parking/chatbot/migrations/0001_initial.py
+ D smart_parking/chatbot/migrations/__init__.py
+ D smart_parking/chatbot/models.py
+ D smart_parking/chatbot/serializers.py
+ D smart_parking/chatbot/tests.py
+ D smart_parking/chatbot/urls.py
+ D smart_parking/chatbot/views.py
+ D smart_parking/core/models.py
+ D smart_parking/manage.py
+ D smart_parking/mapedges.json
+ D smart_parking/mapnodes.json
+ D smart_parking/parkinglot/__init__.py
+ D smart_parking/parkinglot/admin.py
+ D smart_parking/parkinglot/apps.py
+ D smart_parking/parkinglot/migrations/0001_initial.py
+ D smart_parking/parkinglot/migrations/0002_remove_zone_available_count.py
+ D smart_parking/parkinglot/migrations/0003_mapnode_mapedge.py
+ D smart_parking/parkinglot/migrations/0004_mapedge_direction_mapnode_is_gate_alter_mapedge_end_and_more.py
+ D smart_parking/parkinglot/migrations/0005_carslot_x1_carslot_x2_carslot_y1_carslot_y2.py
+ D smart_parking/parkinglot/migrations/0006_remove_carslot_map_x_remove_carslot_map_y.py
+ D smart_parking/parkinglot/migrations/0007_mapnode_node_type.py
+ D smart_parking/parkinglot/migrations/__init__.py
+ D smart_parking/parkinglot/models.py
+ D smart_parking/parkinglot/serializers.py
+ D smart_parking/parkinglot/tests.py
+ D smart_parking/parkinglot/urls.py
+ D smart_parking/parkinglot/views.py
+ D smart_parking/plates/18A12345.jpg
+ D smart_parking/plates/59VA17029.jpg
+ D smart_parking/requirements.txt
+ D smart_parking/smart_parking/__init__.py
+ D smart_parking/smart_parking/asgi.py
+ D smart_parking/smart_parking/settings.py
+ D smart_parking/smart_parking/urls.py
+ D smart_parking/smart_parking/wsgi.py
+ D smart_parking/users/__init__.py
+ D smart_parking/users/admin.py
+ D smart_parking/users/apps.py
+ D smart_parking/users/consumers.py
+ D smart_parking/users/migrations/0001_initial.py
+ D smart_parking/users/migrations/0002_connection_message.py
+ D smart_parking/users/migrations/__init__.py
+ D smart_parking/users/models.py
+ D smart_parking/users/paginators.py
+ D smart_parking/users/routing.py
+ D smart_parking/users/serializers.py
+ D smart_parking/users/tests.py
+ D smart_parking/users/urls.py
+ D smart_parking/users/views.py
+ D smart_parking_ui/smart_parking_app
+ M test.json
+?? .github/
+?? AI.md
+?? AI_nhan_dien_tien_mat.md
+?? PARKING_SYSTEM_PLAN.md
+?? backend-ai-test-timeout.txt
+?? backend-microservices/
+?? backend-test-parsed.txt
+?? backend-test-summary.txt
+?? backend-test-tail-timeout.txt
+?? backend-test-tail.txt
+?? chatbot_plan.md
+?? create_booking.py
+?? docs/
+?? gen_qr.py
+?? hardware/
+?? npm-audit.json
+?? payment-rerun-log.txt
+?? pip-audit.json
+?? qc-fe-sanity.txt
+?? qr_checkin.png
+?? setup_hw_test.py
+?? spotlove-ai/

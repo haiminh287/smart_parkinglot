@@ -1,0 +1,44 @@
+===== auth-service =====
+EXIT_CODE=4
+..\venv\lib\site-packages\rest_framework\settings.py:211: in user_settings
+    self._user_settings = getattr(settings, 'REST_FRAMEWORK', {})
+..\venv\lib\site-packages\django\conf\__init__.py:81: in __getattr__
+    self._setup(name)
+..\venv\lib\site-packages\django\conf\__init__.py:61: in _setup
+    raise ImproperlyConfigured(
+E   django.core.exceptions.ImproperlyConfigured: Requested setting REST_FRAMEWORK, but settings are not configured. You must either define the environment variable DJANGO_SETTINGS_MODULE or call settings.configure() before accessing settings.
+
+
+===== booking-service =====
+EXIT_CODE=4
+..\venv\lib\site-packages\rest_framework\settings.py:211: in user_settings
+    self._user_settings = getattr(settings, 'REST_FRAMEWORK', {})
+..\venv\lib\site-packages\django\conf\__init__.py:81: in __getattr__
+    self._setup(name)
+..\venv\lib\site-packages\django\conf\__init__.py:61: in _setup
+    raise ImproperlyConfigured(
+E   django.core.exceptions.ImproperlyConfigured: Requested setting REST_FRAMEWORK, but settings are not configured. You must either define the environment variable DJANGO_SETTINGS_MODULE or call settings.configure() before accessing settings.
+
+
+===== parking-service =====
+EXIT_CODE=4
+..\venv\lib\site-packages\rest_framework\settings.py:211: in user_settings
+    self._user_settings = getattr(settings, 'REST_FRAMEWORK', {})
+..\venv\lib\site-packages\django\conf\__init__.py:81: in __getattr__
+    self._setup(name)
+..\venv\lib\site-packages\django\conf\__init__.py:61: in _setup
+    raise ImproperlyConfigured(
+E   django.core.exceptions.ImproperlyConfigured: Requested setting REST_FRAMEWORK, but settings are not configured. You must either define the environment variable DJANGO_SETTINGS_MODULE or call settings.configure() before accessing settings.
+
+
+===== vehicle-service =====
+EXIT_CODE=4
+..\venv\lib\site-packages\rest_framework\settings.py:211: in user_settings
+    self._user_settings = getattr(settings, 'REST_FRAMEWORK', {})
+..\venv\lib\site-packages\django\conf\__init__.py:81: in __getattr__
+    self._setup(name)
+..\venv\lib\site-packages\django\conf\__init__.py:61: in _setup
+    raise ImproperlyConfigured(
+E   django.core.exceptions.ImproperlyConfigured: Requested setting REST_FRAMEWORK, but settings are not configured. You must either define the environment variable DJANGO_SETTINGS_MODULE or call settings.configure() before accessing settings.
+
+

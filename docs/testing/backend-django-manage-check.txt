@@ -1,0 +1,15 @@
+===== auth-service =====
+EXIT_CODE=0
+System check identified no issues (0 silenced).
+
+===== booking-service =====
+EXIT_CODE=1
+Traceback (most recent call last):
+
+===== parking-service =====
+EXIT_CODE=0
+System check identified no issues (0 silenced).
+
+===== vehicle-service =====
+EXIT_CODE=0
+System check identified no issues (0 silenced).

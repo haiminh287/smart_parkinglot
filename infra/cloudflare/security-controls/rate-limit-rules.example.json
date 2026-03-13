@@ -1,0 +1,33 @@
+{
+  "description": "Template cấu hình rate-limit baseline cho Cloudflare WAF Rules (không chứa secret)",
+  "rules": [
+    {
+      "name": "auth-login-limit",
+      "expression": "http.request.method eq \"POST\" and http.request.uri.path eq \"/api/auth/login\"",
+      "threshold": 10,
+      "period": 60,
+      "action": "block"
+    },
+    {
+      "name": "auth-register-limit",
+      "expression": "http.request.method eq \"POST\" and http.request.uri.path eq \"/api/auth/register\"",
+      "threshold": 5,
+      "period": 60,
+      "action": "block"
+    },
+    {
+      "name": "chatbot-limit",
+      "expression": "http.request.method eq \"POST\" and starts_with(http.request.uri.path, \"/api/chatbot/\")",
+      "threshold": 30,
+      "period": 60,
+      "action": "managed_challenge"
+    },
+    {
+      "name": "api-general-limit",
+      "expression": "starts_with(http.request.uri.path, \"/api/\")",
+      "threshold": 120,
+      "period": 60,
+      "action": "managed_challenge"
+    }
+  ]
+}
