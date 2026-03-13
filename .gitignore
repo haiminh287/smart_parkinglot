@@ -50,4 +50,17 @@ yarn-error.log*
 
 # === Git ===
 .git/
+.local-backups/
+
+# === Local automation / temp artifacts ===
+.playwright-mcp/
+.tmp_*
+_tmp_*
+*-run.log
+backend-test*.txt
+backend-ai-test-timeout.txt
+payment-rerun-log.txt
+qc-fe-sanity.txt
+npm-audit.json
+pip-audit.json
 
