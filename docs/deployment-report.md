@@ -13,17 +13,17 @@ Vai trò: DevOps
 ## 2) Commit plan atomic
 
 1. `feat: migrate smart parking workspace`
-    - Commit: `1666ab1`
+   - Commit: `1666ab1`
    - Remove legacy monolith paths `smart_parking/`, `smart_parking_ui/`
    - Add current app workspaces như `backend-microservices/`, `spotlove-ai/`, `hardware/`
    - Include project docs/scripts cần thiết cho workspace hiện tại
 2. `chore: add cloudflare deployment assets and release docs`
-    - Commit: `29952c1`
+   - Commit: `29952c1`
    - `.github/workflows/*`
    - `infra/cloudflare/*`
    - `docs/architecture/*`, `docs/testing/*`, `docs/notes/*`
 3. `chore: record deploy evidence and ignore local temp artifacts`
-    - Commit: `47522c5`
+   - Commit: `47522c5`
    - `.gitignore`
    - `docs/deployment-report.md`
    - `docs/notes/cloudflare-security-controls-evidence.md`
@@ -36,7 +36,7 @@ Vai trò: DevOps
 - Remote `origin/main`: `47522c5d9608050995cbeb5d576d6813cabcdf9d`
 - Push status: `PASS`
 - Remote warnings:
-   - `backend-microservices/ai-service-fastapi/ml/models/cash_recognition_best.pth` = `51.47 MB`, vượt mức khuyến nghị `50 MB` của GitHub nhưng push vẫn thành công
+  - `backend-microservices/ai-service-fastapi/ml/models/cash_recognition_best.pth` = `51.47 MB`, vượt mức khuyến nghị `50 MB` của GitHub nhưng push vẫn thành công
 
 ## 4) Local preflight evidence
 
@@ -53,11 +53,11 @@ Vai trò: DevOps
   - Không có local `wrangler` auth session
   - Không có local API token/account id/project name để gọi `wrangler pages deploy`
 - Workflow path đã sẵn sàng: `.github/workflows/deploy-cloudflare-pages.yml`
-- Push lên `main` đã hoàn tất nên workflow *có thể* đã được kích hoạt theo path filter
+- Push lên `main` đã hoàn tất nên workflow _có thể_ đã được kích hoạt theo path filter
 - Kết quả workflow hiện **KHÔNG VERIFY ĐƯỢC** trong phiên này vì:
-   - GitHub Actions page probe trả `404`
-   - GitHub Actions REST API cho repo này trả `404`
-   - Không có GitHub auth/session để xem run của repository private hoặc restricted
+  - GitHub Actions page probe trả `404`
+  - GitHub Actions REST API cho repo này trả `404`
+  - Không có GitHub auth/session để xem run của repository private hoặc restricted
 - Deploy URL / Pages project name: **CHƯA THU ĐƯỢC**
 
 ## 6) Cloudflare Tunnel attempt status
@@ -66,8 +66,8 @@ Vai trò: DevOps
 - Local machine có tunnel credentials trong user profile
 - Tunnel nhìn thấy được qua local auth: `fcba5010-2361-42db-8ba4-b150c36d866a` (`dailytracking`)
 - Local runtime config hiện có:
-   - Tunnel file: `6fb90bf1-7fe4-4855-9bdc-d6d882aab876.json`
-   - Hostnames: `ghepdoicaulong.shop`, `www.ghepdoicaulong.shop`
+  - Tunnel file: `6fb90bf1-7fe4-4855-9bdc-d6d882aab876.json`
+  - Hostnames: `ghepdoicaulong.shop`, `www.ghepdoicaulong.shop`
 - Blocker để publish backend thật cho project hiện tại:
   - Chưa có hostname production được xác nhận cho dự án này
   - Chưa có bằng chứng Cloudflare zone nào thuộc project hiện tại

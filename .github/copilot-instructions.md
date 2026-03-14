@@ -1,161 +1,182 @@
-# 📋 Tiêu chuẩn Lập trình Cấp Doanh nghiệp (Enterprise Coding Standards)
+# 📋 Enterprise Coding Standards v10
 
-> Tệp này là **nguồn quy tắc duy nhất (Single Source of Truth)** cho mọi tác nhân AI hoạt động trong dự án.
-> Mọi agent PHẢI tuân thủ toàn bộ nội dung dưới đây trước khi thực hiện bất kỳ tác vụ nào.
-
----
-
-## 1. Bảo mật (Security First)
-
-- **Tuyệt đối KHÔNG** hardcode mật khẩu, secret key, API key, token, hoặc bất kỳ thông tin nhạy cảm nào.
-- Luôn sử dụng **biến môi trường** qua `.env` (không commit) và `.env.example` (commit mẫu).
-- Mọi kết nối tới dịch vụ bên ngoài phải qua **TLS/SSL**.
-- Dữ liệu nhạy cảm (PII) phải được **mã hóa at rest và in transit**.
-- Input người dùng luôn phải được **validate và sanitize** trước khi xử lý.
-- Dùng **parameterized queries hoặc ORM** để phòng SQL Injection.
-- Áp dụng **OWASP Top 10** làm checklist bảo mật bắt buộc.
+> **Single Source of Truth** cho mọi agent.
+> **Priority**: `docs/architecture/context.md` của project thắng khi conflict với file này.
 
 ---
 
-## 2. Kiến trúc Mã nguồn (Code Architecture)
+## 1. Security (Non-Negotiable)
 
-- Áp dụng nguyên tắc **SOLID** và **Clean Code** trong mọi module.
-- **Kiến trúc được chọn theo yêu cầu dự án** — không có kiến trúc mặc định.
-  Architect quyết định pattern phù hợp (Layered / Hexagonal / CQRS / Event-Driven / ...) và ghi vào ADR.
-  Mọi agent follow đúng ADR của project đó.
-- Mỗi module chỉ chịu trách nhiệm **một chức năng duy nhất** (Single Responsibility).
-- Sử dụng **Dependency Injection** thay vì khởi tạo trực tiếp.
-- Tách biệt rõ ràng **business logic** và **infrastructure code**.
-- Tên biến, hàm, class bằng **tiếng Anh**, rõ ràng, có ý nghĩa.
-- Mỗi hàm không vượt quá **50 dòng** (ngoại lệ phải có chú thích).
-- Mỗi file không vượt quá **300 dòng** — vượt thì tách module.
-
----
-
-## 3. Quản lý Lỗi (Error Handling)
-
-- Mọi tác vụ async/IO **phải** có error handling (try/catch, if err != nil, Result type, ...).
-- Sử dụng **Custom Error Classes** thay vì throw error chung:
-  ```
-  AppError → ValidationError, AuthError, NotFoundError, ConflictError, InfraError
-  ```
-- **Structured logging** (JSON format) với: `timestamp`, `level`, `message`, `context`, `stackTrace`.
-- Phân biệt **operational errors** (dự đoán được) và **programmer errors** (bugs).
-- Mọi API endpoint trả về format lỗi thống nhất:
-  ```json
-  {
-    "success": false,
-    "error": {
-      "code": "ERR_VALIDATION",
-      "message": "Mô tả lỗi",
-      "details": []
-    }
-  }
-  ```
+- KHÔNG hardcode secrets, keys, tokens — dùng env vars
+- `.env` gitignored | `.env.example` committed (không có real values)
+- Mọi external connection: TLS/SSL
+- User input: validate + sanitize trước khi process
+- SQL queries: parameterized/ORM — không string interpolation
+- Passwords: bcrypt/argon2/scrypt (không MD5/SHA1)
+- Randoms: cryptographically secure (crypto.randomBytes, secrets module)
+- Logs: không chứa passwords, tokens, card numbers, PII
+- OWASP Top 10 = security checklist bắt buộc
 
 ---
 
-## 4. Ngôn ngữ và Quy ước Đặt tên
+## 2. Architecture
 
-- **Tài liệu, comment, PRD, ADR**: viết bằng **tiếng Việt**.
-- **Tên biến, hàm, class, commit message, log**: viết bằng **tiếng Anh**.
-- **Naming Conventions — theo convention của ngôn ngữ đang dùng:**
+Architect quyết định pattern (Layered/Hexagonal/CQRS/Event-Driven) và ghi ADR.
+**Mọi agent follow ADR của project — không tự đặt pattern mới.**
 
-  ```
-  Python:
-    snake_case      → biến, hàm: get_user_by_email(), total_amount
-    PascalCase      → class: UserService, IAuthProvider
-    SCREAMING_SNAKE → hằng số: MAX_RETRY_COUNT
-    snake_case      → file và thư mục: user_service.py, api_routes/
+Principles bất biến:
 
-  TypeScript/JavaScript:
-    camelCase       → biến, hàm: getUserByEmail(), totalAmount
-    PascalCase      → class, interface: UserService, IAuthProvider
-    SCREAMING_SNAKE → hằng số: MAX_RETRY_COUNT
-    kebab-case      → file và thư mục: user-service.ts, api-routes/
-
-  Go:
-    camelCase       → biến, hàm unexported: getUserByEmail()
-    PascalCase      → exported: GetUserByEmail(), UserService
-    SCREAMING_SNAKE → hằng số: MaxRetryCount (hoặc iota)
-
-  Java:
-    camelCase       → biến, phương thức: getUserByEmail()
-    PascalCase      → class: UserService
-    SCREAMING_SNAKE → hằng số: MAX_RETRY_COUNT
-    kebab-case/lowercase → package: com.example.userservice
-  ```
-
-  **Nguyên tắc**: Nếu project đã có conventions → **follow conventions đó**, không tự đặt ra mới.
-  - Prefix `I` cho interface (TypeScript/Java): `IUserRepository`
-  - Prefix `is/has/can` cho boolean: `isActive`, `hasPermission`, `is_active`
+- **Single Responsibility**: mỗi class/module 1 lý do thay đổi
+- **Dependency Injection**: không hardcode dependencies
+- **Interface-based**: depend on abstractions
+- **Fail Fast**: validate sớm, throw descriptive errors
+- **Idempotency**: mutations nên idempotent khi có thể
+- **Observability**: metrics/logs/traces từ day 1, không phải afterthought
 
 ---
 
-## 5. Kiểm thử (Testing Standards)
-
-- Code Coverage tối thiểu: **80%** unit test, **60%** integration test.
-- Mỗi module có test file tương ứng (theo convention của test framework đang dùng).
-- Mock tất cả external dependencies trong unit test.
-- Viết test cho cả **happy path** và **edge cases**.
-- Test database riêng biệt — không dùng dev DB.
-
----
-
-## 6. Git & Version Control
-
-- **Conventional Commits**: `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`, `ci:`, `perf:`, `style:`.
-- Mỗi commit chỉ chứa **một thay đổi logic duy nhất**.
-- **KHÔNG** `git add .` — add specific files.
-- Branch naming: `feature/`, `bugfix/`, `hotfix/`, `release/`, `chore/`.
-- Mọi thay đổi qua **Pull Request** với ít nhất **1 reviewer**.
-
----
-
-## 7. Documentation
-
-- Mỗi hàm/method public có **docstring / JSDoc** với params, returns, throws.
-- Mỗi module có **README.md** hoặc inline docs mô tả mục đích, cách dùng.
-- API endpoints documented bằng **format phù hợp stack** (OpenAPI / GraphQL schema / proto / event catalog).
-- Architectural decisions ghi nhận trong **ADR** tại `docs/architecture/`.
-
----
-
-## 8. Performance & Optimization
-
-- **Caching** (Redis / in-memory) cho dữ liệu truy vấn nhiều.
-- **Pagination** cho tất cả API trả về danh sách.
-- Tối ưu **database queries**: tránh N+1, dùng index đúng.
-- Lazy loading cho module không cần thiết lúc khởi động.
-- Giám sát **memory leaks** và **connection pools**.
-
----
-
-## 9. Agent Delegation (Quy tắc Ủy quyền)
-
-- **Orchestrator** là Team Lead — chỉ có tool `agent`. KHÔNG có `editFiles`, `runInTerminal`.
-- Orchestrator **BẮT BUỘC** dùng tool `agent` cho mọi task chuyên môn:
-  - Viết code → `implementer`
-  - Viết test → `tester`
-  - Review code → `reviewer`
-  - Deploy / Infra → `devops`
-  - Security audit → `security`
-  - QC Gate (coverage, perf, regression, checklist) → `qc`
-  - Thiết kế hệ thống → `architect`
-  - Research / Khảo sát codebase, best practices → `researcher`
-- Mỗi sub-agent **chỉ làm trong phạm vi quyền** của mình.
-- **Sub-agent KHÔNG GỌI sub-agent khác** — báo về Orchestrator, để Orchestrator điều phối.
-
----
-
-## 10. Active Agent Reporting
+## 3. Error Handling
 
 ```
-Khi bắt đầu:   🤖 [AGENT_NAME] đang thực thi: [mô tả task]
-Khi hoàn tất:  ✅ [AGENT_NAME] hoàn tất: [kết quả tóm tắt]
+AppError (base, with code + statusCode)
+├── ValidationError    (400)
+├── UnauthorizedError  (401)
+├── ForbiddenError     (403)
+├── NotFoundError      (404)
+├── ConflictError      (409)
+└── InternalError      (500)
 ```
 
-Orchestrator ghi nhận trong báo cáo cuối:
+API error format (bất biến):
+
+```json
+{
+  "success": false,
+  "error": { "code": "ERR_VALIDATION", "message": "...", "details": [] }
+}
 ```
-📊 Agents đã dùng: researcher → architect → implementer → reviewer → tester → security → qc → devops
+
+Logs (structured JSON): `timestamp`, `level`, `message`, `context` — no sensitive data.
+
+---
+
+## 4. Naming Conventions
+
+Docs/comments/ADR → **tiếng Việt**
+Code/variables/commits/logs → **tiếng Anh**
+
+| Language      | variables/funcs      | classes    | constants       | files      |
+| ------------- | -------------------- | ---------- | --------------- | ---------- |
+| TypeScript/JS | camelCase            | PascalCase | SCREAMING_SNAKE | kebab-case |
+| Python        | snake_case           | PascalCase | SCREAMING_SNAKE | snake_case |
+| Go            | camelCase/PascalCase | PascalCase | MixedCaps       | snake_case |
+| Java          | camelCase            | PascalCase | SCREAMING_SNAKE | lowercase  |
+
+Universal: boolean → `is/has/can` prefix. Interface → `I` prefix (TS/Java).
+**Nếu project đã có conventions → FOLLOW chúng.**
+
+---
+
+## 5. Code Quality
+
+| Metric          | Limit                               |
+| --------------- | ----------------------------------- |
+| Function length | ≤ 50 lines                          |
+| File length     | ≤ 300 lines                         |
+| Nesting depth   | ≤ 4 levels                          |
+| Function params | ≤ 4 (dùng object/DTO cho nhiều hơn) |
+
+---
+
+## 6. Dead Code Policy
+
+**Sau mỗi task hoàn thành, codebase phải sạch:**
+
+- Không có approach-drift files (thử A, dùng B, files của A phải xóa)
+- Không có unused imports, variables, functions
+- Không có commented-out code blocks > 10 dòng
+- Không có `.old`, `.bak`, `_backup` files trong src/
+- Không có `console.log`/`print` debug
+
+**Workflow**: Reviewer flag → Orchestrator tạo cleanup state → Implementer xóa → DevOps commit riêng.
+
+---
+
+## 7. Testing
+
+| Type        | Standard | Sensitive |
+| ----------- | -------- | --------- |
+| Unit        | ≥ 80%    | ≥ 90%     |
+| Integration | ≥ 60%    | ≥ 75%     |
+| Branch      | ≥ 70%    | ≥ 85%     |
+
+- Test naming: `should {behavior} when {condition}`
+- Pattern: AAA (Arrange-Act-Assert)
+- Mock: only external dependencies
+- Test DB: isolated, never dev/prod
+- No flaky tests
+
+---
+
+## 8. Git Workflow
+
+Branches: `feature/ISSUE-{ID}-{desc}` | `bugfix/` | `hotfix/` | `chore/` | `refactor/`
+
+Commits: `{type}({scope}): {description}  Refs: #{ID}`
+Types: `feat fix refactor test docs chore ci perf style build`
+
+Rules: **KHÔNG** `git add .` | KHÔNG force push protected | KHÔNG `git reset --hard` shared | commit per logical unit
+
+---
+
+## 9. Performance
+
+- Pagination bắt buộc cho list APIs
+- Avoid N+1 queries (use eager loading / batch)
+- Indexes cho frequent query patterns
+- Timeout cho mọi external calls
+- Connection pooling cho DB/external services
+
+---
+
+## 10. Documentation
+
+- Public functions: docstring/JSDoc (params, returns, throws)
+- Architecture decisions: ADR tại `docs/architecture/`
+- API: OpenAPI 3.0 / GraphQL schema / proto
+- Env vars: documented trong `.env.example` với comments
+
+---
+
+## 11. Agent Delegation
+
+```
+Orchestrator: CHỈ có tool `agent` — KHÔNG editFiles/runInTerminal
+  write code      → implementer
+  write tests     → tester
+  review code     → reviewer
+  deploy/git      → devops
+  migrations      → devops
+  security audit  → security
+  QC gate         → qc
+  system design   → architect
+  research        → researcher
+
+Sub-agents: KHÔNG gọi nhau — báo Orchestrator, để Orchestrator điều phối
+```
+
+---
+
+## 12. Reporting
+
+```
+Start:   🤖 [{AGENT}] đang thực thi: {task}
+Done:    ✅ [{AGENT}] hoàn tất: {result + metrics}
+Fail:    ❌ [{AGENT}] FAIL: {reason + action needed}
+```
+
+Final summary:
+
+```
+📊 Agents: researcher→architect→implementer→reviewer→[cleanup→]devops→tester→security→qc→devops
 ```

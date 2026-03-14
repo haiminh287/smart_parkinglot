@@ -50,17 +50,15 @@ agents:
     { status: "working", current_task: "Điều phối fix security blockers" }
   researcher: { status: "done", current_task: "" }
   architect: { status: "done", current_task: "" }
-  implementer:
-    { status: "done", current_task: "" }
-  tester:
-    { status: "done", current_task: "" }
+  implementer: { status: "done", current_task: "" }
+  tester: { status: "done", current_task: "" }
   reviewer: { status: "done", current_task: "" }
   security: { status: "done", current_task: "" }
   qc: { status: "done", current_task: "" }
   devops:
     {
       status: "waiting",
-      current_task: "Blocked: chờ secrets/zone/hostname hoặc quyền xem GitHub Actions/Cloudflare"
+      current_task: "Blocked: chờ secrets/zone/hostname hoặc quyền xem GitHub Actions/Cloudflare",
     }
 
 handoff_log:
