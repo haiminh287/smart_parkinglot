@@ -1,43 +1,44 @@
 # Cloudflare Tunnel – Production config
-# ghepdoicaulong.shop
+# app.ghepdoicaulong.shop (FE) | api.ghepdoicaulong.shop (API) | ws.ghepdoicaulong.shop (WS)
 #
-# HƯỚNG DẪN SETUP (điền trước khi chạy):
+# HƯỚNG DẪN SETUP:
 #   1. Tạo tunnel:   cloudflared tunnel create ghepdoicaulong
-#   2. Copy tunnel ID xuất hiện → thay thế TẤT CẢ <TUNNEL_ID_PLACEHOLDER> bên dưới
+#   2. Copy tunnel ID xuất hiện → thay thế TẤT CẢ 57eb6de9-3ffa-4fe8-bb64-0aa7150f2684 bên dưới
 #   3. Đảm bảo file credentials đã được tạo tại đường dẫn credentials-file
-#   4. Tạo DNS routes: cloudflared tunnel route dns ghepdoicaulong ghepdoicaulong.shop
-#                      cloudflared tunnel route dns ghepdoicaulong api.ghepdoicaulong.shop
-#                      cloudflared tunnel route dns ghepdoicaulong ws.ghepdoicaulong.shop
+#   4. Tạo DNS routes:
+#        cloudflared tunnel route dns ghepdoicaulong app.ghepdoicaulong.shop
+#        cloudflared tunnel route dns ghepdoicaulong api.ghepdoicaulong.shop
+#        cloudflared tunnel route dns ghepdoicaulong ws.ghepdoicaulong.shop
 
-tunnel: <TUNNEL_ID_PLACEHOLDER>
-credentials-file: C:\Users\MINH\.cloudflared\<TUNNEL_ID_PLACEHOLDER>.json
+tunnel: 57eb6de9-3ffa-4fe8-bb64-0aa7150f2684
+credentials-file: C:\Users\MINH\.cloudflared\57eb6de9-3ffa-4fe8-bb64-0aa7150f2684.json
 
 # Log level: debug | info | warn | error
 loglevel: info
 logfile: C:\Users\MINH\.cloudflared\cloudflared.log
 
 ingress:
-  # ─── Frontend ───────────────────────────────────────────────────────────────
+  # ─── Frontend (app subdomain) ─────────────────────────────────────────────
   # Nginx serve static dist/ tại port 80
-  - hostname: ghepdoicaulong.shop
+  - hostname: app.ghepdoicaulong.shop
     service: http://localhost:80
     originRequest:
       connectTimeout: 30s
-      httpHostHeader: ghepdoicaulong.shop
+      httpHostHeader: app.ghepdoicaulong.shop
 
-  # ─── API Gateway ─────────────────────────────────────────────────────────────
+  # ─── API Gateway ──────────────────────────────────────────────────────────
   - hostname: api.ghepdoicaulong.shop
     service: http://localhost:8000
     originRequest:
       connectTimeout: 30s
       httpHostHeader: api.ghepdoicaulong.shop
 
-  # ─── WebSocket Realtime ───────────────────────────────────────────────────────
+  # ─── WebSocket Realtime ───────────────────────────────────────────────────
   - hostname: ws.ghepdoicaulong.shop
     service: http://localhost:8006
     originRequest:
       connectTimeout: 30s
       noTLSVerify: false
 
-  # ─── Fallback (bắt buộc phải có cuối cùng) ───────────────────────────────────
+  # ─── Fallback (bắt buộc phải có cuối cùng) ───────────────────────────────
   - service: http_status:404

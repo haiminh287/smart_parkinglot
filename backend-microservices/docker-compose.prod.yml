@@ -4,10 +4,11 @@
 # Override này:
 #   1. Thêm nginx service → serve FE dist/ tại port 80
 #   2. Set CORS_ALLOWED_ORIGINS + ALLOWED_HOSTS cho tất cả microservices
+#      (FE nằm ở app.ghepdoicaulong.shop, API ở api.ghepdoicaulong.shop)
 #   3. Tắt debug mode
+#   4. Set đầy đủ production env vars cho gateway + auth-service
 
 services:
-
   # ─── Nginx – serve FE static + reverse proxy ────────────────────────────────
   nginx:
     image: nginx:alpine
@@ -16,83 +17,104 @@ services:
     ports:
       - "80:80"
     volumes:
-      # Config file (đường dẫn tương đối từ backend-microservices/)
       - ../infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      # FE build output
       - ../spotlove-ai/dist:/usr/share/nginx/html:ro
     extra_hosts:
-      # Cho phép nginx container gọi về host (API gateway, WS)
       - "host.docker.internal:host-gateway"
     depends_on:
-      - api-gateway
+      - gateway-service-go
     networks:
       - parksmart-network
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/nginx-health"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost/nginx-health",
+        ]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 10s
 
   # ─── Auth service – production overrides ────────────────────────────────────
+  # auth-service cũng có production validation: ENV, SESSION_COOKIE_DOMAIN, CORS
   auth-service:
     environment:
+      - ENV=production
       - DEBUG=False
       - ALLOWED_HOSTS=api.ghepdoicaulong.shop,localhost
-      - CORS_ALLOWED_ORIGINS=https://ghepdoicaulong.shop
+      - CORS_ALLOWED_ORIGINS=https://app.ghepdoicaulong.shop
+      - SESSION_COOKIE_DOMAIN=.ghepdoicaulong.shop
+      - SESSION_COOKIE_SECURE=true
+      # OAuth redirect URIs phải khớp với Google/Facebook Console
+      - GOOGLE_REDIRECT_URI=https://api.ghepdoicaulong.shop/api/auth/google/callback/
+      - FACEBOOK_REDIRECT_URI=https://api.ghepdoicaulong.shop/api/auth/facebook/callback/
 
   # ─── Parking service ─────────────────────────────────────────────────────────
   parking-service:
     environment:
       - DEBUG=False
       - ALLOWED_HOSTS=api.ghepdoicaulong.shop,localhost
-      - CORS_ALLOWED_ORIGINS=https://ghepdoicaulong.shop
+      - CORS_ALLOWED_ORIGINS=https://app.ghepdoicaulong.shop
 
   # ─── Booking service ─────────────────────────────────────────────────────────
   booking-service:
     environment:
       - DEBUG=False
       - ALLOWED_HOSTS=api.ghepdoicaulong.shop,localhost
-      - CORS_ALLOWED_ORIGINS=https://ghepdoicaulong.shop
+      - CORS_ALLOWED_ORIGINS=https://app.ghepdoicaulong.shop
 
   # ─── Vehicle service ─────────────────────────────────────────────────────────
   vehicle-service:
     environment:
       - DEBUG=False
       - ALLOWED_HOSTS=api.ghepdoicaulong.shop,localhost
-      - CORS_ALLOWED_ORIGINS=https://ghepdoicaulong.shop
+      - CORS_ALLOWED_ORIGINS=https://app.ghepdoicaulong.shop
 
   # ─── Payment service ─────────────────────────────────────────────────────────
   payment-service-fastapi:
     environment:
       - DEBUG=False
       - ALLOWED_HOSTS=api.ghepdoicaulong.shop,localhost
-      - CORS_ALLOWED_ORIGINS=https://ghepdoicaulong.shop
+      - CORS_ALLOWED_ORIGINS=https://app.ghepdoicaulong.shop
 
   # ─── Notification service ────────────────────────────────────────────────────
   notification-service-fastapi:
     environment:
       - DEBUG=False
       - ALLOWED_HOSTS=api.ghepdoicaulong.shop,localhost
-      - CORS_ALLOWED_ORIGINS=https://ghepdoicaulong.shop
-
-  # ─── AI service ──────────────────────────────────────────────────────────────
-  ai-service-fastapi:
-    environment:
-      - DEBUG=False
-      - ALLOWED_HOSTS=api.ghepdoicaulong.shop,localhost
-      - CORS_ALLOWED_ORIGINS=https://ghepdoicaulong.shop
+      - CORS_ALLOWED_ORIGINS=https://app.ghepdoicaulong.shop
 
   # ─── Chatbot service ─────────────────────────────────────────────────────────
   chatbot-service-fastapi:
     environment:
       - DEBUG=False
       - ALLOWED_HOSTS=api.ghepdoicaulong.shop,localhost
-      - CORS_ALLOWED_ORIGINS=https://ghepdoicaulong.shop
+      - CORS_ALLOWED_ORIGINS=https://app.ghepdoicaulong.shop
 
-  # ─── API Gateway ─────────────────────────────────────────────────────────────
-  api-gateway:
+  # ─── AI service ──────────────────────────────────────────────────────────────
+  ai-service-fastapi:
     environment:
       - DEBUG=False
       - ALLOWED_HOSTS=api.ghepdoicaulong.shop,localhost
-      - CORS_ALLOWED_ORIGINS=https://ghepdoicaulong.shop
+      - CORS_ALLOWED_ORIGINS=https://app.ghepdoicaulong.shop
+
+  # ─── API Gateway (full production config) ────────────────────────────────────
+  # gateway-service-go có validation fail-fast cho ENV=production
+  gateway-service-go:
+    environment:
+      - ENV=production
+      - DEBUG=False
+      - ALLOWED_HOSTS=api.ghepdoicaulong.shop,localhost
+      # FE origin: app subdomain
+      - CORS_ALLOWED_ORIGINS=https://app.ghepdoicaulong.shop
+      # Cookie domain dùng dot-prefix để cover tất cả subdomains
+      - SESSION_COOKIE_DOMAIN=.ghepdoicaulong.shop
+      - SESSION_COOKIE_SECURE=true
+      - SESSION_COOKIE_SAMESITE=Lax
+      # OAuth callback redirect về app subdomain
+      - FE_AUTH_CALLBACK_URL=https://app.ghepdoicaulong.shop/auth/callback
