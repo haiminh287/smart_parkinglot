@@ -1,0 +1,43 @@
+# Cloudflare Tunnel – Production config
+# ghepdoicaulong.shop
+#
+# HƯỚNG DẪN SETUP (điền trước khi chạy):
+#   1. Tạo tunnel:   cloudflared tunnel create ghepdoicaulong
+#   2. Copy tunnel ID xuất hiện → thay thế TẤT CẢ <TUNNEL_ID_PLACEHOLDER> bên dưới
+#   3. Đảm bảo file credentials đã được tạo tại đường dẫn credentials-file
+#   4. Tạo DNS routes: cloudflared tunnel route dns ghepdoicaulong ghepdoicaulong.shop
+#                      cloudflared tunnel route dns ghepdoicaulong api.ghepdoicaulong.shop
+#                      cloudflared tunnel route dns ghepdoicaulong ws.ghepdoicaulong.shop
+
+tunnel: <TUNNEL_ID_PLACEHOLDER>
+credentials-file: C:\Users\MINH\.cloudflared\<TUNNEL_ID_PLACEHOLDER>.json
+
+# Log level: debug | info | warn | error
+loglevel: info
+logfile: C:\Users\MINH\.cloudflared\cloudflared.log
+
+ingress:
+  # ─── Frontend ───────────────────────────────────────────────────────────────
+  # Nginx serve static dist/ tại port 80
+  - hostname: ghepdoicaulong.shop
+    service: http://localhost:80
+    originRequest:
+      connectTimeout: 30s
+      httpHostHeader: ghepdoicaulong.shop
+
+  # ─── API Gateway ─────────────────────────────────────────────────────────────
+  - hostname: api.ghepdoicaulong.shop
+    service: http://localhost:8000
+    originRequest:
+      connectTimeout: 30s
+      httpHostHeader: api.ghepdoicaulong.shop
+
+  # ─── WebSocket Realtime ───────────────────────────────────────────────────────
+  - hostname: ws.ghepdoicaulong.shop
+    service: http://localhost:8006
+    originRequest:
+      connectTimeout: 30s
+      noTLSVerify: false
+
+  # ─── Fallback (bắt buộc phải có cuối cùng) ───────────────────────────────────
+  - service: http_status:404
