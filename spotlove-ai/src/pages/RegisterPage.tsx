@@ -1,11 +1,11 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Car, Mail, Lock, Eye, EyeOff, User, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useAuth } from '@/contexts/use-auth';
-import { useToast } from '@/hooks/use-toast';
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Car, Mail, Lock, Eye, EyeOff, User, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useAuth } from "@/contexts/use-auth";
+import { useToast } from "@/hooks/use-toast";
 
 // =====================
 // API Integration (Uncomment when backend is ready)
@@ -15,10 +15,10 @@ import { useToast } from '@/hooks/use-toast';
 // import { setUser, setLoading, setError } from '@/store/slices/authSlice';
 
 export default function RegisterPage() {
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
   const { register, loginWithGoogle, loginWithFacebook, isLoading } = useAuth();
@@ -27,21 +27,21 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (password !== confirmPassword) {
       toast({
-        title: 'Lỗi',
-        description: 'Mật khẩu xác nhận không khớp',
-        variant: 'destructive',
+        title: "Lỗi",
+        description: "Mật khẩu xác nhận không khớp",
+        variant: "destructive",
       });
       return;
     }
 
     if (!acceptTerms) {
       toast({
-        title: 'Lỗi',
-        description: 'Vui lòng đồng ý với điều khoản sử dụng',
-        variant: 'destructive',
+        title: "Lỗi",
+        description: "Vui lòng đồng ý với điều khoản sử dụng",
+        variant: "destructive",
       });
       return;
     }
@@ -49,15 +49,15 @@ export default function RegisterPage() {
     try {
       await register(email, password, username);
       toast({
-        title: 'Đăng ký thành công',
-        description: 'Chào mừng bạn đến với ParkSmart!',
+        title: "Đăng ký thành công",
+        description: "Chào mừng bạn đến với ParkSmart!",
       });
-      navigate('/');
+      navigate("/");
     } catch (error) {
       toast({
-        title: 'Đăng ký thất bại',
-        description: 'Có lỗi xảy ra, vui lòng thử lại',
-        variant: 'destructive',
+        title: "Đăng ký thất bại",
+        description: "Có lỗi xảy ra, vui lòng thử lại",
+        variant: "destructive",
       });
     }
   };
@@ -65,12 +65,12 @@ export default function RegisterPage() {
   const handleGoogleLogin = async () => {
     try {
       await loginWithGoogle();
-      navigate('/');
+      navigate("/");
     } catch (error) {
       toast({
-        title: 'Đăng ký thất bại',
-        description: 'Không thể đăng ký với Google',
-        variant: 'destructive',
+        title: "Đăng ký thất bại",
+        description: "Không thể đăng ký với Google",
+        variant: "destructive",
       });
     }
   };
@@ -78,12 +78,12 @@ export default function RegisterPage() {
   const handleFacebookLogin = async () => {
     try {
       await loginWithFacebook();
-      navigate('/');
+      navigate("/");
     } catch (error) {
       toast({
-        title: 'Đăng ký thất bại',
-        description: 'Không thể đăng ký với Facebook',
-        variant: 'destructive',
+        title: "Đăng ký thất bại",
+        description: "Không thể đăng ký với Facebook",
+        variant: "destructive",
       });
     }
   };
@@ -104,37 +104,68 @@ export default function RegisterPage() {
             Tham gia cộng đồng ParkSmart
           </h1>
           <p className="text-lg opacity-90 max-w-md">
-            Đăng ký miễn phí và bắt đầu trải nghiệm đặt chỗ đậu xe thông minh ngay hôm nay.
+            Đăng ký miễn phí và bắt đầu trải nghiệm đặt chỗ đậu xe thông minh
+            ngay hôm nay.
           </p>
-          
+
           <div className="mt-12 space-y-4">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-foreground/20">
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
               </div>
               <span>Đặt chỗ trước, không lo hết chỗ</span>
             </div>
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-foreground/20">
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
               </div>
               <span>Thanh toán an toàn, tiện lợi</span>
             </div>
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-foreground/20">
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
               </div>
               <span>Theo dõi xe qua camera 24/7</span>
             </div>
           </div>
         </div>
-        
+
         {/* Decorative circles */}
         <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-primary-foreground/10" />
         <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-primary-foreground/5" />
@@ -152,7 +183,9 @@ export default function RegisterPage() {
           </div>
 
           <div className="text-center lg:text-left">
-            <h2 className="text-2xl font-bold text-foreground">Đăng ký tài khoản</h2>
+            <h2 className="text-2xl font-bold text-foreground">
+              Đăng ký tài khoản
+            </h2>
             <p className="text-muted-foreground mt-2">
               Tạo tài khoản để bắt đầu sử dụng ParkSmart.
             </p>
@@ -197,7 +230,7 @@ export default function RegisterPage() {
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <Input
                   id="password"
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -210,7 +243,11 @@ export default function RegisterPage() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5" />
+                  ) : (
+                    <Eye className="h-5 w-5" />
+                  )}
                 </button>
               </div>
             </div>
@@ -221,7 +258,7 @@ export default function RegisterPage() {
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <Input
                   id="confirmPassword"
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
@@ -232,32 +269,36 @@ export default function RegisterPage() {
             </div>
 
             <label className="flex items-start gap-2 cursor-pointer">
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 className="rounded border-border mt-1"
                 checked={acceptTerms}
                 onChange={(e) => setAcceptTerms(e.target.checked)}
               />
               <span className="text-sm text-muted-foreground">
-                Tôi đồng ý với{' '}
+                Tôi đồng ý với{" "}
                 <Link to="/terms" className="text-primary hover:underline">
                   Điều khoản sử dụng
-                </Link>{' '}
-                và{' '}
+                </Link>{" "}
+                và{" "}
                 <Link to="/privacy" className="text-primary hover:underline">
                   Chính sách bảo mật
                 </Link>
               </span>
             </label>
 
-            <Button type="submit" className="w-full gradient-primary" disabled={isLoading}>
+            <Button
+              type="submit"
+              className="w-full gradient-primary"
+              disabled={isLoading}
+            >
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Đang đăng ký...
                 </>
               ) : (
-                'Đăng ký'
+                "Đăng ký"
               )}
             </Button>
           </form>
@@ -267,7 +308,9 @@ export default function RegisterPage() {
               <span className="w-full border-t border-border" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">Hoặc đăng ký với</span>
+              <span className="bg-background px-2 text-muted-foreground">
+                Hoặc đăng ký với
+              </span>
             </div>
           </div>
 
@@ -314,8 +357,11 @@ export default function RegisterPage() {
           </div>
 
           <p className="text-center text-sm text-muted-foreground">
-            Đã có tài khoản?{' '}
-            <Link to="/login" className="text-primary font-medium hover:underline">
+            Đã có tài khoản?{" "}
+            <Link
+              to="/login"
+              className="text-primary font-medium hover:underline"
+            >
               Đăng nhập
             </Link>
           </p>

@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback } from 'react';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useEffect, useState, useCallback } from "react";
+import { useTheme } from "@/contexts/use-theme";
 
 interface Snowflake {
   id: number;
@@ -29,7 +29,7 @@ export function SnowfallEffect() {
   const generateSnowflakes = useCallback(() => {
     // Multiple layers of snowflakes for depth
     const flakes: Snowflake[] = [];
-    
+
     // Background layer - smaller, slower, more blurred
     for (let i = 0; i < 30; i++) {
       flakes.push({
@@ -43,7 +43,7 @@ export function SnowfallEffect() {
         wobble: Math.random() * 30 - 15,
       });
     }
-    
+
     // Middle layer - medium sized
     for (let i = 30; i < 70; i++) {
       flakes.push({
@@ -57,7 +57,7 @@ export function SnowfallEffect() {
         wobble: Math.random() * 40 - 20,
       });
     }
-    
+
     // Foreground layer - larger, faster, sharper
     for (let i = 70; i < 100; i++) {
       flakes.push({
@@ -71,7 +71,7 @@ export function SnowfallEffect() {
         wobble: Math.random() * 50 - 25,
       });
     }
-    
+
     return flakes;
   }, []);
 
@@ -88,7 +88,7 @@ export function SnowfallEffect() {
   }, []);
 
   useEffect(() => {
-    if (theme === 'dark') {
+    if (theme === "dark") {
       setSnowflakes(generateSnowflakes());
       setSparkles(generateSparkles());
     } else {
@@ -97,18 +97,19 @@ export function SnowfallEffect() {
     }
   }, [theme, generateSnowflakes, generateSparkles]);
 
-  if (theme !== 'dark' || snowflakes.length === 0) return null;
+  if (theme !== "dark" || snowflakes.length === 0) return null;
 
   return (
     <div className="fixed inset-0 pointer-events-none z-[100] overflow-hidden">
       {/* Subtle aurora gradient at top */}
-      <div 
+      <div
         className="absolute top-0 left-0 right-0 h-64 opacity-20"
         style={{
-          background: 'linear-gradient(180deg, rgba(100, 200, 255, 0.15) 0%, rgba(150, 100, 255, 0.1) 50%, transparent 100%)',
+          background:
+            "linear-gradient(180deg, rgba(100, 200, 255, 0.15) 0%, rgba(150, 100, 255, 0.1) 50%, transparent 100%)",
         }}
       />
-      
+
       {/* Snowflakes with varied animations */}
       {snowflakes.map((flake) => (
         <div
@@ -116,13 +117,13 @@ export function SnowfallEffect() {
           className="absolute"
           style={{
             left: `${flake.x}%`,
-            top: '-20px',
+            top: "-20px",
             animation: `snowfall ${flake.animationDuration}s linear infinite`,
             animationDelay: `${flake.animationDelay}s`,
             filter: `blur(${flake.blur}px)`,
           }}
         >
-          <div 
+          <div
             className="rounded-full"
             style={{
               width: `${flake.size}px`,
@@ -152,13 +153,13 @@ export function SnowfallEffect() {
             animationDelay: `${sparkle.delay}s`,
           }}
         >
-          <div 
+          <div
             style={{
               width: `${sparkle.size}px`,
               height: `${sparkle.size}px`,
               opacity: sparkle.opacity,
-              background: 'white',
-              borderRadius: '50%',
+              background: "white",
+              borderRadius: "50%",
               boxShadow: `
                 0 0 ${sparkle.size * 2}px white,
                 0 0 ${sparkle.size * 4}px rgba(200, 220, 255, 0.8)

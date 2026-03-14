@@ -1,11 +1,11 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Car, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useAuth } from '@/contexts/use-auth';
-import { useToast } from '@/hooks/use-toast';
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Car, Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useAuth } from "@/contexts/use-auth";
+import { useToast } from "@/hooks/use-toast";
 
 // =====================
 // API Integration (Uncomment when backend is ready)
@@ -15,8 +15,8 @@ import { useToast } from '@/hooks/use-toast';
 // import { setUser, setLoading, setError } from '@/store/slices/authSlice';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const { login, loginWithGoogle, loginWithFacebook, isLoading } = useAuth();
   const navigate = useNavigate();
@@ -27,15 +27,15 @@ export default function LoginPage() {
     try {
       await login(email, password);
       toast({
-        title: 'Đăng nhập thành công',
-        description: 'Chào mừng bạn quay lại!',
+        title: "Đăng nhập thành công",
+        description: "Chào mừng bạn quay lại!",
       });
-      navigate('/');
+      navigate("/");
     } catch (error) {
       toast({
-        title: 'Đăng nhập thất bại',
-        description: 'Email hoặc mật khẩu không đúng',
-        variant: 'destructive',
+        title: "Đăng nhập thất bại",
+        description: "Email hoặc mật khẩu không đúng",
+        variant: "destructive",
       });
     }
   };
@@ -43,12 +43,12 @@ export default function LoginPage() {
   const handleGoogleLogin = async () => {
     try {
       await loginWithGoogle();
-      navigate('/');
+      navigate("/");
     } catch (error) {
       toast({
-        title: 'Đăng nhập thất bại',
-        description: 'Không thể đăng nhập với Google',
-        variant: 'destructive',
+        title: "Đăng nhập thất bại",
+        description: "Không thể đăng nhập với Google",
+        variant: "destructive",
       });
     }
   };
@@ -56,12 +56,12 @@ export default function LoginPage() {
   const handleFacebookLogin = async () => {
     try {
       await loginWithFacebook();
-      navigate('/');
+      navigate("/");
     } catch (error) {
       toast({
-        title: 'Đăng nhập thất bại',
-        description: 'Không thể đăng nhập với Facebook',
-        variant: 'destructive',
+        title: "Đăng nhập thất bại",
+        description: "Không thể đăng nhập với Facebook",
+        variant: "destructive",
       });
     }
   };
@@ -78,14 +78,12 @@ export default function LoginPage() {
             </div>
             <span className="font-bold text-3xl">ParkSmart</span>
           </div>
-          <h1 className="text-4xl font-bold mb-4">
-            Đặt chỗ đậu xe thông minh
-          </h1>
+          <h1 className="text-4xl font-bold mb-4">Đặt chỗ đậu xe thông minh</h1>
           <p className="text-lg opacity-90 max-w-md">
-            Tiết kiệm thời gian, đặt chỗ trước, thanh toán dễ dàng. 
-            Trải nghiệm đậu xe hiện đại với ParkSmart.
+            Tiết kiệm thời gian, đặt chỗ trước, thanh toán dễ dàng. Trải nghiệm
+            đậu xe hiện đại với ParkSmart.
           </p>
-          
+
           <div className="mt-12 grid grid-cols-3 gap-6">
             <div className="text-center">
               <p className="text-3xl font-bold">500+</p>
@@ -101,7 +99,7 @@ export default function LoginPage() {
             </div>
           </div>
         </div>
-        
+
         {/* Decorative circles */}
         <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-primary-foreground/10" />
         <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-primary-foreground/5" />
@@ -148,7 +146,7 @@ export default function LoginPage() {
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <Input
                   id="password"
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -160,7 +158,11 @@ export default function LoginPage() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5" />
+                  ) : (
+                    <Eye className="h-5 w-5" />
+                  )}
                 </button>
               </div>
             </div>
@@ -170,19 +172,26 @@ export default function LoginPage() {
                 <input type="checkbox" className="rounded border-border" />
                 <span className="text-muted-foreground">Ghi nhớ đăng nhập</span>
               </label>
-              <Link to="/forgot-password" className="text-primary hover:underline">
+              <Link
+                to="/forgot-password"
+                className="text-primary hover:underline"
+              >
                 Quên mật khẩu?
               </Link>
             </div>
 
-            <Button type="submit" className="w-full gradient-primary" disabled={isLoading}>
+            <Button
+              type="submit"
+              className="w-full gradient-primary"
+              disabled={isLoading}
+            >
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Đang đăng nhập...
                 </>
               ) : (
-                'Đăng nhập'
+                "Đăng nhập"
               )}
             </Button>
           </form>
@@ -192,7 +201,9 @@ export default function LoginPage() {
               <span className="w-full border-t border-border" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">Hoặc tiếp tục với</span>
+              <span className="bg-background px-2 text-muted-foreground">
+                Hoặc tiếp tục với
+              </span>
             </div>
           </div>
 
@@ -239,8 +250,11 @@ export default function LoginPage() {
           </div>
 
           <p className="text-center text-sm text-muted-foreground">
-            Chưa có tài khoản?{' '}
-            <Link to="/register" className="text-primary font-medium hover:underline">
+            Chưa có tài khoản?{" "}
+            <Link
+              to="/register"
+              className="text-primary font-medium hover:underline"
+            >
               Đăng ký ngay
             </Link>
           </p>
@@ -248,8 +262,9 @@ export default function LoginPage() {
           {/* Demo hint */}
           <div className="mt-4 p-4 rounded-xl bg-muted/50 border border-border">
             <p className="text-xs text-muted-foreground text-center">
-              <strong>Demo:</strong> Nhập email bất kỳ để đăng nhập. 
-              Sử dụng <code className="text-primary">admin@example.com</code> để đăng nhập với quyền Admin.
+              <strong>Demo:</strong> Nhập email bất kỳ để đăng nhập. Sử dụng{" "}
+              <code className="text-primary">admin@example.com</code> để đăng
+              nhập với quyền Admin.
             </p>
           </div>
         </div>

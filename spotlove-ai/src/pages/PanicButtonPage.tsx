@@ -158,8 +158,7 @@ export default function PanicButtonPage() {
           // No active parking session
           setUserParkingInfo(null);
         }
-      } catch (error) {
-        console.log("No active parking session");
+      } catch {
         setUserParkingInfo(null);
       } finally {
         setIsLoadingParking(false);
@@ -197,8 +196,7 @@ export default function PanicButtonPage() {
           }),
         );
         setIncidents(mappedIncidents);
-      } catch (error) {
-        console.log("Failed to load incidents");
+      } catch {
         setIncidents([]);
       } finally {
         setIsLoadingIncidents(false);
@@ -312,8 +310,8 @@ export default function PanicButtonPage() {
         slotId: userParkingInfo.slotId,
       });
       setCameraStream(cameraInfo.streamUrl);
-    } catch (error) {
-      console.log("Failed to get camera stream");
+    } catch {
+      setCameraStream((prev) => prev);
     }
     setShowCameraDialog(true);
   };
