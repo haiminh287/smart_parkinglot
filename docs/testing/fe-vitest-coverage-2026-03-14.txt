@@ -1,0 +1,11 @@
+Command: npx vitest run --coverage --coverage.reporter=text
+Date: 2026-03-14
+Result: PASS (6/6 test files, 65/65 tests)
+Coverage summary (v8):
+- Statements: 16.53%
+- Branch: 60.00%
+- Functions: 8.33%
+- Lines: 16.53%
+Notes:
+- Coverage provider dependency @vitest/coverage-v8 was required in local environment.
+- Raw terminal output also captured in Copilot session resource content for this run.

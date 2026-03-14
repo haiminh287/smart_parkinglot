@@ -1,0 +1,178 @@
+{
+  "auditReportVersion": 2,
+  "vulnerabilities": {
+    "@tootallnate/once": {
+      "name": "@tootallnate/once",
+      "severity": "low",
+      "isDirect": false,
+      "via": [
+        {
+          "source": 1113977,
+          "name": "@tootallnate/once",
+          "dependency": "@tootallnate/once",
+          "title": "@tootallnate/once vulnerable to Incorrect Control Flow Scoping",
+          "url": "https://github.com/advisories/GHSA-vpq2-c234-7xj6",
+          "severity": "low",
+          "cwe": [
+            "CWE-705"
+          ],
+          "cvss": {
+            "score": 3.3,
+            "vectorString": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:L"
+          },
+          "range": "<3.0.1"
+        }
+      ],
+      "effects": [
+        "http-proxy-agent"
+      ],
+      "range": "<3.0.1",
+      "nodes": [
+        "node_modules/@tootallnate/once"
+      ],
+      "fixAvailable": {
+        "name": "jsdom",
+        "version": "28.1.0",
+        "isSemVerMajor": true
+      }
+    },
+    "esbuild": {
+      "name": "esbuild",
+      "severity": "moderate",
+      "isDirect": false,
+      "via": [
+        {
+          "source": 1102341,
+          "name": "esbuild",
+          "dependency": "esbuild",
+          "title": "esbuild enables any website to send any requests to the development server and read the response",
+          "url": "https://github.com/advisories/GHSA-67mh-4wv8-2f99",
+          "severity": "moderate",
+          "cwe": [
+            "CWE-346"
+          ],
+          "cvss": {
+            "score": 5.3,
+            "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:H/I:N/A:N"
+          },
+          "range": "<=0.24.2"
+        }
+      ],
+      "effects": [
+        "vite"
+      ],
+      "range": "<=0.24.2",
+      "nodes": [
+        "node_modules/esbuild"
+      ],
+      "fixAvailable": {
+        "name": "vite",
+        "version": "8.0.0",
+        "isSemVerMajor": true
+      }
+    },
+    "flatted": {
+      "name": "flatted",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        {
+          "source": 1114526,
+          "name": "flatted",
+          "dependency": "flatted",
+          "title": "flatted vulnerable to unbounded recursion DoS in parse() revive phase",
+          "url": "https://github.com/advisories/GHSA-25h7-pfq9-p65f",
+          "severity": "high",
+          "cwe": [
+            "CWE-674"
+          ],
+          "cvss": {
+            "score": 7.5,
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+          },
+          "range": "<3.4.0"
+        }
+      ],
+      "effects": [],
+      "range": "<3.4.0",
+      "nodes": [
+        "node_modules/flatted"
+      ],
+      "fixAvailable": true
+    },
+    "http-proxy-agent": {
+      "name": "http-proxy-agent",
+      "severity": "low",
+      "isDirect": false,
+      "via": [
+        "@tootallnate/once"
+      ],
+      "effects": [
+        "jsdom"
+      ],
+      "range": "4.0.1 - 5.0.0",
+      "nodes": [
+        "node_modules/http-proxy-agent"
+      ],
+      "fixAvailable": {
+        "name": "jsdom",
+        "version": "28.1.0",
+        "isSemVerMajor": true
+      }
+    },
+    "jsdom": {
+      "name": "jsdom",
+      "severity": "low",
+      "isDirect": true,
+      "via": [
+        "http-proxy-agent"
+      ],
+      "effects": [],
+      "range": "16.6.0 - 22.1.0",
+      "nodes": [
+        "node_modules/jsdom"
+      ],
+      "fixAvailable": {
+        "name": "jsdom",
+        "version": "28.1.0",
+        "isSemVerMajor": true
+      }
+    },
+    "vite": {
+      "name": "vite",
+      "severity": "moderate",
+      "isDirect": true,
+      "via": [
+        "esbuild"
+      ],
+      "effects": [],
+      "range": "0.11.0 - 6.1.6",
+      "nodes": [
+        "node_modules/vite"
+      ],
+      "fixAvailable": {
+        "name": "vite",
+        "version": "8.0.0",
+        "isSemVerMajor": true
+      }
+    }
+  },
+  "metadata": {
+    "vulnerabilities": {
+      "info": 0,
+      "low": 3,
+      "moderate": 2,
+      "high": 1,
+      "critical": 0,
+      "total": 6
+    },
+    "dependencies": {
+      "prod": 297,
+      "dev": 303,
+      "optional": 87,
+      "peer": 12,
+      "peerOptional": 0,
+      "total": 601
+    }
+  }
+}

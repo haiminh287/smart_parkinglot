@@ -1,0 +1,79 @@
+{
+  "timestamp": "2026-03-14T17:07:50.257333",
+  "frontend": {
+    "critical": 0,
+    "high": 0,
+    "moderate": 2,
+    "low": 3,
+    "total": 5,
+    "exit_code": 0,
+    "error": null
+  },
+  "backend": {
+    "manifests": [
+      {
+        "requirements": "backend-microservices/requirements.txt",
+        "vuln_count": 0,
+        "exit_code": 0,
+        "error": null
+      },
+      {
+        "requirements": "backend-microservices/shared/requirements-base.txt",
+        "vuln_count": 0,
+        "exit_code": 0,
+        "error": null
+      },
+      {
+        "requirements": "backend-microservices/ai-service-fastapi/requirements.txt",
+        "vuln_count": 0,
+        "exit_code": 1,
+        "error": null
+      },
+      {
+        "requirements": "backend-microservices/auth-service/requirements.txt",
+        "vuln_count": 0,
+        "exit_code": 0,
+        "error": null
+      },
+      {
+        "requirements": "backend-microservices/booking-service/requirements.txt",
+        "vuln_count": 0,
+        "exit_code": 0,
+        "error": null
+      },
+      {
+        "requirements": "backend-microservices/chatbot-service-fastapi/requirements.txt",
+        "vuln_count": 0,
+        "exit_code": 0,
+        "error": null
+      },
+      {
+        "requirements": "backend-microservices/notification-service-fastapi/requirements.txt",
+        "vuln_count": 0,
+        "exit_code": 0,
+        "error": null
+      },
+      {
+        "requirements": "backend-microservices/parking-service/requirements.txt",
+        "vuln_count": 0,
+        "exit_code": 0,
+        "error": null
+      },
+      {
+        "requirements": "backend-microservices/payment-service-fastapi/requirements.txt",
+        "vuln_count": 0,
+        "exit_code": 0,
+        "error": null
+      },
+      {
+        "requirements": "backend-microservices/vehicle-service/requirements.txt",
+        "vuln_count": 0,
+        "exit_code": 0,
+        "error": null
+      }
+    ],
+    "total_vulns": 0,
+    "audit_errors": 0,
+    "audited_manifests": 10
+  }
+}

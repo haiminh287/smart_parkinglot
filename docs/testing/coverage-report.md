@@ -1,4 +1,66 @@
-# Coverage Report — Dependency Remediation Smoke (2026-03-13)
+# Coverage Report — Coverage Boost Re-run (2026-03-14)
+
+## Summary
+
+- Gate result: **FAIL** (đã tăng coverage nhưng chưa đạt ngưỡng policy).
+- Frontend coverage (Vitest): **PASS**, tăng ở cả `statements/branches/functions` sau khi bổ sung test API/util.
+- Backend coverage (pytest-cov): chạy targeted suite cho `booking/chatbot/payment/notification` với test cô lập, không phụ thuộc backend thật.
+
+## Coverage Commands
+
+- Frontend:
+  - `npx vitest run --coverage` (tại `spotlove-ai`).
+- Backend:
+  - `chatbot-service-fastapi`: `pytest tests/test_smoke.py tests/test_gateway_auth_and_schema_unit.py --cov=app --cov-report=term-missing`.
+  - `payment-service-fastapi`: `pytest tests/test_smoke.py tests/test_gateway_auth_and_schema_unit.py --cov=app --cov-report=term-missing`.
+  - `notification-service-fastapi`: `pytest tests/test_smoke.py tests/test_gateway_auth_and_schema_unit.py --cov=app --cov-report=term-missing`.
+  - `booking-service`: `pytest tests/test_services_unit.py --cov=bookings --cov-report=term-missing`.
+
+## FE Coverage Before/After (Vitest)
+
+| Metric     | Before |  After | Delta |
+| ---------- | -----: | -----: | ----: |
+| Statements | 16.53% | 17.26% | +0.73 |
+| Branches   | 60.00% | 67.96% | +7.96 |
+| Functions  |  8.33% | 12.50% | +4.17 |
+| Lines      | 16.53% | 17.26% | +0.73 |
+
+Frontend run status: **10 test files, 83 passed, 0 failed**.
+
+## Backend Coverage Before/After (pytest-cov)
+
+| Service                         |     Before |      After |     Delta | Run status                   |
+| ------------------------------- | ---------: | ---------: | --------: | ---------------------------- |
+| booking-service                 |     10.00% |     11.00% |     +1.00 | 6 passed (isolated unit)     |
+| chatbot-service-fastapi         |     17.00% |     17.00% |     +0.00 | 23 passed                    |
+| payment-service-fastapi         |     54.00% |     67.00% |    +13.00 | 8 passed                     |
+| notification-service-fastapi    |     61.00% |     78.00% |    +17.00 | 9 passed                     |
+| **Weighted total (4 services)** | **19.99%** | **21.36%** | **+1.37** | **all targeted suites pass** |
+
+Backend run status: **46 passed, 0 failed** (targeted scope).
+
+## Coverage Gate vs Policy
+
+Policy hiện hành (`.github/AGENTS.md`): Unit ≥ 80%, Integration ≥ 60%, Branch ≥ 70%.
+
+| Gate Metric                                                 | Actual | Threshold | Status |
+| ----------------------------------------------------------- | -----: | --------: | :----: |
+| Unit (FE Statements proxy)                                  | 17.26% |       80% |   ❌   |
+| Branch (FE Branches)                                        | 67.96% |       70% |   ❌   |
+| Integration (Backend weighted statements across 4 services) | 21.36% |       60% |   ❌   |
+
+## Testing Gate Decision
+
+- **TESTING GATE: FAIL**
+- Lý do chặn:
+  1. FE Unit coverage dưới ngưỡng.
+  2. FE Branch coverage còn thiếu 2.04 điểm phần trăm.
+  3. Backend integration coverage (weighted statements cho 4 service mục tiêu) vẫn thấp hơn ngưỡng.
+  4. Kết quả hiện tại đã ổn định theo hướng smoke/behavior + isolated unit, nhưng chưa đủ để pass gate policy toàn cục.
+
+---
+
+## Archive: Dependency Remediation Smoke (2026-03-13)
 
 ## Tổng quan nhanh
 

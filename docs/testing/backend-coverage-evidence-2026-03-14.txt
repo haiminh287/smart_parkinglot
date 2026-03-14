@@ -1,0 +1,28 @@
+===== payment-service-fastapi : pytest --cov=. --cov-branch tests/test_smoke.py -q =====
+
+ERROR: usage: __main__.py [options] [file_or_dir] [file_or_dir] [...]
+__main__.py: error: unrecognized arguments: --cov=. --cov-branch --cov-report=term
+  inifile: C:\Users\MINH\Documents\Zalo_Received_Files\Project_Main\backend-microservices\payment-service-fastapi\pytest.ini
+  rootdir: C:\Users\MINH\Documents\Zalo_Received_Files\Project_Main\backend-microservices\payment-service-fastapi
+
+EXIT_CODE=4
+
+===== notification-service-fastapi : pytest --cov=. --cov-branch tests/test_smoke.py -q =====
+
+ERROR: usage: __main__.py [options] [file_or_dir] [file_or_dir] [...]
+__main__.py: error: unrecognized arguments: --cov=. --cov-branch --cov-report=term
+  inifile: C:\Users\MINH\Documents\Zalo_Received_Files\Project_Main\backend-microservices\notification-service-fastapi\pytest.ini
+  rootdir: C:\Users\MINH\Documents\Zalo_Received_Files\Project_Main\backend-microservices\notification-service-fastapi
+
+EXIT_CODE=4
+
+===== chatbot-service-fastapi : pytest --cov=. --cov-branch tests/test_smoke.py -q =====
+
+ERROR: usage: __main__.py [options] [file_or_dir] [file_or_dir] [...]
+__main__.py: error: unrecognized arguments: --cov=. --cov-branch --cov-report=term
+  inifile: C:\Users\MINH\Documents\Zalo_Received_Files\Project_Main\backend-microservices\chatbot-service-fastapi\pytest.ini
+  rootdir: C:\Users\MINH\Documents\Zalo_Received_Files\Project_Main\backend-microservices\chatbot-service-fastapi
+
+EXIT_CODE=4
+
+DONE=1

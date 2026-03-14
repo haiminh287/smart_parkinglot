@@ -1,0 +1,15 @@
+===== FE: lint =====
+LINT_EXIT=0
+===== FE: test =====
+TEST_EXIT=0
+===== FE: build =====
+BUILD_EXIT=0
+===== DJANGO: auth-service =====
+CHECK_EXIT=0
+===== DJANGO: booking-service =====
+CHECK_EXIT=0
+===== DJANGO: parking-service =====
+CHECK_EXIT=0
+===== DJANGO: vehicle-service =====
+CHECK_EXIT=0
+DONE=1

@@ -1,0 +1,8 @@
+=== RUN   TestValidate_ProductionRequiresCookieDomain
+--- PASS: TestValidate_ProductionRequiresCookieDomain (0.00s)
+=== RUN   TestValidate_ProductionRejectsInsecureCORSOrigin
+--- PASS: TestValidate_ProductionRejectsInsecureCORSOrigin (0.00s)
+=== RUN   TestValidate_ProductionValidConfig
+--- PASS: TestValidate_ProductionValidConfig (0.00s)
+PASS
+ok  	gateway-service/internal/config	(cached)
