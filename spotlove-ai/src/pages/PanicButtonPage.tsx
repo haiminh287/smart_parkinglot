@@ -27,7 +27,7 @@ import {
   RefreshCcw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/use-auth";
 import { toast } from "sonner";
 import { incidentApi, bookingApi } from "@/services";
 import { mapBookingResponse } from "@/store/slices/bookingSlice";

@@ -19,9 +19,9 @@ import {
   Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useTheme } from "@/contexts/ThemeContext";
+import { useTheme } from "@/contexts/use-theme";
 import { vehicleApi, notificationApi, authApi } from "@/services";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { AddVehicleDialog } from "@/components/settings/AddVehicleDialog";
 import type { NotificationType } from "@/store/slices/notificationSlice";

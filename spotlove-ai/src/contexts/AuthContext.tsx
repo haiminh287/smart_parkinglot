@@ -4,7 +4,7 @@
  * for backward compatibility with existing components
  */
 
-import { createContext, useContext, ReactNode, useEffect } from "react";
+import { ReactNode, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   login as loginAction,
@@ -12,35 +12,17 @@ import {
   loginWithFacebook as loginWithFacebookAction,
   register as registerAction,
   logout as logoutAction,
-  fetchCurrentUser,
   updateProfile as updateProfileAction,
 } from "@/store/slices/authSlice";
 import type { User, UserRole } from "@/store/slices/authSlice";
+import { AuthContext } from "@/contexts/auth-context";
 
 // Re-export types for backward compatibility
 export type { User, UserRole };
 
-interface AuthContextType {
-  user: User | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  loginWithGoogle: () => Promise<void>;
-  loginWithFacebook: () => Promise<void>;
-  register: (
-    email: string,
-    password: string,
-    username: string,
-  ) => Promise<void>;
-  logout: () => void;
-  updateProfile: (data: Partial<User>) => Promise<void>;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const dispatch = useAppDispatch();
-  const { user, isAuthenticated, isLoading, error } = useAppSelector(
+  const { user, isAuthenticated, isLoading } = useAppSelector(
     (state) => state.auth,
   );
 
@@ -54,7 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         dispatch(initAuth());
       });
     }
-  }, [dispatch]); // Only run once on mount
+  }, [dispatch, isLoading, user]);
 
   const login = async (email: string, password: string) => {
     const result = await dispatch(loginAction({ email, password }));
@@ -120,10 +102,3 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
-}

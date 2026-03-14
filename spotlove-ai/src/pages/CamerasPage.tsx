@@ -32,7 +32,7 @@ import {
   Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/use-auth";
 import { adminApi, bookingApi, parkingApi } from "@/services";
 import { useToast } from "@/hooks/use-toast";
 import { mapBookingResponse } from "@/store/slices/bookingSlice";
