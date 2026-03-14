@@ -2,16 +2,16 @@ project:
   name: "smartparkinglot"
   phase: "deploying"
   started_at: "2026-03-13T00:00:00Z"
-  updated_at: "2026-03-13T20:44:24+07:00"
+  updated_at: "2026-03-14T17:50:46+07:00"
 
 task:
   id: "SECURITY-BLOCKERS-2026-03-13"
   title: "Remediation backend Python vulnerabilities + Cloudflare security controls evidence"
   pipeline: "FULL"
   state: "blocked"
-  prev_state: "security_check"
+  prev_state: "qc_gate"
   started_at: "2026-03-13T05:30:00Z"
-  updated_at: "2026-03-13T20:44:24+07:00"
+  updated_at: "2026-03-14T17:50:46+07:00"
   stack:
     language: "Python + TypeScript"
     package_manager: "pip + npm"
@@ -28,7 +28,7 @@ task:
     reviewer: 0
     security: 0
     devops: 1
-  blocked_reason: "Git push PASS nhưng Cloudflare Pages deploy không verify được do thiếu wrangler auth/local secrets và GitHub Actions endpoint trả 404; backend Tunnel chỉ verify được local auth/tooling, chưa có hostname/zone/origin runtime chính thức của dự án để publish thật."
+  blocked_reason: "Git push origin/main PASS (5 commits mới) nhưng deploy path chuẩn hóa thất bại tại scripts/deploy-local.ps1 do infra/cloudflare/cloudflared/config.yml còn <TUNNEL_ID_PLACEHOLDER>; đồng thời gate production nội bộ đang blocked vì thiếu artifact docs/qc/* (qc_files=0)."
   cost_guard:
     steps_used: 1
     agent_calls_used: 1
@@ -56,12 +56,19 @@ agents:
   security: { status: "done", current_task: "" }
   qc: { status: "done", current_task: "" }
   devops:
-    {
-      status: "waiting",
-      current_task: "Blocked: chờ secrets/zone/hostname hoặc quyền xem GitHub Actions/Cloudflare",
-    }
+    { status: "done", current_task: "" }
 
 handoff_log:
+  - from: "devops"
+    to: "orchestrator"
+    timestamp: "2026-03-14T17:50:46+07:00"
+    reason: "Đã commit/push toàn bộ thay đổi mới nhất lên origin/main (5 commits); attempt deploy theo runbook bằng scripts/deploy-local.ps1 -SkipBuild -SkipDocker FAIL do config.yml còn TUNNEL_ID placeholder; production gate chưa thể mở vì thiếu docs/qc artifacts"
+    artifacts:
+      - "docs/status.yaml"
+      - "docs/reviews/ISSUE-BATCH-P0-OAUTH-2026-03-14-review.md"
+      - "docs/security/final-security-gate-2026-03-14.json"
+      - "docs/notes/cloudflare-deploy-runbook.md"
+
   - from: "devops"
     to: "orchestrator"
     timestamp: "2026-03-13T20:44:24+07:00"
