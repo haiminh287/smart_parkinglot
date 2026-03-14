@@ -6,18 +6,34 @@ on:
     paths:
       - "spotlove-ai/**"
       - ".github/workflows/deploy-cloudflare-pages.yml"
+    tags:
+      # Push tag v* → build FE và commit dist/ vào repo (cho local tunnel serve)
+      - "v*"
   workflow_dispatch:
+    inputs:
+      build_and_commit_dist:
+        description: "Build FE và commit dist/ vào repo (dùng cho local tunnel)"
+        required: false
+        default: "false"
+        type: choice
+        options: ["true", "false"]
 
 permissions:
-  contents: read
+  contents: write   # cần để commit dist/ khi tag push
 
 env:
   NODE_VERSION: "20"
   WRANGLER_VERSION: "4.14.1"
 
 jobs:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # JOB 1: Deploy to Cloudflare Pages (trigger: push main / workflow_dispatch)
+  # ─────────────────────────────────────────────────────────────────────────────
   deploy-frontend:
     runs-on: ubuntu-latest
+    if: >
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')) ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.build_and_commit_dist == 'false')
     defaults:
       run:
         working-directory: spotlove-ai
@@ -68,3 +84,62 @@ jobs:
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
           CF_PAGES_PROJECT: ${{ secrets.CF_PAGES_PROJECT }}
         run: npx --yes wrangler@${{ env.WRANGLER_VERSION }} pages deploy dist --project-name "$CF_PAGES_PROJECT"
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # JOB 2: Build FE và commit dist/ vào repo
+  #   Trigger: push tag v* hoặc workflow_dispatch với build_and_commit_dist=true
+  #   Mục đích: local Nginx + Cloudflare Tunnel có thể serve dist/ trực tiếp
+  # ─────────────────────────────────────────────────────────────────────────────
+  build-and-commit-dist:
+    runs-on: ubuntu-latest
+    if: >
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.build_and_commit_dist == 'true')
+    defaults:
+      run:
+        working-directory: spotlove-ai
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Checkout đầy đủ để có thể push
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "${{ env.NODE_VERSION }}"
+          cache: npm
+          cache-dependency-path: spotlove-ai/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build frontend (production – ghepdoicaulong.shop)
+        run: npm run build -- --mode production
+        env:
+          VITE_API_URL: https://api.ghepdoicaulong.shop
+          VITE_WS_URL: wss://ws.ghepdoicaulong.shop
+          VITE_APP_ENV: production
+          # VITE_GATEWAY_SECRET inject từ GitHub Secret
+          VITE_GATEWAY_SECRET: ${{ secrets.VITE_GATEWAY_SECRET }}
+
+      - name: Commit dist/ vào repo
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Thêm dist/ (thường bị .gitignore – force add)
+          git add -f spotlove-ai/dist/
+
+          # Chỉ commit nếu có thay đổi
+          if git diff --cached --quiet; then
+            echo "Khong co thay doi trong dist/ – skip commit."
+          else
+            TAG="${GITHUB_REF_NAME:-manual}"
+            git commit -m "chore(dist): build FE for local tunnel – $TAG  [skip ci]"
+            git push origin HEAD:main
+            echo "dist/ da duoc commit va push len main."
+          fi
