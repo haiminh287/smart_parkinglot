@@ -26,13 +26,15 @@ import {
   type Booking as MappedBooking,
 } from "@/store/slices/bookingSlice";
 
-// Bank info for QR
+// Bank info for QR payment
+// TODO: Move these values to environment variables or a backend config endpoint
+// e.g. VITE_BANK_CODE, VITE_BANK_ACCOUNT_NUMBER, VITE_BANK_ACCOUNT_NAME
 const bankInfo = {
-  bankName: "Vietcombank",
-  bankCode: "VCB",
-  accountNumber: "1234567890123",
-  accountName: "CONG TY PARKSMART",
-  branch: "Chi nhánh Hồ Chí Minh",
+  bankName: import.meta.env.VITE_BANK_NAME ?? "Vietcombank",
+  bankCode: import.meta.env.VITE_BANK_CODE ?? "VCB",
+  accountNumber: import.meta.env.VITE_BANK_ACCOUNT_NUMBER ?? "1234567890123",
+  accountName: import.meta.env.VITE_BANK_ACCOUNT_NAME ?? "CONG TY PARKSMART",
+  branch: import.meta.env.VITE_BANK_BRANCH ?? "Chi nhánh Hồ Chí Minh",
 };
 
 // Generate VietQR content

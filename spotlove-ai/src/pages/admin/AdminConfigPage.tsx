@@ -128,25 +128,17 @@ export default function AdminConfigPage() {
 
         // Map API response to local state - handle both flat and nested formats
         const carPerHour =
-          config.pricePerHourCar ||
-          config.pricing?.car_per_hour ||
-          15000;
+          config.pricePerHourCar || config.pricing?.car_per_hour || 15000;
         const motorbikePerHour =
           config.pricePerHourMotorbike ||
           config.pricing?.motorbike_per_hour ||
           5000;
         const holdMinutes =
-          config.holdTimeMinutes ||
-          config.booking?.hold_time_minutes ||
-          15;
+          config.holdTimeMinutes || config.booking?.hold_time_minutes || 15;
         const maxNoShow =
-          config.maxNoShowCount ||
-          config.booking?.max_no_show_count ||
-          2;
+          config.maxNoShowCount || config.booking?.max_no_show_count || 2;
         const autoCancel =
-          config.autoCancelMinutes ||
-          config.booking?.auto_cancel_minutes ||
-          30;
+          config.autoCancelMinutes || config.booking?.auto_cancel_minutes || 30;
 
         setPricing({
           carHourly: carPerHour,

@@ -179,7 +179,6 @@ export default function HistoryPage() {
   });
 
   // Calculate stats
-  console.log("Monthly Expense Data:", monthlyExpenseData);
   const thisMonthSpent =
     monthlyExpenseData[monthlyExpenseData.length - 1].amount;
   // const lastMonthSpent =

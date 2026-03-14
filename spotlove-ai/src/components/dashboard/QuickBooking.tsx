@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Car, Bike, Calendar, Clock, MapPin, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useNavigate } from 'react-router-dom';
 
 type VehicleType = 'Car' | 'Motorbike';
 type PackageType = 'monthly' | 'weekly' | 'custom';
@@ -13,6 +14,7 @@ const packageOptions: { type: PackageType; label: string; discount?: string }[] 
 ];
 
 export function QuickBooking() {
+  const navigate = useNavigate();
   const [vehicleType, setVehicleType] = useState<VehicleType>('Car');
   const [packageType, setPackageType] = useState<PackageType>('monthly');
 
@@ -131,7 +133,7 @@ export function QuickBooking() {
       </div>
 
       {/* Submit Button */}
-      <Button variant="hero" className="w-full text-sm sm:text-base" size="lg">
+      <Button variant="hero" className="w-full text-sm sm:text-base" size="lg" onClick={() => navigate('/booking')}>
         Tiếp tục đặt chỗ
         <ArrowRight className="h-4 w-4" />
       </Button>

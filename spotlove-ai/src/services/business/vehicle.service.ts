@@ -35,7 +35,10 @@ interface ApiErrorPayload {
   };
 }
 
-const getApiErrorMessage = (error: unknown, fallbackMessage: string): string => {
+const getApiErrorMessage = (
+  error: unknown,
+  fallbackMessage: string,
+): string => {
   const apiError = error as ApiErrorPayload;
   return apiError.response?.data?.message || fallbackMessage;
 };
