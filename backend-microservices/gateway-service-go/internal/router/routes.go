@@ -1,4 +1,4 @@
-﻿package router
+package router
 
 import (
 	"net/http"
@@ -28,7 +28,7 @@ func Setup(
 
 	// Global middleware
 	r.Use(gin.Recovery())
-	r.Use(middleware.CORSMiddleware())
+	r.Use(middleware.CORSMiddleware(cfg))
 	r.Use(middleware.LoggingMiddleware())
 	r.Use(middleware.RateLimitMiddleware())
 
@@ -69,6 +69,16 @@ func Setup(
 			}
 			if cleanPath == "auth/logout/" || cleanPath == "auth/logout" {
 				authHandler.HandleLogout(c)
+				return
+			}
+		}
+		if method == http.MethodGet {
+			if cleanPath == "auth/google/callback/" || cleanPath == "auth/google/callback" {
+				authHandler.HandleOAuthCallback("google", c)
+				return
+			}
+			if cleanPath == "auth/facebook/callback/" || cleanPath == "auth/facebook/callback" {
+				authHandler.HandleOAuthCallback("facebook", c)
 				return
 			}
 		}

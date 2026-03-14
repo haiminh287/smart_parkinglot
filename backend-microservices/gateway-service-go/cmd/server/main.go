@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -22,7 +21,6 @@ func main() {
 	_ = godotenv.Load()
 	// Load configuration
 	cfg := config.Load()
-	fmt.Println(cfg)
 	// Initialize Redis session store
 	store, err := session.NewRedisStore(cfg.RedisURL)
 	if err != nil {

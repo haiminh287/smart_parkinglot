@@ -89,3 +89,48 @@ func TestGetServiceRoute_BookingsIsProtected(t *testing.T) {
 		t.Error("Bookings route should NOT be public")
 	}
 }
+
+func TestValidate_ProductionRequiresCookieDomain(t *testing.T) {
+	cfg := &config.Config{
+		Environment:           "production",
+		SessionCookieDomain:   "",
+		SessionCookieSecure:   true,
+		SessionCookieSameSite: "Lax",
+		CORSAllowedOrigins:    []string{"https://app.example.com"},
+		FEAuthCallbackURL:     "https://app.example.com/auth/callback",
+	}
+
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("expected validation error when SESSION_COOKIE_DOMAIN is missing")
+	}
+}
+
+func TestValidate_ProductionRejectsInsecureCORSOrigin(t *testing.T) {
+	cfg := &config.Config{
+		Environment:           "production",
+		SessionCookieDomain:   ".example.com",
+		SessionCookieSecure:   true,
+		SessionCookieSameSite: "Lax",
+		CORSAllowedOrigins:    []string{"http://localhost:5173"},
+		FEAuthCallbackURL:     "https://app.example.com/auth/callback",
+	}
+
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("expected validation error for insecure CORS origin")
+	}
+}
+
+func TestValidate_ProductionValidConfig(t *testing.T) {
+	cfg := &config.Config{
+		Environment:           "production",
+		SessionCookieDomain:   ".example.com",
+		SessionCookieSecure:   true,
+		SessionCookieSameSite: "Lax",
+		CORSAllowedOrigins:    []string{"https://app.example.com"},
+		FEAuthCallbackURL:     "https://app.example.com/auth/callback",
+	}
+
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("expected valid production config, got error: %v", err)
+	}
+}

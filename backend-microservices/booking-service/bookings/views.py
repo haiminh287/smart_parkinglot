@@ -10,12 +10,14 @@ from django.conf import settings
 from decimal import Decimal
 import requests
 import os
+import logging
 from shared.gateway_permissions import IsGatewayAuthenticated
 from .models import PackagePricing, Booking
 from .serializers import PackagePricingSerializer, BookingSerializer, CreateBookingSerializer
 
 # Realtime service URL for WebSocket broadcasting
 REALTIME_SERVICE_URL = os.environ.get('REALTIME_SERVICE_URL', 'http://realtime-service:8006')
+logger = logging.getLogger(__name__)
 
 
 def broadcast_slot_status(slot_id, zone_id, slot_status, vehicle_type):
@@ -33,7 +35,7 @@ def broadcast_slot_status(slot_id, zone_id, slot_status, vehicle_type):
         )
     except Exception as e:
         # Log but don't fail the booking if broadcast fails
-        print(f"Failed to broadcast slot status: {e}")
+        logger.warning("Failed to broadcast slot status: %s", e)
 
 
 class PackagePricingViewSet(viewsets.ModelViewSet):
@@ -134,7 +136,7 @@ class BookingViewSet(viewsets.ModelViewSet):
                     timeout=3,
                 )
             except Exception as e:
-                print(f"Failed to update slot in parking-service: {e}")
+                logger.warning("Failed to update slot in parking-service: %s", e)
         
         serializer = self.get_serializer(booking)
         return Response({
@@ -226,7 +228,7 @@ class BookingViewSet(viewsets.ModelViewSet):
                     timeout=3,
                 )
             except Exception as e:
-                print(f"Failed to release slot in parking-service: {e}")
+                logger.warning("Failed to release slot in parking-service: %s", e)
         
         serializer = self.get_serializer(booking)
         return Response({

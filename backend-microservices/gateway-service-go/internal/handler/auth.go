@@ -6,6 +6,9 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -19,6 +22,14 @@ type AuthHandler struct {
 	cfg   *config.Config
 	store *session.RedisStore
 }
+
+const (
+	oauthErrorAuthFailed   = "auth_failed"
+	oauthErrorInvalidState = "invalid_state"
+	oauthErrorProvider     = "provider_error"
+	oauthErrorInvalidReq   = "invalid_request"
+	oauthErrorGateway      = "gateway_error"
+)
 
 // NewAuthHandler creates a new AuthHandler
 func NewAuthHandler(cfg *config.Config, store *session.RedisStore) *AuthHandler {
@@ -120,18 +131,107 @@ func (h *AuthHandler) HandleLogin(c *gin.Context) {
 	}
 
 	// Set session cookie
-	c.SetCookie(
-		"session_id", // name
-		sessionID,    // value
-		7*24*3600,    // maxAge (7 days)
-		"/",          // path
-		"",           // domain
-		false,        // secure (set true in production with HTTPS)
-		true,         // httpOnly
-	)
+	h.setSessionCookie(c, sessionID)
 
 	// Return auth-service response
 	c.Data(http.StatusOK, "application/json", body)
+}
+
+// HandleOAuthCallback handles social OAuth callback and creates gateway session
+func (h *AuthHandler) HandleOAuthCallback(provider string, c *gin.Context) {
+	code := c.Query("code")
+	state := c.Query("state")
+
+	if code == "" {
+		h.redirectOAuthCallback(c, provider, oauthErrorInvalidReq)
+		return
+	}
+
+	targetURL := h.cfg.AuthServiceURL + "/auth/" + provider + "/callback/"
+	reqURL, err := url.Parse(targetURL)
+	if err != nil {
+		log.Printf("OAuth callback URL parse error: %v", err)
+		h.redirectOAuthCallback(c, provider, oauthErrorGateway)
+		return
+	}
+
+	query := reqURL.Query()
+	query.Set("code", code)
+	if state != "" {
+		query.Set("state", state)
+	}
+	reqURL.RawQuery = query.Encode()
+
+	httpReq, err := http.NewRequest(http.MethodGet, reqURL.String(), nil)
+	if err != nil {
+		log.Printf("OAuth callback request create error: %v", err)
+		h.redirectOAuthCallback(c, provider, oauthErrorGateway)
+		return
+	}
+	httpReq.Header.Set("X-Gateway-Secret", h.cfg.GatewaySecret)
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(httpReq)
+	if err != nil {
+		log.Printf("Auth service OAuth callback error: %v", err)
+		h.redirectOAuthCallback(c, provider, oauthErrorAuthFailed)
+		return
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("Read auth callback response error: %v", err)
+		h.redirectOAuthCallback(c, provider, oauthErrorAuthFailed)
+		return
+	}
+
+	var authResp map[string]interface{}
+	if err := json.Unmarshal(body, &authResp); err != nil {
+		log.Printf("Auth callback JSON parse error: %v", err)
+		h.redirectOAuthCallback(c, provider, oauthErrorAuthFailed)
+		return
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		h.redirectOAuthCallback(c, provider, extractOAuthErrorCode(authResp))
+		return
+	}
+
+	userData, ok := authResp["user"].(map[string]interface{})
+	if !ok {
+		userData = authResp
+	}
+
+	role := "user"
+	isStaff := false
+	if r, ok := userData["role"].(string); ok {
+		role = r
+		isStaff = role == "admin"
+	}
+	if s, ok := userData["is_staff"].(bool); ok {
+		isStaff = s
+		if isStaff {
+			role = "admin"
+		}
+	}
+
+	sessionData := &session.SessionData{
+		UserID:  toString(userData["id"]),
+		Email:   toString(userData["email"]),
+		Role:    role,
+		IsStaff: isStaff,
+	}
+
+	sessionID, err := h.store.CreateSession(sessionData)
+	if err != nil {
+		log.Printf("Failed to create oauth session: %v", err)
+		h.redirectOAuthCallback(c, provider, oauthErrorAuthFailed)
+		return
+	}
+
+	h.setSessionCookie(c, sessionID)
+	h.redirectOAuthCallback(c, provider, "")
 }
 
 // HandleLogout destroys the gateway session
@@ -146,7 +246,7 @@ func (h *AuthHandler) HandleLogout(c *gin.Context) {
 	}
 
 	// Clear cookie
-	c.SetCookie("session_id", "", -1, "/", "", false, true)
+	h.clearSessionCookie(c)
 
 	// Also forward to auth-service
 	targetURL := h.cfg.AuthServiceURL + "/auth/logout/"
@@ -169,28 +269,99 @@ func (h *AuthHandler) HandleGetMe(c *gin.Context) {
 	proxy.HandleProxy(c)
 }
 
-// Helper functions
-
-func jsonReader(data []byte) io.Reader {
-	return io.NopCloser(io.Reader(byteReader(data)))
+func (h *AuthHandler) setSessionCookie(c *gin.Context, sessionID string) {
+	c.SetSameSite(parseSameSite(h.cfg.SessionCookieSameSite))
+	c.SetCookie(
+		"session_id",
+		sessionID,
+		h.cfg.SessionCookieMaxAge,
+		"/",
+		h.cfg.SessionCookieDomain,
+		h.cfg.SessionCookieSecure,
+		true,
+	)
 }
 
-type byteReaderImpl struct {
-	data []byte
-	pos  int
+func (h *AuthHandler) clearSessionCookie(c *gin.Context) {
+	c.SetSameSite(parseSameSite(h.cfg.SessionCookieSameSite))
+	c.SetCookie(
+		"session_id",
+		"",
+		-1,
+		"/",
+		h.cfg.SessionCookieDomain,
+		h.cfg.SessionCookieSecure,
+		true,
+	)
 }
 
-func byteReader(data []byte) *byteReaderImpl {
-	return &byteReaderImpl{data: data}
-}
-
-func (r *byteReaderImpl) Read(p []byte) (n int, err error) {
-	if r.pos >= len(r.data) {
-		return 0, io.EOF
+func parseSameSite(value string) http.SameSite {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "strict":
+		return http.SameSiteStrictMode
+	case "none":
+		return http.SameSiteNoneMode
+	default:
+		return http.SameSiteLaxMode
 	}
-	n = copy(p, r.data[r.pos:])
-	r.pos += n
-	return n, nil
+}
+
+func extractOAuthErrorCode(body map[string]interface{}) string {
+	if raw, ok := body["error"]; ok {
+		if code, ok := raw.(string); ok {
+			return normalizeOAuthErrorCode(code)
+		}
+	}
+	if raw, ok := body["code"]; ok {
+		if code, ok := raw.(string); ok {
+			return normalizeOAuthErrorCode(code)
+		}
+	}
+	return oauthErrorAuthFailed
+}
+
+func normalizeOAuthErrorCode(code string) string {
+	switch strings.ToLower(strings.TrimSpace(code)) {
+	case oauthErrorInvalidState:
+		return oauthErrorInvalidState
+	case oauthErrorProvider:
+		return oauthErrorProvider
+	case oauthErrorInvalidReq:
+		return oauthErrorInvalidReq
+	case oauthErrorGateway:
+		return oauthErrorGateway
+	default:
+		return oauthErrorAuthFailed
+	}
+}
+
+func (h *AuthHandler) redirectOAuthCallback(c *gin.Context, provider, errCode string) {
+	redirectURL, err := url.Parse(h.cfg.FEAuthCallbackURL)
+	if err != nil {
+		fallbackURL := "/auth/callback"
+		params := url.Values{}
+		if provider != "" {
+			params.Set("provider", provider)
+		}
+		if errCode != "" {
+			params.Set("error", normalizeOAuthErrorCode(errCode))
+		}
+		if encoded := params.Encode(); encoded != "" {
+			fallbackURL += "?" + encoded
+		}
+		c.Redirect(http.StatusFound, fallbackURL)
+		return
+	}
+
+	params := redirectURL.Query()
+	if provider != "" {
+		params.Set("provider", provider)
+	}
+	if errCode != "" {
+		params.Set("error", normalizeOAuthErrorCode(errCode))
+	}
+	redirectURL.RawQuery = params.Encode()
+	c.Redirect(http.StatusFound, redirectURL.String())
 }
 
 func toString(v interface{}) string {
@@ -201,7 +372,10 @@ func toString(v interface{}) string {
 		return s
 	}
 	if f, ok := v.(float64); ok {
-		return json.Number(json.Number(string(rune(int(f))))).String()
+		return strconv.FormatInt(int64(f), 10)
+	}
+	if n, ok := v.(json.Number); ok {
+		return n.String()
 	}
 	b, _ := json.Marshal(v)
 	return string(b)

@@ -3,9 +3,11 @@ Views for authentication service using HttpOnly cookies.
 """
 
 import secrets
-from datetime import datetime, timedelta
+import logging
+from datetime import timedelta
 from django.conf import settings
 from django.contrib.auth import login, logout
+from django.core import signing
 from django.utils import timezone
 from rest_framework import status, generics
 from rest_framework.decorators import api_view, permission_classes
@@ -22,6 +24,103 @@ from .oauth.google import get_google_auth_url, exchange_google_code
 from .oauth.facebook import get_facebook_auth_url, exchange_facebook_code
 
 from shared.gateway_permissions import IsGatewayAuthenticated
+
+
+logger = logging.getLogger(__name__)
+
+OAUTH_STATE_SESSION_KEY = 'oauth_state_nonces'
+OAUTH_ERROR_INVALID_REQUEST = 'invalid_request'
+OAUTH_ERROR_INVALID_STATE = 'invalid_state'
+OAUTH_ERROR_PROVIDER = 'provider_error'
+
+
+def attach_csrf_cookie(request, response: Response) -> None:
+    from django.middleware.csrf import get_token
+
+    csrf_token = get_token(request)
+    response.set_cookie(
+        key=settings.CSRF_COOKIE_NAME,
+        value=csrf_token,
+        max_age=settings.CSRF_COOKIE_AGE,
+        path=settings.CSRF_COOKIE_PATH,
+        domain=settings.CSRF_COOKIE_DOMAIN,
+        secure=settings.CSRF_COOKIE_SECURE,
+        httponly=settings.CSRF_COOKIE_HTTPONLY,
+        samesite=settings.CSRF_COOKIE_SAMESITE,
+    )
+
+
+def sanitize_return_to(value: str | None) -> str:
+    if not value:
+        return '/'
+    if not value.startswith('/') or value.startswith('//'):
+        return '/'
+    if value.startswith('/auth/callback'):
+        return '/'
+    return value
+
+
+def _store_oauth_state_nonce(request, provider: str, nonce: str) -> None:
+    state_store = request.session.get(OAUTH_STATE_SESSION_KEY)
+    if not isinstance(state_store, dict):
+        state_store = {}
+    state_store[f'{provider}:{nonce}'] = True
+    request.session[OAUTH_STATE_SESSION_KEY] = state_store
+    request.session.modified = True
+
+
+def _consume_oauth_state_nonce(request, provider: str, nonce: str) -> bool:
+    state_store = request.session.get(OAUTH_STATE_SESSION_KEY)
+    if not isinstance(state_store, dict):
+        return False
+    key = f'{provider}:{nonce}'
+    if key not in state_store:
+        return False
+    del state_store[key]
+    request.session[OAUTH_STATE_SESSION_KEY] = state_store
+    request.session.modified = True
+    return True
+
+
+def create_oauth_state(request, provider: str, return_to: str) -> str:
+    nonce = secrets.token_urlsafe(16)
+    payload = {
+        'provider': provider,
+        'return_to': sanitize_return_to(return_to),
+        'nonce': nonce,
+    }
+    _store_oauth_state_nonce(request, provider, nonce)
+    return signing.dumps(
+        payload,
+        key=settings.OAUTH_STATE_SECRET,
+        salt='oauth.state',
+    )
+
+
+def validate_oauth_state(request, raw_state: str, provider: str):
+    try:
+        payload = signing.loads(
+            raw_state,
+            key=settings.OAUTH_STATE_SECRET,
+            salt='oauth.state',
+            max_age=settings.OAUTH_STATE_TTL_SECONDS,
+        )
+    except signing.SignatureExpired:
+        return None, OAUTH_ERROR_INVALID_STATE
+    except signing.BadSignature:
+        return None, OAUTH_ERROR_INVALID_STATE
+
+    if payload.get('provider') != provider:
+        return None, OAUTH_ERROR_INVALID_STATE
+
+    nonce = payload.get('nonce')
+    if not isinstance(nonce, str) or not nonce:
+        return None, OAUTH_ERROR_INVALID_STATE
+    if not _consume_oauth_state_nonce(request, provider, nonce):
+        return None, OAUTH_ERROR_INVALID_STATE
+
+    payload['return_to'] = sanitize_return_to(payload.get('return_to'))
+    return payload, None
 
 
 class RegisterView(generics.CreateAPIView):
@@ -63,17 +162,9 @@ class LoginView(APIView):
             'user': UserSerializer(user).data,
             'message': 'Login successful'
         }, status=status.HTTP_200_OK)
-        
+
         # Ensure CSRF token is set in cookie (for subsequent requests)
-        from django.middleware.csrf import get_token
-        csrf_token = get_token(request)
-        response.set_cookie(
-            key='csrftoken',
-            value=csrf_token,
-            httponly=False,  # Must be False so frontend can read it
-            secure=False,  # False for development
-            samesite='Lax'
-        )
+        attach_csrf_cookie(request, response)
         
         return response
 
@@ -210,8 +301,10 @@ class ResetPasswordView(APIView):
 @permission_classes([AllowAny])
 def google_auth_url_view(request):
     """Get Google OAuth2 authorization URL."""
-    
-    auth_url = get_google_auth_url()
+
+    return_to = sanitize_return_to(request.GET.get('return_to'))
+    state = create_oauth_state(request, 'google', return_to)
+    auth_url = get_google_auth_url(state)
     
     return Response({
         'authorization_url': auth_url
@@ -222,40 +315,49 @@ def google_auth_url_view(request):
 @permission_classes([AllowAny])
 def google_callback_view(request):
     """Handle Google OAuth2 callback."""
-    
+
     code = request.GET.get('code')
+    raw_state = request.GET.get('state')
     
     if not code:
         return Response({
-            'error': 'No authorization code provided'
+            'error': OAUTH_ERROR_INVALID_REQUEST
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    if not raw_state:
+        return Response({
+            'error': OAUTH_ERROR_INVALID_STATE
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    state_payload, state_error = validate_oauth_state(request, raw_state, 'google')
+    if state_error:
+        return Response({
+            'error': state_error
         }, status=status.HTTP_400_BAD_REQUEST)
     
     try:
         user = exchange_google_code(code)
-        
+
         # Django session login
         login(request, user)
-        
+
+        user.last_login = timezone.now()
+        user.save(update_fields=['last_login'])
+
         response = Response({
             'user': UserSerializer(user).data,
-            'message': 'Google login successful'
+            'message': 'Google login successful',
+            'provider': 'google',
         })
-        
-        # Set HttpOnly cookie
-        response.set_cookie(
-            key='sessionid',
-            value=request.session.session_key,
-            httponly=True,
-            secure=not settings.DEBUG,
-            samesite='Lax',
-            max_age=settings.SESSION_COOKIE_AGE
-        )
-        
+
+        attach_csrf_cookie(request, response)
+
         return response
     
-    except Exception as e:
+    except Exception:
+        logger.exception('google_callback_failed')
         return Response({
-            'error': str(e)
+            'error': OAUTH_ERROR_PROVIDER
         }, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -263,8 +365,10 @@ def google_callback_view(request):
 @permission_classes([AllowAny])
 def facebook_auth_url_view(request):
     """Get Facebook OAuth2 authorization URL."""
-    
-    auth_url = get_facebook_auth_url()
+
+    return_to = sanitize_return_to(request.GET.get('return_to'))
+    state = create_oauth_state(request, 'facebook', return_to)
+    auth_url = get_facebook_auth_url(state)
     
     return Response({
         'authorization_url': auth_url
@@ -275,38 +379,47 @@ def facebook_auth_url_view(request):
 @permission_classes([AllowAny])
 def facebook_callback_view(request):
     """Handle Facebook OAuth2 callback."""
-    
+
     code = request.GET.get('code')
+    raw_state = request.GET.get('state')
     
     if not code:
         return Response({
-            'error': 'No authorization code provided'
+            'error': OAUTH_ERROR_INVALID_REQUEST
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    if not raw_state:
+        return Response({
+            'error': OAUTH_ERROR_INVALID_STATE
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    state_payload, state_error = validate_oauth_state(request, raw_state, 'facebook')
+    if state_error:
+        return Response({
+            'error': state_error
         }, status=status.HTTP_400_BAD_REQUEST)
     
     try:
         user = exchange_facebook_code(code)
-        
+
         # Django session login
         login(request, user)
-        
+
+        user.last_login = timezone.now()
+        user.save(update_fields=['last_login'])
+
         response = Response({
             'user': UserSerializer(user).data,
-            'message': 'Facebook login successful'
+            'message': 'Facebook login successful',
+            'provider': 'facebook',
         })
-        
-        # Set HttpOnly cookie
-        response.set_cookie(
-            key='sessionid',
-            value=request.session.session_key,
-            httponly=True,
-            secure=not settings.DEBUG,
-            samesite='Lax',
-            max_age=settings.SESSION_COOKIE_AGE
-        )
-        
+
+        attach_csrf_cookie(request, response)
+
         return response
     
-    except Exception as e:
+    except Exception:
+        logger.exception('facebook_callback_failed')
         return Response({
-            'error': str(e)
+            'error': OAUTH_ERROR_PROVIDER
         }, status=status.HTTP_400_BAD_REQUEST)

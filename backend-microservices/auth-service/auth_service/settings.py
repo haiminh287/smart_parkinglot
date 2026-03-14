@@ -5,12 +5,14 @@ Django settings for auth_service project.
 import os
 from pathlib import Path
 from datetime import timedelta
+from django.core.exceptions import ImproperlyConfigured
 from decouple import config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
+ENV = config('ENV', default='development')
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost').split(',')
 
 # Application definition
@@ -128,8 +130,38 @@ REDIS_URL = config('REDIS_URL')
 # OAuth2 Settings
 GOOGLE_CLIENT_ID = config('GOOGLE_CLIENT_ID', default='')
 GOOGLE_CLIENT_SECRET = config('GOOGLE_CLIENT_SECRET', default='')
+GOOGLE_REDIRECT_URI = config('GOOGLE_REDIRECT_URI', default='http://localhost:8001/api/auth/google/callback/')
 FACEBOOK_APP_ID = config('FACEBOOK_APP_ID', default='')
 FACEBOOK_APP_SECRET = config('FACEBOOK_APP_SECRET', default='')
+FACEBOOK_REDIRECT_URI = config('FACEBOOK_REDIRECT_URI', default='http://localhost:8001/api/auth/facebook/callback/')
+OAUTH_STATE_SECRET = config('OAUTH_STATE_SECRET', default=SECRET_KEY)
+OAUTH_STATE_TTL_SECONDS = config('OAUTH_STATE_TTL_SECONDS', default=300, cast=int)
+
+raw_cors_allowed_origins = config('CORS_ALLOWED_ORIGINS', default='')
+CORS_ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in raw_cors_allowed_origins.split(',')
+    if origin.strip()
+]
+SESSION_COOKIE_DOMAIN = config('SESSION_COOKIE_DOMAIN', default='').strip()
+SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=not DEBUG, cast=bool)
+CSRF_COOKIE_SECURE = SESSION_COOKIE_SECURE
+
+if ENV.lower() == 'production':
+    if not SESSION_COOKIE_DOMAIN:
+        raise ImproperlyConfigured('SESSION_COOKIE_DOMAIN is required when ENV=production')
+    if not SESSION_COOKIE_SECURE:
+        raise ImproperlyConfigured('SESSION_COOKIE_SECURE must be true when ENV=production')
+    if not CSRF_COOKIE_SECURE:
+        raise ImproperlyConfigured('CSRF_COOKIE_SECURE must be true when ENV=production')
+    if not CORS_ALLOWED_ORIGINS:
+        raise ImproperlyConfigured('CORS_ALLOWED_ORIGINS is required when ENV=production')
+    for origin in CORS_ALLOWED_ORIGINS:
+        lower_origin = origin.lower()
+        if not lower_origin.startswith('https://'):
+            raise ImproperlyConfigured('CORS_ALLOWED_ORIGINS must use https:// when ENV=production')
+        if 'localhost' in lower_origin or '127.0.0.1' in lower_origin:
+            raise ImproperlyConfigured('CORS_ALLOWED_ORIGINS cannot include localhost when ENV=production')
 
 # Gateway authentication - All requests must come through gateway
 GATEWAY_SECRET = config('GATEWAY_SECRET', default='gateway-internal-secret-key')

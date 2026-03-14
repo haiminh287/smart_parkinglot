@@ -7,6 +7,9 @@ from datetime import timedelta
 from .models import Booking
 import requests
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 @shared_task
@@ -15,7 +18,7 @@ def auto_cancel_unpaid_bookings():
     Auto-cancel bookings with payment_method='online' that are still 'pending' 
     after 15 minutes of creation.
     """
-    print("[CELERY] Running auto_cancel_unpaid_bookings task...")
+    logger.info("Running auto_cancel_unpaid_bookings task")
     
     # Find bookings that are:
     # 1. payment_method = 'online'
@@ -52,7 +55,7 @@ def auto_cancel_unpaid_bookings():
                     timeout=2
                 )
             except Exception as e:
-                print(f"Failed to broadcast slot release: {e}")
+                logger.warning("Failed to broadcast slot release: %s", e)
         
         # TODO: Send notification to user
         try:
@@ -70,9 +73,9 @@ def auto_cancel_unpaid_bookings():
                 timeout=2
             )
         except Exception as e:
-            print(f"Failed to send notification: {e}")
+            logger.warning("Failed to send notification: %s", e)
     
-    print(f"[CELERY] Auto-cancelled {cancelled_count} unpaid bookings")
+    logger.info("Auto-cancelled %s unpaid bookings", cancelled_count)
     return cancelled_count
 
 
@@ -82,7 +85,7 @@ def check_no_show_bookings():
     Check for hourly bookings with on_exit payment that haven't checked in 
     30 minutes after scheduled start time. Send warning notification.
     """
-    print("[CELERY] Running check_no_show_bookings task...")
+    logger.info("Running check_no_show_bookings task")
     
     # Find hourly bookings that:
     # 1. package_type = 'hourly'
@@ -116,7 +119,7 @@ def check_no_show_bookings():
                 timeout=2
             )
         except Exception as e:
-            print(f"Failed to increment no-show count: {e}")
+            logger.warning("Failed to increment no-show count: %s", e)
         
         # Send warning notification with extension option
         try:
@@ -135,7 +138,7 @@ def check_no_show_bookings():
                 timeout=2
             )
         except Exception as e:
-            print(f"Failed to send no-show notification: {e}")
+            logger.warning("Failed to send no-show notification: %s", e)
     
-    print(f"[CELERY] Sent no-show warnings for {warned_count} bookings")
+    logger.info("Sent no-show warnings for %s bookings", warned_count)
     return warned_count

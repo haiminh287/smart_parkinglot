@@ -95,7 +95,7 @@ func TestAuthMiddleware_ProtectedEndpoint_InvalidCookie(t *testing.T) {
 
 func TestCORSMiddleware_AllowsOrigin(t *testing.T) {
 	r := gin.New()
-	r.Use(middleware.CORSMiddleware())
+	r.Use(middleware.CORSMiddleware(config.Load()))
 	r.GET("/test", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"ok": true})
 	})
@@ -113,7 +113,7 @@ func TestCORSMiddleware_AllowsOrigin(t *testing.T) {
 
 func TestCORSMiddleware_SetHeaders(t *testing.T) {
 	r := gin.New()
-	r.Use(middleware.CORSMiddleware())
+	r.Use(middleware.CORSMiddleware(config.Load()))
 	r.GET("/test", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"ok": true})
 	})

@@ -4,6 +4,10 @@ Custom authentication backend to support UUID primary keys.
 
 from django.contrib.auth.backends import ModelBackend
 from django.contrib.auth import get_user_model
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 class UUIDModelBackend(ModelBackend):
@@ -25,7 +29,7 @@ class UUIDModelBackend(ModelBackend):
         Returns:
             User object or None
         """
-        print(f"[BACKEND] get_user called with user_id: {user_id}, type: {type(user_id)}")
+        logger.debug("UUIDModelBackend.get_user called with user_id=%s type=%s", user_id, type(user_id))
         UserModel = get_user_model()
         try:
             # Convert string to UUID if needed
@@ -33,15 +37,15 @@ class UUIDModelBackend(ModelBackend):
                 import uuid
                 try:
                     user_id = uuid.UUID(user_id)
-                    print(f"[BACKEND] Converted to UUID: {user_id}")
+                    logger.debug("Converted user_id to UUID: %s", user_id)
                 except (ValueError, AttributeError):
-                    print(f"[BACKEND] Invalid UUID format: {user_id}")
+                    logger.warning("Invalid UUID format: %s", user_id)
                     return None
             
             # For unmanaged proxy models, create an in-memory User object
             # instead of querying the database
             if UserModel._meta.managed is False:
-                print(f"[BACKEND] Creating in-memory User for UUID: {user_id}")
+                logger.debug("Creating in-memory User for UUID: %s", user_id)
                 user = UserModel(
                     id=user_id,
                     email=f"user-{user_id}@system",
@@ -51,15 +55,15 @@ class UUIDModelBackend(ModelBackend):
                 )
                 # Mark as authenticated
                 user.backend = f'{self.__module__}.{self.__class__.__name__}'
-                print(f"[BACKEND] User created: {user}, is_authenticated: {user.is_authenticated}")
+                logger.debug("In-memory user created for UUID: %s", user_id)
                 return user
             
             # For managed models, query normally
             return UserModel.objects.get(pk=user_id)
         except UserModel.DoesNotExist:
-            print(f"[BACKEND] User not found: {user_id}")
+            logger.warning("User not found for UUID: %s", user_id)
             return None
         except Exception as e:
-            print(f"[BACKEND] Error getting user: {e}")
+            logger.error("Error getting user in UUIDModelBackend: %s", e)
             return None
 
