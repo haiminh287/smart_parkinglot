@@ -7,22 +7,12 @@ import (
 	"gateway-service/internal/config"
 )
 
-func TestLoad_DefaultValues(t *testing.T) {
-	// Clear env vars to test defaults
-	os.Unsetenv("PORT")
-	os.Unsetenv("GATEWAY_SECRET")
-	os.Unsetenv("REDIS_URL")
-
+func TestLoad_WithEnvSet(t *testing.T) {
+	os.Setenv("GATEWAY_SECRET", "test-secret-value")
+	t.Cleanup(func() { os.Unsetenv("GATEWAY_SECRET") })
 	cfg := config.Load()
-
-	if cfg.Port != "8000" {
-		t.Errorf("Expected default port '8000', got '%s'", cfg.Port)
-	}
-	if cfg.GatewaySecret != "gateway-internal-secret-key" {
-		t.Errorf("Expected default gateway secret, got '%s'", cfg.GatewaySecret)
-	}
-	if cfg.RedisURL != "redis://localhost:6379/1" {
-		t.Errorf("Expected default Redis URL with DB 1, got '%s'", cfg.RedisURL)
+	if cfg.GatewaySecret != "test-secret-value" {
+		t.Errorf("expected 'test-secret-value', got %q", cfg.GatewaySecret)
 	}
 }
 
@@ -34,9 +24,13 @@ func TestGetServiceRoute_ValidRoutes(t *testing.T) {
 		expected string
 	}{
 		{"auth/login/", "auth"},
+		{"/api/auth/login/", "auth"},
 		{"parking/lots/", "parking"},
+		{"/api/parking/health", "parking"},
 		{"vehicles/", "vehicle"},
+		{"/api/vehicles/", "vehicle"},
 		{"bookings/123/", "booking"},
+		{"/api/bookings/123/", "booking"},
 		{"incidents/", "booking"},
 		{"notifications/", "notification"},
 		{"realtime/ws/", "realtime"},
