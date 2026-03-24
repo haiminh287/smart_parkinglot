@@ -33,7 +33,7 @@ services:
           "--no-verbose",
           "--tries=1",
           "--spider",
-          "http://localhost/nginx-health",
+          "http://127.0.0.1/nginx-health",
         ]
       interval: 30s
       timeout: 5s
@@ -46,8 +46,8 @@ services:
     environment:
       - ENV=production
       - DEBUG=False
-      - ALLOWED_HOSTS=api.ghepdoicaulong.shop,localhost
-      - CORS_ALLOWED_ORIGINS=https://app.ghepdoicaulong.shop
+      - ALLOWED_HOSTS=api.ghepdoicaulong.shop,localhost,auth-service,gateway-service-go
+      - CORS_ALLOWED_ORIGINS=https://app.ghepdoicaulong.shop,https://parksmart.ghepdoicaulong.shop
       - SESSION_COOKIE_DOMAIN=.ghepdoicaulong.shop
       - SESSION_COOKIE_SECURE=true
       # OAuth redirect URIs phải khớp với Google/Facebook Console
@@ -58,50 +58,43 @@ services:
   parking-service:
     environment:
       - DEBUG=False
-      - ALLOWED_HOSTS=api.ghepdoicaulong.shop,localhost
-      - CORS_ALLOWED_ORIGINS=https://app.ghepdoicaulong.shop
+      - ALLOWED_HOSTS=api.ghepdoicaulong.shop,localhost,parking-service,gateway-service-go
+      - CORS_ALLOWED_ORIGINS=https://app.ghepdoicaulong.shop,https://parksmart.ghepdoicaulong.shop
 
   # ─── Booking service ─────────────────────────────────────────────────────────
   booking-service:
     environment:
       - DEBUG=False
-      - ALLOWED_HOSTS=api.ghepdoicaulong.shop,localhost
-      - CORS_ALLOWED_ORIGINS=https://app.ghepdoicaulong.shop
+      - ALLOWED_HOSTS=api.ghepdoicaulong.shop,localhost,booking-service,gateway-service-go
+      - CORS_ALLOWED_ORIGINS=https://app.ghepdoicaulong.shop,https://parksmart.ghepdoicaulong.shop
 
   # ─── Vehicle service ─────────────────────────────────────────────────────────
   vehicle-service:
     environment:
       - DEBUG=False
-      - ALLOWED_HOSTS=api.ghepdoicaulong.shop,localhost
-      - CORS_ALLOWED_ORIGINS=https://app.ghepdoicaulong.shop
+      - ALLOWED_HOSTS=api.ghepdoicaulong.shop,localhost,vehicle-service,gateway-service-go
+      - CORS_ALLOWED_ORIGINS=https://app.ghepdoicaulong.shop,https://parksmart.ghepdoicaulong.shop
 
   # ─── Payment service ─────────────────────────────────────────────────────────
   payment-service-fastapi:
     environment:
       - DEBUG=False
       - ALLOWED_HOSTS=api.ghepdoicaulong.shop,localhost
-      - CORS_ALLOWED_ORIGINS=https://app.ghepdoicaulong.shop
+      - CORS_ALLOWED_ORIGINS=https://app.ghepdoicaulong.shop,https://parksmart.ghepdoicaulong.shop
 
   # ─── Notification service ────────────────────────────────────────────────────
   notification-service-fastapi:
     environment:
       - DEBUG=False
       - ALLOWED_HOSTS=api.ghepdoicaulong.shop,localhost
-      - CORS_ALLOWED_ORIGINS=https://app.ghepdoicaulong.shop
+      - CORS_ALLOWED_ORIGINS=https://app.ghepdoicaulong.shop,https://parksmart.ghepdoicaulong.shop
 
   # ─── Chatbot service ─────────────────────────────────────────────────────────
   chatbot-service-fastapi:
     environment:
       - DEBUG=False
       - ALLOWED_HOSTS=api.ghepdoicaulong.shop,localhost
-      - CORS_ALLOWED_ORIGINS=https://app.ghepdoicaulong.shop
-
-  # ─── AI service ──────────────────────────────────────────────────────────────
-  ai-service-fastapi:
-    environment:
-      - DEBUG=False
-      - ALLOWED_HOSTS=api.ghepdoicaulong.shop,localhost
-      - CORS_ALLOWED_ORIGINS=https://app.ghepdoicaulong.shop
+      - CORS_ALLOWED_ORIGINS=https://app.ghepdoicaulong.shop,https://parksmart.ghepdoicaulong.shop
 
   # ─── API Gateway (full production config) ────────────────────────────────────
   # gateway-service-go có validation fail-fast cho ENV=production
@@ -110,8 +103,8 @@ services:
       - ENV=production
       - DEBUG=False
       - ALLOWED_HOSTS=api.ghepdoicaulong.shop,localhost
-      # FE origin: app subdomain
-      - CORS_ALLOWED_ORIGINS=https://app.ghepdoicaulong.shop
+      # FE origins: app subdomain + parksmart subdomain
+      - CORS_ALLOWED_ORIGINS=https://app.ghepdoicaulong.shop,https://parksmart.ghepdoicaulong.shop
       # Cookie domain dùng dot-prefix để cover tất cả subdomains
       - SESSION_COOKIE_DOMAIN=.ghepdoicaulong.shop
       - SESSION_COOKIE_SECURE=true

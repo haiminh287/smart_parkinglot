@@ -4,7 +4,7 @@
  * for backward compatibility with existing components
  */
 
-import { ReactNode, useEffect } from "react";
+import { ReactNode, useEffect, useRef } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   login as loginAction,
@@ -25,18 +25,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { user, isAuthenticated, isLoading } = useAppSelector(
     (state) => state.auth,
   );
+  const initAttempted = useRef(false);
 
-  // Initialize auth - verify session on mount
+  // Initialize auth - verify session on mount (run ONCE only)
   useEffect(() => {
-    // Only run initAuth if we don't already have user data
-    // This prevents re-verification immediately after login
-    if (!user && !isLoading) {
-      // Import initAuth dynamically to avoid circular dependency
-      import("@/store/slices/authSlice").then(({ initAuth }) => {
-        dispatch(initAuth());
-      });
-    }
-  }, [dispatch, isLoading, user]);
+    if (initAttempted.current) return;
+    initAttempted.current = true;
+    import("@/store/slices/authSlice").then(({ initAuth }) => {
+      dispatch(initAuth());
+    });
+  }, [dispatch]);
 
   const login = async (email: string, password: string) => {
     const result = await dispatch(loginAction({ email, password }));
