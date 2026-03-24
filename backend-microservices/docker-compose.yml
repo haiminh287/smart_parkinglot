@@ -4,10 +4,10 @@ services:
     container_name: parksmartdb_mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-parksmartpass}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set in .env}
       MYSQL_DATABASE: parksmartdb
-      MYSQL_USER: ${DB_USER:-parksmartuser}
-      MYSQL_PASSWORD: ${DB_PASSWORD:-parksmartpass}
+      MYSQL_USER: ${DB_USER:?DB_USER must be set in .env}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set in .env}
     ports:
       - "3307:3306"
     volumes:
@@ -25,7 +25,7 @@ services:
           "127.0.0.1",
           "-u",
           "root",
-          "-p${DB_PASSWORD:-parksmartpass}",
+          "-p${DB_PASSWORD:?DB_PASSWORD must be set in .env}",
         ]
       interval: 10s
       timeout: 5s
@@ -53,8 +53,8 @@ services:
     container_name: parksmartdb_rabbitmq
     restart: unless-stopped
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-admin}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-admin}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:?RABBITMQ_USER must be set in .env}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:?RABBITMQ_PASS must be set in .env}
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -78,13 +78,13 @@ services:
       - ALLOWED_HOSTS=*
       - DB_HOST=mysql
       - DB_PORT=3306
-      - DB_USER=${DB_USER:-parksmartuser}
-      - DB_PASSWORD=${DB_PASSWORD:-parksmartpass}
+      - DB_USER=${DB_USER:?DB_USER must be set in .env}
+      - DB_PASSWORD=${DB_PASSWORD:?DB_PASSWORD must be set in .env}
       - REDIS_URL=redis://redis:6379/1
-      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-admin}:${RABBITMQ_PASS:-admin}@rabbitmq:5672/
-      - RABBITMQ_USER=${RABBITMQ_USER:-admin}
-      - RABBITMQ_PASSWORD=${RABBITMQ_PASS:-admin}
-      - GATEWAY_SECRET=${GATEWAY_SECRET:-gateway-internal-secret-key}
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
+      - RABBITMQ_USER=${RABBITMQ_USER}
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASS}
+      - GATEWAY_SECRET=${GATEWAY_SECRET:?GATEWAY_SECRET must be set in .env}
       - PYTHONPATH=/app:/app/shared
     ports:
       - "8001:8000"
@@ -108,13 +108,13 @@ services:
       - ALLOWED_HOSTS=*
       - DB_HOST=mysql
       - DB_PORT=3306
-      - DB_USER=${DB_USER:-parksmartuser}
-      - DB_PASSWORD=${DB_PASSWORD:-parksmartpass}
+      - DB_USER=${DB_USER:?DB_USER must be set in .env}
+      - DB_PASSWORD=${DB_PASSWORD:?DB_PASSWORD must be set in .env}
       - REDIS_URL=redis://redis:6379/3
-      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-admin}:${RABBITMQ_PASS:-admin}@rabbitmq:5672/
-      - RABBITMQ_USER=${RABBITMQ_USER:-admin}
-      - RABBITMQ_PASSWORD=${RABBITMQ_PASS:-admin}
-      - GATEWAY_SECRET=${GATEWAY_SECRET:-gateway-internal-secret-key}
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
+      - RABBITMQ_USER=${RABBITMQ_USER}
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASS}
+      - GATEWAY_SECRET=${GATEWAY_SECRET:?GATEWAY_SECRET must be set in .env}
       - PYTHONPATH=/app:/app/shared
     ports:
       - "8003:8000"
@@ -136,10 +136,10 @@ services:
       - ALLOWED_HOSTS=*
       - DB_HOST=mysql
       - DB_PORT=3306
-      - DB_USER=${DB_USER:-parksmartuser}
-      - DB_PASSWORD=${DB_PASSWORD:-parksmartpass}
+      - DB_USER=${DB_USER:?DB_USER must be set in .env}
+      - DB_PASSWORD=${DB_PASSWORD:?DB_PASSWORD must be set in .env}
       - REDIS_URL=redis://redis:6379/4
-      - GATEWAY_SECRET=${GATEWAY_SECRET:-gateway-internal-secret-key}
+      - GATEWAY_SECRET=${GATEWAY_SECRET:?GATEWAY_SECRET must be set in .env}
       - PYTHONPATH=/app:/app/shared
     expose:
       - "8000"
@@ -161,20 +161,20 @@ services:
       - ALLOWED_HOSTS=*
       - DB_HOST=mysql
       - DB_PORT=3306
-      - DB_USER=${DB_USER:-parksmartuser}
-      - DB_PASSWORD=${DB_PASSWORD:-parksmartpass}
+      - DB_USER=${DB_USER:?DB_USER must be set in .env}
+      - DB_PASSWORD=${DB_PASSWORD:?DB_PASSWORD must be set in .env}
       - REDIS_URL=redis://redis:6379/2
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-admin}:${RABBITMQ_PASS:-admin}@rabbitmq:5672/
-      - RABBITMQ_USER=${RABBITMQ_USER:-admin}
-      - RABBITMQ_PASSWORD=${RABBITMQ_PASS:-admin}
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
+      - RABBITMQ_USER=${RABBITMQ_USER}
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASS}
       - REALTIME_SERVICE_URL=http://realtime-service-go:8006
       - VEHICLE_SERVICE_URL=http://vehicle-service:8000
       - PARKING_SERVICE_URL=http://parking-service:8000
       - AUTH_SERVICE_URL=http://auth-service:8000
       - NOTIFICATION_SERVICE_URL=http://notification-service-fastapi:8005
-      - GATEWAY_SECRET=${GATEWAY_SECRET:-gateway-internal-secret-key}
+      - GATEWAY_SECRET=${GATEWAY_SECRET:?GATEWAY_SECRET must be set in .env}
       - PYTHONPATH=/app:/app/shared
     ports:
       - "8002:8000"
@@ -195,13 +195,15 @@ services:
     container_name: booking-celery-worker
     restart: unless-stopped
     command: celery -A booking_service worker --loglevel=info
+    healthcheck:
+      disable: true
     environment:
       - SECRET_KEY=${SECRET_KEY}
       - DEBUG=${DEBUG:-False}
       - DB_HOST=mysql
       - DB_PORT=3306
-      - DB_USER=${DB_USER:-parksmartuser}
-      - DB_PASSWORD=${DB_PASSWORD:-parksmartpass}
+      - DB_USER=${DB_USER:?DB_USER must be set in .env}
+      - DB_PASSWORD=${DB_PASSWORD:?DB_PASSWORD must be set in .env}
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - REALTIME_SERVICE_URL=http://realtime-service-go:8006
@@ -209,7 +211,7 @@ services:
       - PARKING_SERVICE_URL=http://parking-service:8000
       - AUTH_SERVICE_URL=http://auth-service:8000
       - NOTIFICATION_SERVICE_URL=http://notification-service-fastapi:8005
-      - GATEWAY_SECRET=${GATEWAY_SECRET:-gateway-internal-secret-key}
+      - GATEWAY_SECRET=${GATEWAY_SECRET:?GATEWAY_SECRET must be set in .env}
       - PYTHONPATH=/app:/app/shared
     volumes:
       - ./shared:/app/shared
@@ -226,13 +228,15 @@ services:
     container_name: booking-celery-beat
     restart: unless-stopped
     command: celery -A booking_service beat --loglevel=info
+    healthcheck:
+      disable: true
     environment:
       - SECRET_KEY=${SECRET_KEY}
       - DEBUG=${DEBUG:-False}
       - DB_HOST=mysql
       - DB_PORT=3306
-      - DB_USER=${DB_USER:-parksmartuser}
-      - DB_PASSWORD=${DB_PASSWORD:-parksmartpass}
+      - DB_USER=${DB_USER:?DB_USER must be set in .env}
+      - DB_PASSWORD=${DB_PASSWORD:?DB_PASSWORD must be set in .env}
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - PYTHONPATH=/app:/app/shared
@@ -253,9 +257,9 @@ services:
       - DB_HOST=mysql
       - DB_PORT=3306
       - DB_NAME=parksmartdb
-      - DB_USER=${DB_USER:-parksmartuser}
-      - DB_PASSWORD=${DB_PASSWORD:-parksmartpass}
-      - GATEWAY_SECRET=${GATEWAY_SECRET:-gateway-internal-secret-key}
+      - DB_USER=${DB_USER:?DB_USER must be set in .env}
+      - DB_PASSWORD=${DB_PASSWORD:?DB_PASSWORD must be set in .env}
+      - GATEWAY_SECRET=${GATEWAY_SECRET:?GATEWAY_SECRET must be set in .env}
       - REALTIME_SERVICE_URL=http://realtime-service-go:8006
       - DEBUG=${DEBUG:-False}
     expose:
@@ -276,7 +280,7 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_DB=5
-      - GATEWAY_SECRET=${GATEWAY_SECRET:-gateway-internal-secret-key}
+      - GATEWAY_SECRET=${GATEWAY_SECRET:?GATEWAY_SECRET must be set in .env}
     ports:
       - "8006:8006" # WebSocket — browsers need direct WS connection
     depends_on:
@@ -294,9 +298,9 @@ services:
       - DB_HOST=mysql
       - DB_PORT=3306
       - DB_NAME=parksmartdb
-      - DB_USER=${DB_USER:-parksmartuser}
-      - DB_PASSWORD=${DB_PASSWORD:-parksmartpass}
-      - GATEWAY_SECRET=${GATEWAY_SECRET:-gateway-internal-secret-key}
+      - DB_USER=${DB_USER:?DB_USER must be set in .env}
+      - DB_PASSWORD=${DB_PASSWORD:?DB_PASSWORD must be set in .env}
+      - GATEWAY_SECRET=${GATEWAY_SECRET:?GATEWAY_SECRET must be set in .env}
       - BOOKING_SERVICE_URL=http://booking-service:8000
       - NOTIFICATION_SERVICE_URL=http://notification-service-fastapi:8005
       - REALTIME_SERVICE_URL=http://realtime-service-go:8006
@@ -309,34 +313,48 @@ services:
     networks:
       - parksmart-network
 
-  # # ─── AI Service (FastAPI) ───
-  # ai-service-fastapi:
-  #   build: ./ai-service-fastapi
-  #   container_name: ai-service-fastapi
-  #   restart: unless-stopped
-  #   environment:
-  #     - DB_HOST=mysql
-  #     - DB_PORT=3306
-  #     - DB_NAME=parksmartdb
-  #     - DB_USER=${DB_USER:-parksmartuser}
-  #     - DB_PASSWORD=${DB_PASSWORD:-parksmartpass}
-  #     - GATEWAY_SECRET=${GATEWAY_SECRET:-gateway-internal-secret-key}
-  #     - PARKING_SERVICE_URL=http://parking-service:8000
-  #     - REALTIME_SERVICE_URL=http://realtime-service-go:8006
-  #     - MEDIA_ROOT=/app/media
-  #     - ML_MODELS_DIR=/app/ml/models
-  #     - DEBUG=${DEBUG:-False}
-  #   expose:
-  #     - "8009"
-  #   volumes:
-  #     - ai_models:/app/ml/models
-  #     - ai_datasets:/app/datasets
-  #     - parksmart_media:/app/media
-  #   depends_on:
-  #     mysql:
-  #       condition: service_healthy
-  #   networks:
-  #     - parksmart-network
+  # ─── AI Service (FastAPI) ───
+  ai-service-fastapi:
+    build: ./ai-service-fastapi
+    container_name: ai-service-fastapi
+    restart: unless-stopped
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_NAME=parksmartdb
+      - DB_USER=${DB_USER:?DB_USER must be set in .env}
+      - DB_PASSWORD=${DB_PASSWORD:?DB_PASSWORD must be set in .env}
+      - GATEWAY_SECRET=${GATEWAY_SECRET:?GATEWAY_SECRET must be set in .env}
+      - PARKING_SERVICE_URL=http://parking-service:8000
+      - BOOKING_SERVICE_URL=http://booking-service:8000
+      - REALTIME_SERVICE_URL=http://realtime-service-go:8006
+      - MEDIA_ROOT=/app/media
+      - ML_MODELS_DIR=/app/ml/models
+      - YOLO_PARKING_MODEL_PATH=/app/ml/models/yolo11n.pt
+      - DEBUG=${DEBUG:-False}
+    expose:
+      - "8009"
+    volumes:
+      - ai_models:/app/ml/models
+      - ai_datasets:/app/datasets
+      - parksmart_media:/app/media
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8009/health/')",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - parksmart-network
 
   # ─── Chatbot Service (FastAPI) ───
   chatbot-service-fastapi:
@@ -347,9 +365,9 @@ services:
       - DB_HOST=mysql
       - DB_PORT=3306
       - DB_NAME=parksmartdb
-      - DB_USER=${DB_USER:-parksmartuser}
-      - DB_PASSWORD=${DB_PASSWORD:-parksmartpass}
-      - GATEWAY_SECRET=${GATEWAY_SECRET:-gateway-internal-secret-key}
+      - DB_USER=${DB_USER:?DB_USER must be set in .env}
+      - DB_PASSWORD=${DB_PASSWORD:?DB_PASSWORD must be set in .env}
+      - GATEWAY_SECRET=${GATEWAY_SECRET:?GATEWAY_SECRET must be set in .env}
       - BOOKING_SERVICE_URL=http://booking-service:8000
       - PARKING_SERVICE_URL=http://parking-service:8000
       - VEHICLE_SERVICE_URL=http://vehicle-service:8000
@@ -363,7 +381,7 @@ services:
       - REDIS_PORT=6379
       - REDIS_DB=6
       # ─── RabbitMQ (proactive events) ───
-      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-admin}:${RABBITMQ_PASS:-admin}@rabbitmq:5672/
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
       - DEBUG=${DEBUG:-False}
     expose:
       - "8008"
@@ -388,7 +406,7 @@ services:
       - REDIS_PORT=6379
       - REDIS_DB=1
       - REDIS_URL=redis://redis:6379/1
-      - GATEWAY_SECRET=${GATEWAY_SECRET:-gateway-internal-secret-key}
+      - GATEWAY_SECRET=${GATEWAY_SECRET:?GATEWAY_SECRET must be set in .env}
       # Internal service URLs (Docker network)
       - AUTH_SERVICE_URL=http://auth-service:8000
       - PARKING_SERVICE_URL=http://parking-service:8000

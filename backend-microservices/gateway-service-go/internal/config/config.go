@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"log"
 	"net/url"
 	"os"
 	"strconv"
@@ -40,7 +41,7 @@ func Load() *Config {
 	cfg := &Config{
 		Port:          getEnv("PORT", "8000"),
 		Environment:   getEnv("ENV", "development"),
-		GatewaySecret: getEnv("GATEWAY_SECRET", "gateway-internal-secret-key"),
+		GatewaySecret: strings.TrimSpace(mustGetEnv("GATEWAY_SECRET")),
 		RedisURL:      getEnv("REDIS_URL", "redis://localhost:6379/1"),
 		Debug:         getEnv("DEBUG", "false") == "true",
 		CORSAllowedOrigins: parseCSVEnv(
@@ -115,8 +116,18 @@ type ServiceRoute struct {
 	Public bool // If true, no auth required
 }
 
+// NormalizeServicePath normalizes incoming gateway path for route lookup/proxying.
+// It removes leading slash and optional api/ prefix.
+func NormalizeServicePath(path string) string {
+	normalizedPath := strings.TrimPrefix(path, "/")
+	normalizedPath = strings.TrimPrefix(normalizedPath, "api/")
+	return normalizedPath
+}
+
 // GetServiceRoute returns the target service for a given path
 func (c *Config) GetServiceRoute(path string) *ServiceRoute {
+	path = NormalizeServicePath(path)
+
 	routes := []struct {
 		prefix string
 		route  ServiceRoute
@@ -139,6 +150,14 @@ func (c *Config) GetServiceRoute(path string) *ServiceRoute {
 		}
 	}
 	return nil
+}
+
+func mustGetEnv(key string) string {
+	val := os.Getenv(key)
+	if val == "" {
+		log.Fatalf("required environment variable %q is not set", key)
+	}
+	return val
 }
 
 func getEnv(key, defaultValue string) string {
