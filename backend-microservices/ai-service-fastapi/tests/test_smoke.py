@@ -3,6 +3,9 @@ Smoke tests for ai-service-fastapi.
 Verifies health endpoint and __tablename__ mapping.
 """
 
+import sys
+import types
+
 import pytest
 from httpx import AsyncClient, ASGITransport
 
@@ -76,3 +79,91 @@ def test_model_version_schema_camelcase():
     assert "modelType" in output, f"Expected camelCase 'modelType', got keys: {list(output.keys())}"
     assert "f1Score" in output
     assert "map50" in output
+
+
+class _FakeModel:
+    def __init__(self, ckpt_path: str | None = None):
+        self.ckpt_path = ckpt_path
+
+
+def test_slot_detector_load_yolo_uses_configured_path_when_exists(monkeypatch, tmp_path):
+    """_load_yolo should prefer configured model path when the file exists."""
+    from app.engine import slot_detection
+
+    configured_model = tmp_path / "models" / "yolo11n.pt"
+    configured_model.parent.mkdir(parents=True, exist_ok=True)
+    configured_model.write_bytes(b"weights")
+
+    calls: list[str] = []
+
+    def fake_yolo(path: str):
+        calls.append(path)
+        return _FakeModel(ckpt_path=path)
+
+    monkeypatch.setattr(
+        slot_detection.settings,
+        "YOLO_PARKING_MODEL_PATH",
+        str(configured_model),
+    )
+    monkeypatch.setitem(sys.modules, "ultralytics", types.SimpleNamespace(YOLO=fake_yolo))
+
+    detector = slot_detection.SlotDetector.__new__(slot_detection.SlotDetector)
+    model = detector._load_yolo()
+
+    assert model is not None
+    assert calls == [str(configured_model)]
+
+
+def test_slot_detector_load_yolo_autodownload_and_sync_when_config_missing(monkeypatch, tmp_path):
+    """_load_yolo should auto-download and sync weights when configured path is missing."""
+    from app.engine import slot_detection
+
+    configured_model = tmp_path / "persisted" / "yolo11n.pt"
+    downloaded_model = tmp_path / "ultralytics-cache" / "yolo11n.pt"
+    downloaded_model.parent.mkdir(parents=True, exist_ok=True)
+    downloaded_model.write_bytes(b"auto-downloaded-weights")
+
+    calls: list[str] = []
+
+    def fake_yolo(path: str):
+        calls.append(path)
+        if path == "yolo11n.pt":
+            return _FakeModel(ckpt_path=str(downloaded_model))
+        return _FakeModel(ckpt_path=path)
+
+    monkeypatch.setattr(
+        slot_detection.settings,
+        "YOLO_PARKING_MODEL_PATH",
+        str(configured_model),
+    )
+    monkeypatch.setitem(sys.modules, "ultralytics", types.SimpleNamespace(YOLO=fake_yolo))
+
+    detector = slot_detection.SlotDetector.__new__(slot_detection.SlotDetector)
+    model = detector._load_yolo()
+
+    assert model is not None
+    assert calls == ["yolo11n.pt"]
+    assert configured_model.exists()
+    assert configured_model.read_bytes() == b"auto-downloaded-weights"
+
+
+def test_slot_detector_load_yolo_falls_back_to_none_when_all_paths_fail(monkeypatch, tmp_path):
+    """_load_yolo should return None if YOLO loading and auto-download fail."""
+    from app.engine import slot_detection
+
+    configured_model = tmp_path / "missing" / "yolo11n.pt"
+
+    def fake_yolo(_path: str):
+        raise RuntimeError("load failed")
+
+    monkeypatch.setattr(
+        slot_detection.settings,
+        "YOLO_PARKING_MODEL_PATH",
+        str(configured_model),
+    )
+    monkeypatch.setitem(sys.modules, "ultralytics", types.SimpleNamespace(YOLO=fake_yolo))
+
+    detector = slot_detection.SlotDetector.__new__(slot_detection.SlotDetector)
+    model = detector._load_yolo()
+
+    assert model is None

@@ -178,5 +178,5 @@ Fail:    ❌ [{AGENT}] FAIL: {reason + action needed}
 Final summary:
 
 ```
-📊 Agents: researcher→architect→implementer→reviewer→[cleanup→]devops→tester→security→qc→devops
+📊 Agents: researcher→architect→implementer→reviewer→[cleanup→][migrate(devops)→]tester→security→qc→devops
 ```

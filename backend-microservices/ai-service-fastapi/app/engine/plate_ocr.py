@@ -45,6 +45,13 @@ def _normalize_plate(raw: str) -> str:
     text = text.replace(' ', '').replace('\n', '').replace('\t', '')
     # Strip leading non-alphanumeric chars (TrOCR sometimes prepends : ; , etc.)
     text = re.sub(r'^[^A-Z0-9]+', '', text)
+    # Normalize OCR misread of separator (* is never valid, must be -)
+    text = text.replace('*', '-')
+    # Normalize digit-lookalike letters in province code (first 2 chars only)
+    if len(text) >= 2:
+        prov_digit_map = {'O': '0', 'Q': '0', 'I': '1', 'L': '1', 'Z': '2', 'S': '5', 'G': '6', 'B': '8'}
+        province = ''.join(prov_digit_map.get(c, c) for c in text[:2])
+        text = province + text[2:]
     # OCR common substitutions on plates
     ocr_map = {
         'O': '0', 'Q': '0', 'D': '0',

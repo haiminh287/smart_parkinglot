@@ -1,0 +1,21 @@
+HTTP/1.1 200 OK
+Date: Sat, 14 Mar 2026 14:11:17 GMT
+Content-Type: text/html
+Transfer-Encoding: chunked
+Connection: keep-alive
+Report-To: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=treB1Wjry4bcGlh1X3KvNkG8He2HAnXkgUPh2wVf9mGTnKsTVfsL1BiVzu%2BJGwwl%2BqSsRW3IGzyxHm3FKyWkxJxmHfiGlPFZO9bhtEDQWIOZ9BizyCvgrdH%2FWoDCO6ydOoK6"}]}
+content-security-policy: default-src 'self'; connect-src 'self' https://api.ghepdoicaulong.shop wss://ws.ghepdoicaulong.shop; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:;
+Nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
+last-modified: Sat, 14 Mar 2026 11:59:38 GMT
+permissions-policy: camera=(), microphone=(), geolocation=()
+referrer-policy: strict-origin-when-cross-origin
+Server: cloudflare
+strict-transport-security: max-age=31536000; includeSubDomains
+vary: Accept-Encoding
+x-content-type-options: nosniff
+x-frame-options: SAMEORIGIN
+x-xss-protection: 1; mode=block
+cf-cache-status: DYNAMIC
+CF-RAY: 9dc3dddf9c248499-HKG
+alt-svc: h3=":443"; ma=86400
+

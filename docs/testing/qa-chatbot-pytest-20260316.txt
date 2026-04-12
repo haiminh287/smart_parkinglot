@@ -1,0 +1,228 @@
+============================= test session starts =============================
+platform win32 -- Python 3.10.5, pytest-9.0.2, pluggy-1.6.0 -- C:\Users\MINH\Documents\Zalo_Received_Files\Project_Main\backend-microservices\venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\MINH\Documents\Zalo_Received_Files\Project_Main\backend-microservices\chatbot-service-fastapi
+configfile: pytest.ini
+plugins: anyio-4.12.1, asyncio-1.3.0, cov-5.0.0, django-4.12.0
+asyncio: mode=auto, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 96 items
+
+tests/test_ai_metrics.py::TestAIMetricType::test_all_metric_types_exist PASSED [  1%]
+tests/test_ai_metrics.py::TestAIMetricType::test_metric_values_are_lowercase PASSED [  2%]
+tests/test_chatbot_comprehensive.py::test_health[asyncio] PASSED         [  3%]
+tests/test_chatbot_comprehensive.py::test_chat_send_message[asyncio] FAILED [  4%]
+tests/test_chatbot_comprehensive.py::test_chat_empty_message[asyncio] FAILED [  5%]
+tests/test_chatbot_comprehensive.py::test_chat_with_conversation_id[asyncio] FAILED [  6%]
+tests/test_chatbot_comprehensive.py::test_quick_actions[asyncio] FAILED  [  7%]
+tests/test_chatbot_comprehensive.py::test_feedback_submit[asyncio] FAILED [  8%]
+tests/test_chatbot_comprehensive.py::test_list_conversations[asyncio] FAILED [  9%]
+tests/test_chatbot_comprehensive.py::test_create_conversation[asyncio] FAILED [ 10%]
+tests/test_chatbot_comprehensive.py::test_get_active_conversation[asyncio] FAILED [ 11%]
+tests/test_chatbot_comprehensive.py::test_get_conversation_by_id[asyncio] FAILED [ 12%]
+tests/test_chatbot_comprehensive.py::test_get_conversation_messages[asyncio] FAILED [ 13%]
+tests/test_chatbot_comprehensive.py::test_latest_history[asyncio] FAILED [ 14%]
+tests/test_chatbot_comprehensive.py::test_list_actions[asyncio] FAILED   [ 15%]
+tests/test_chatbot_comprehensive.py::test_get_preferences[asyncio] FAILED [ 16%]
+tests/test_chatbot_comprehensive.py::test_update_preferences[asyncio] FAILED [ 17%]
+tests/test_chatbot_comprehensive.py::test_list_chatbot_notifications[asyncio] FAILED [ 18%]
+tests/test_chatbot_comprehensive.py::test_action_on_notification[asyncio] FAILED [ 19%]
+tests/test_chatbot_comprehensive.py::test_protected_without_auth[asyncio] PASSED [ 20%]
+tests/test_confidence.py::TestHybridConfidenceCalculate::test_all_perfect PASSED [ 21%]
+tests/test_confidence.py::TestHybridConfidenceCalculate::test_all_zero PASSED [ 22%]
+tests/test_confidence.py::TestHybridConfidenceCalculate::test_weights_correct PASSED [ 23%]
+tests/test_confidence.py::TestHybridConfidenceCalculate::test_clamp_above_one PASSED [ 25%]
+tests/test_confidence.py::TestHybridConfidenceCalculate::test_clamp_below_zero PASSED [ 26%]
+tests/test_confidence.py::TestEntityCompleteness::test_all_present PASSED [ 27%]
+tests/test_confidence.py::TestEntityCompleteness::test_none_present PASSED [ 28%]
+tests/test_confidence.py::TestEntityCompleteness::test_partial PASSED    [ 29%]
+tests/test_confidence.py::TestEntityCompleteness::test_no_required PASSED [ 30%]
+tests/test_confidence.py::TestEntityCompleteness::test_none_values_not_counted PASSED [ 31%]
+tests/test_confidence.py::TestContextMatch::test_no_last_intent PASSED   [ 32%]
+tests/test_confidence.py::TestContextMatch::test_natural_flow PASSED     [ 33%]
+tests/test_confidence.py::TestContextMatch::test_same_intent_repeated PASSED [ 34%]
+tests/test_confidence.py::TestContextMatch::test_abrupt_topic_switch PASSED [ 35%]
+tests/test_confidence.py::TestConfidenceGate::test_low_confidence_clarify PASSED [ 36%]
+tests/test_confidence.py::TestConfidenceGate::test_medium_confidence_confirm PASSED [ 37%]
+tests/test_confidence.py::TestConfidenceGate::test_high_confidence_execute PASSED [ 38%]
+tests/test_confidence.py::TestConfidenceGate::test_high_stakes_stricter PASSED [ 39%]
+tests/test_confidence.py::TestConfidenceGate::test_non_high_stakes_medium_execute PASSED [ 40%]
+tests/test_confidence.py::TestConfidenceGate::test_boundary_clarify_threshold PASSED [ 41%]
+tests/test_gateway_auth_and_schema_unit.py::test_should_bypass_auth_for_exempt_paths PASSED [ 42%]
+tests/test_gateway_auth_and_schema_unit.py::test_should_return_403_for_invalid_gateway_secret PASSED [ 43%]
+tests/test_gateway_auth_and_schema_unit.py::test_should_inject_user_state_for_valid_gateway_secret PASSED [ 44%]
+tests/test_gateway_auth_and_schema_unit.py::test_should_serialize_chat_response_to_camel_case PASSED [ 45%]
+tests/test_gateway_auth_and_schema_unit.py::test_should_accept_chat_request_camel_case_alias PASSED [ 46%]
+tests/test_handoff.py::TestHandoffPolicy::test_high_frustration_triggers_handoff PASSED [ 47%]
+tests/test_handoff.py::TestHandoffPolicy::test_many_clarifications_triggers_handoff PASSED [ 48%]
+tests/test_handoff.py::TestHandoffPolicy::test_handoff_keyword PASSED    [ 50%]
+tests/test_handoff.py::TestHandoffPolicy::test_no_trigger PASSED         [ 51%]
+tests/test_handoff.py::TestHandoffPolicy::test_borderline_frustration PASSED [ 52%]
+tests/test_intent.py::TestIntentEnum::test_all_intents_exist PASSED      [ 53%]
+tests/test_intent.py::TestIntentEnum::test_high_stakes_intents PASSED    [ 54%]
+tests/test_intent.py::TestIntentEnum::test_non_high_stakes PASSED        [ 55%]
+tests/test_intent.py::TestIntentEnum::test_book_slot_required_entities PASSED [ 56%]
+tests/test_intent.py::TestIntentEnum::test_cancel_required_entities PASSED [ 57%]
+tests/test_intent.py::TestIntentEnum::test_greeting_no_required PASSED   [ 58%]
+tests/test_intent.py::TestIntentEnum::test_invalid_intent_raises PASSED  [ 59%]
+tests/test_memory_antinoise.py::TestMemoryAntiNoise::test_skip_if_too_few_turns PASSED [ 60%]
+tests/test_memory_antinoise.py::TestMemoryAntiNoise::test_allow_sufficient_turns PASSED [ 61%]
+tests/test_memory_antinoise.py::TestMemoryAntiNoise::test_skip_if_action_failed PASSED [ 62%]
+tests/test_memory_antinoise.py::TestMemoryAntiNoise::test_skip_system_cancel PASSED [ 63%]
+tests/test_memory_antinoise.py::TestMemoryAntiNoise::test_allow_user_cancel PASSED [ 64%]
+tests/test_memory_antinoise.py::TestMemoryAntiNoise::test_skip_very_short_booking PASSED [ 65%]
+tests/test_memory_antinoise.py::TestMemoryAntiNoise::test_allow_normal_duration_booking PASSED [ 66%]
+tests/test_memory_antinoise.py::TestMemoryAntiNoise::test_no_action_status_passes_through PASSED [ 67%]
+tests/test_proactive.py::TestNotificationPriority::test_priority_values PASSED [ 68%]
+tests/test_proactive.py::TestCooldownConfig::test_default_cooldowns PASSED [ 69%]
+tests/test_proactive.py::TestCooldownConfig::test_get_cooldown_high PASSED [ 70%]
+tests/test_proactive.py::TestCooldownConfig::test_get_cooldown_medium PASSED [ 71%]
+tests/test_proactive.py::TestCooldownConfig::test_get_cooldown_low PASSED [ 72%]
+tests/test_proactive.py::TestCooldownConfig::test_user_active_suppress PASSED [ 73%]
+tests/test_proactive.py::TestCooldownConfig::test_max_per_hour PASSED    [ 75%]
+tests/test_proactive.py::TestCooldownConfig::test_custom_config PASSED   [ 76%]
+tests/test_safety_result.py::TestSafetyResult::test_safe_result PASSED   [ 77%]
+tests/test_safety_result.py::TestSafetyResult::test_blocked_result PASSED [ 78%]
+tests/test_safety_result.py::TestSafetyResult::test_all_safety_codes_exist PASSED [ 79%]
+tests/test_safety_result.py::TestSafetyResult::test_blocked_has_details PASSED [ 80%]
+tests/test_safety_result.py::TestSafetyResult::test_safe_has_empty_details PASSED [ 81%]
+tests/test_smoke.py::test_health_returns_200[asyncio] PASSED             [ 82%]
+tests/test_smoke.py::test_chat_endpoint_registered[asyncio] PASSED       [ 83%]
+tests/test_smoke.py::test_quick_actions_endpoint[asyncio] FAILED         [ 84%]
+tests/test_smoke.py::test_chatbot_tablename[Conversation-chatbot_conversation] PASSED [ 85%]
+tests/test_smoke.py::test_chatbot_tablename[ChatMessage-chatbot_chatmessage] PASSED [ 86%]
+tests/test_smoke.py::test_chatbot_tablename[UserPreferences-chatbot_user_preferences] PASSED [ 87%]
+tests/test_smoke.py::test_chatbot_tablename[UserBehavior-chatbot_user_behavior] PASSED [ 88%]
+tests/test_smoke.py::test_chatbot_tablename[UserCommunicationStyle-chatbot_user_communication_style] PASSED [ 89%]
+tests/test_smoke.py::test_chatbot_tablename[ConversationSummary-chatbot_conversation_summary] PASSED [ 90%]
+tests/test_smoke.py::test_chatbot_tablename[ProactiveNotification-chatbot_proactive_notification] PASSED [ 91%]
+tests/test_smoke.py::test_chatbot_tablename[ActionLog-chatbot_action_log] PASSED [ 92%]
+tests/test_smoke.py::test_chatbot_tablename[AIMetricLog-chatbot_ai_metric_log] PASSED [ 93%]
+tests/test_smoke.py::test_conversation_schema_camelcase PASSED           [ 94%]
+tests/test_smoke.py::test_chat_router_prefix PASSED                      [ 95%]
+tests/test_smoke.py::test_conversation_router_prefix PASSED              [ 96%]
+tests/test_smoke.py::test_preferences_router_prefix PASSED               [ 97%]
+tests/test_smoke.py::test_notifications_router_prefix PASSED             [ 98%]
+tests/test_smoke.py::test_actions_router_prefix PASSED                   [100%]
+
+================================== FAILURES ===================================
+_______________________ test_chat_send_message[asyncio] _______________________
+tests\test_chatbot_comprehensive.py:53: in test_chat_send_message
+    assert response.status_code in [200, 201]
+E   assert 403 in [200, 201]
+E    +  where 403 = <Response [403 Forbidden]>.status_code
+______________________ test_chat_empty_message[asyncio] _______________________
+tests\test_chatbot_comprehensive.py:63: in test_chat_empty_message
+    assert response.status_code in [200, 400, 422]
+E   assert 403 in [200, 400, 422]
+E    +  where 403 = <Response [403 Forbidden]>.status_code
+___________________ test_chat_with_conversation_id[asyncio] ___________________
+tests\test_chatbot_comprehensive.py:73: in test_chat_with_conversation_id
+    assert response.status_code in [200, 201, 404]
+E   assert 403 in [200, 201, 404]
+E    +  where 403 = <Response [403 Forbidden]>.status_code
+_________________________ test_quick_actions[asyncio] _________________________
+tests\test_chatbot_comprehensive.py:83: in test_quick_actions
+    assert response.status_code == 200
+E   assert 403 == 200
+E    +  where 403 = <Response [403 Forbidden]>.status_code
+________________________ test_feedback_submit[asyncio] ________________________
+tests\test_chatbot_comprehensive.py:99: in test_feedback_submit
+    assert response.status_code in [200, 201, 404, 422]
+E   assert 403 in [200, 201, 404, 422]
+E    +  where 403 = <Response [403 Forbidden]>.status_code
+______________________ test_list_conversations[asyncio] _______________________
+tests\test_chatbot_comprehensive.py:109: in test_list_conversations
+    assert response.status_code == 200
+E   assert 403 == 200
+E    +  where 403 = <Response [403 Forbidden]>.status_code
+______________________ test_create_conversation[asyncio] ______________________
+tests\test_chatbot_comprehensive.py:115: in test_create_conversation
+    assert response.status_code in [200, 201]
+E   assert 403 in [200, 201]
+E    +  where 403 = <Response [403 Forbidden]>.status_code
+____________________ test_get_active_conversation[asyncio] ____________________
+tests\test_chatbot_comprehensive.py:121: in test_get_active_conversation
+    assert response.status_code in [200, 404]
+E   assert 403 in [200, 404]
+E    +  where 403 = <Response [403 Forbidden]>.status_code
+____________________ test_get_conversation_by_id[asyncio] _____________________
+tests\test_chatbot_comprehensive.py:128: in test_get_conversation_by_id
+    assert response.status_code in [200, 404]
+E   assert 403 in [200, 404]
+E    +  where 403 = <Response [403 Forbidden]>.status_code
+___________________ test_get_conversation_messages[asyncio] ___________________
+tests\test_chatbot_comprehensive.py:135: in test_get_conversation_messages
+    assert response.status_code in [200, 404]
+E   assert 403 in [200, 404]
+E    +  where 403 = <Response [403 Forbidden]>.status_code
+________________________ test_latest_history[asyncio] _________________________
+tests\test_chatbot_comprehensive.py:141: in test_latest_history
+    assert response.status_code == 200
+E   assert 403 == 200
+E    +  where 403 = <Response [403 Forbidden]>.status_code
+_________________________ test_list_actions[asyncio] __________________________
+tests\test_chatbot_comprehensive.py:151: in test_list_actions
+    assert response.status_code == 200
+E   assert 403 == 200
+E    +  where 403 = <Response [403 Forbidden]>.status_code
+________________________ test_get_preferences[asyncio] ________________________
+tests\test_chatbot_comprehensive.py:161: in test_get_preferences
+    assert response.status_code == 200
+E   assert 403 == 200
+E    +  where 403 = <Response [403 Forbidden]>.status_code
+______________________ test_update_preferences[asyncio] _______________________
+tests\test_chatbot_comprehensive.py:169: in test_update_preferences
+    assert response.status_code in [200, 422]
+E   assert 403 in [200, 422]
+E    +  where 403 = <Response [403 Forbidden]>.status_code
+__________________ test_list_chatbot_notifications[asyncio] ___________________
+tests\test_chatbot_comprehensive.py:179: in test_list_chatbot_notifications
+    assert response.status_code == 200
+E   assert 403 == 200
+E    +  where 403 = <Response [403 Forbidden]>.status_code
+____________________ test_action_on_notification[asyncio] _____________________
+tests\test_chatbot_comprehensive.py:188: in test_action_on_notification
+    assert response.status_code in [200, 404]
+E   assert 403 in [200, 404]
+E    +  where 403 = <Response [403 Forbidden]>.status_code
+____________________ test_quick_actions_endpoint[asyncio] _____________________
+tests\test_smoke.py:155: in test_quick_actions_endpoint
+    assert response.status_code == 200
+E   assert 403 == 200
+E    +  where 403 = <Response [403 Forbidden]>.status_code
+=========================== short test summary info ===========================
+FAILED tests/test_chatbot_comprehensive.py::test_chat_send_message[asyncio] - assert 403 in [200, 201]
+ +  where 403 = <Response [403 Forbidden]>.status_code
+FAILED tests/test_chatbot_comprehensive.py::test_chat_empty_message[asyncio] - assert 403 in [200, 400, 422]
+ +  where 403 = <Response [403 Forbidden]>.status_code
+FAILED tests/test_chatbot_comprehensive.py::test_chat_with_conversation_id[asyncio] - assert 403 in [200, 201, 404]
+ +  where 403 = <Response [403 Forbidden]>.status_code
+FAILED tests/test_chatbot_comprehensive.py::test_quick_actions[asyncio] - assert 403 == 200
+ +  where 403 = <Response [403 Forbidden]>.status_code
+FAILED tests/test_chatbot_comprehensive.py::test_feedback_submit[asyncio] - assert 403 in [200, 201, 404, 422]
+ +  where 403 = <Response [403 Forbidden]>.status_code
+FAILED tests/test_chatbot_comprehensive.py::test_list_conversations[asyncio] - assert 403 == 200
+ +  where 403 = <Response [403 Forbidden]>.status_code
+FAILED tests/test_chatbot_comprehensive.py::test_create_conversation[asyncio] - assert 403 in [200, 201]
+ +  where 403 = <Response [403 Forbidden]>.status_code
+FAILED tests/test_chatbot_comprehensive.py::test_get_active_conversation[asyncio] - assert 403 in [200, 404]
+ +  where 403 = <Response [403 Forbidden]>.status_code
+FAILED tests/test_chatbot_comprehensive.py::test_get_conversation_by_id[asyncio] - assert 403 in [200, 404]
+ +  where 403 = <Response [403 Forbidden]>.status_code
+FAILED tests/test_chatbot_comprehensive.py::test_get_conversation_messages[asyncio] - assert 403 in [200, 404]
+ +  where 403 = <Response [403 Forbidden]>.status_code
+FAILED tests/test_chatbot_comprehensive.py::test_latest_history[asyncio] - assert 403 == 200
+ +  where 403 = <Response [403 Forbidden]>.status_code
+FAILED tests/test_chatbot_comprehensive.py::test_list_actions[asyncio] - assert 403 == 200
+ +  where 403 = <Response [403 Forbidden]>.status_code
+FAILED tests/test_chatbot_comprehensive.py::test_get_preferences[asyncio] - assert 403 == 200
+ +  where 403 = <Response [403 Forbidden]>.status_code
+FAILED tests/test_chatbot_comprehensive.py::test_update_preferences[asyncio] - assert 403 in [200, 422]
+ +  where 403 = <Response [403 Forbidden]>.status_code
+FAILED tests/test_chatbot_comprehensive.py::test_list_chatbot_notifications[asyncio] - assert 403 == 200
+ +  where 403 = <Response [403 Forbidden]>.status_code
+FAILED tests/test_chatbot_comprehensive.py::test_action_on_notification[asyncio] - assert 403 in [200, 404]
+ +  where 403 = <Response [403 Forbidden]>.status_code
+FAILED tests/test_smoke.py::test_quick_actions_endpoint[asyncio] - assert 403 == 200
+ +  where 403 = <Response [403 Forbidden]>.status_code
+======================== 17 failed, 79 passed in 2.32s ========================

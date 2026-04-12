@@ -4,15 +4,16 @@ AI Service - FastAPI Application
 
 import logging
 from contextlib import asynccontextmanager
-
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from pathlib import Path
 
 from app.config import settings
 from app.engine.camera_monitor import start_camera_monitor, stop_camera_monitor
-from app.routers import detection, training, metrics, parking, esp32, camera
-from app.routers.esp32 import seed_default_devices
 from app.middleware.gateway_auth import GatewayAuthMiddleware
+from app.routers import camera, detection, esp32, metrics, parking, training
+from app.routers.esp32 import seed_default_devices
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,10 @@ async def lifespan(app: FastAPI):
     """Application lifespan — start/stop background workers."""
     logger.info("AI Service starting up...")
     seed_default_devices()
+    # Pre-warm YOLO slot detector (loads model once into memory)
+    from app.engine.slot_detection import get_slot_detector
+
+    get_slot_detector()
     await start_camera_monitor()
     yield
     logger.info("AI Service shutting down...")
@@ -37,7 +42,11 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000", "http://localhost:8080"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://localhost:8080",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -48,9 +57,17 @@ app.add_middleware(GatewayAuthMiddleware)
 app.include_router(detection.router)
 app.include_router(training.router)
 app.include_router(metrics.router)
+app.include_router(metrics.parking_router)
 app.include_router(parking.router)
 app.include_router(esp32.router)
 app.include_router(camera.router)
+
+# Serve saved plate capture images (check-in / check-out detection records)
+_plate_images_dir = Path(__file__).parent / "images"
+_plate_images_dir.mkdir(parents=True, exist_ok=True)
+app.mount(
+    "/ai/images", StaticFiles(directory=str(_plate_images_dir)), name="plate_images"
+)
 
 
 @app.get("/health/")

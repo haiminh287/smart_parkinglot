@@ -106,6 +106,14 @@ export const authApi = {
    */
   getCurrentUser: async (): Promise<LoginResponse> => {
     const response = await apiClient.get("/auth/me/");
+
+    const contentType =
+      (response.headers?.["content-type"] as string | undefined) || "";
+
+    if (!contentType.toLowerCase().includes("application/json")) {
+      throw new Error("AUTH_ME_INVALID_CONTENT_TYPE");
+    }
+
     // Backend returns user object directly, wrap it for consistency
     return { user: response.data, message: "Current user fetched" };
   },

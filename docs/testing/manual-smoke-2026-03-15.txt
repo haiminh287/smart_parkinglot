@@ -1,0 +1,16 @@
+NAME: 
+METHOD: GET
+URL: 
+STATUS: 200
+CONTENT-TYPE: application/json; charset=utf-8
+LOCATION: 
+BODY: 
+---
+NAME: 
+METHOD: POST
+URL: 
+STATUS: 400
+CONTENT-TYPE: application/json
+LOCATION: 
+BODY: 
+---

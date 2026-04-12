@@ -39,8 +39,8 @@ class GatewayAuthMiddleware:
         is_public = any(request.path.startswith(path) for path in public_paths)
         
         # Check gateway secret for ALL non-public requests
-        gateway_secret = request.headers.get('X-Gateway-Secret')
-        expected_secret = getattr(settings, 'GATEWAY_SECRET', None)
+        gateway_secret = (request.headers.get('X-Gateway-Secret') or '').strip()
+        expected_secret = (getattr(settings, 'GATEWAY_SECRET', '') or '').strip()
         
         if not is_public and (not gateway_secret or gateway_secret != expected_secret):
             return JsonResponse({

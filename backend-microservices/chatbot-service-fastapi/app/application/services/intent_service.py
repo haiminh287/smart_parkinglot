@@ -466,6 +466,10 @@ Context: {json.dumps(context.get("lastEntities", {}), ensure_ascii=False)}
             # Goodbye
             (["tạm biệt", "goodbye", "bye", "bye bye", "hẹn gặp lại",
               "tạm biệt nhé", "thôi nhé", "cảm ơn bye"], "goodbye", 1.0),
+            # Operating hours
+            (["mở cửa", "đóng cửa", "giờ hoạt động", "giờ làm việc", "mấy giờ mở",
+              "mở mấy giờ", "đóng mấy giờ", "working hours", "opening hours",
+              "hoạt động mấy giờ", "bãi xe giờ nào", "giờ bãi xe", "bãi xe mấy giờ"], "operating_hours", 0.9),
             # Greeting — LAST (lowest priority)
             (["xin chào", "hello", "chào bạn", "chào", "hi there"], "greeting", 1.0),
         ]
@@ -601,6 +605,9 @@ DANH SÁCH 15 INTENT VÀ VÍ DỤ:
     VD: "nói chuyện với nhân viên", "chuyển cho người thật", "hỗ trợ viên"
 
 15. unknown — Không thuộc intent nào ở trên
+
+16. operating_hours — Hỏi giờ hoạt động bãi xe
+   VD: "bãi xe mở cửa mấy giờ?", "mấy giờ đóng cửa", "giờ hoạt động"
 
 ═══════════════════════════════════════
 QUY TẮC PHÂN BIỆT (RẤT QUAN TRỌNG):

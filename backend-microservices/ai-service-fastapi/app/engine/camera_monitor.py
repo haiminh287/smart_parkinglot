@@ -23,12 +23,8 @@ import httpx
 
 from app.config import settings
 from app.engine.camera_capture import get_camera_capture, CameraCaptureError
-from app.engine.slot_detection import (
-    FrameDetectionResult,
-    SlotBbox,
-    SlotStatus,
-    get_slot_detector,
-)
+from app.engine.slot_detection import SlotBbox, get_slot_detector
+from app.schemas.ai import OccupancyDetectionResponse
 
 logger = logging.getLogger(__name__)
 
@@ -111,9 +107,10 @@ async def _scan_all_cameras() -> None:
             logger.warning("Failed to capture from camera %s: %s", camera_id, exc)
             continue
 
-        # Detect occupancy
-        result: FrameDetectionResult = detector.detect_occupancy(
-            frame, slots, camera_id=str(camera_id)
+        # Detect occupancy — YOLO inference is CPU-bound; run in thread pool
+        loop = asyncio.get_event_loop()
+        result: OccupancyDetectionResponse = await loop.run_in_executor(
+            None, detector.detect_occupancy, frame, slots, str(camera_id)
         )
 
         # Push updates for changed slots
@@ -181,26 +178,42 @@ async def _fetch_camera_slots(camera_id: str) -> list[SlotBbox]:
     return []
 
 
-async def _push_slot_updates(result: FrameDetectionResult) -> None:
+async def _push_slot_updates(result: OccupancyDetectionResponse) -> None:
     """Push slot status updates to parking-service and realtime-service.
 
-    Only updates slots whose detected status differs from current.
+    Only updates slots whose detected status is known and confidence is sufficient.
 
     Args:
-        result: Frame detection results.
+        result: OccupancyDetectionResponse with per-slot results.
     """
     headers = {"X-Gateway-Secret": GATEWAY_SECRET, "Content-Type": "application/json"}
 
     async with httpx.AsyncClient(timeout=10.0) as client:
         for slot_result in result.slots:
-            if slot_result.status == SlotStatus.UNKNOWN:
+            if slot_result.status == "unknown":
                 continue
             if slot_result.confidence < 0.6:
                 continue
 
-            new_status = slot_result.status.value  # "available" or "occupied"
+            new_status = slot_result.status  # already a string: "available" or "occupied"
 
             # Update parking-service slot status
+            if new_status == 'available':
+                try:
+                    check_resp = await client.get(
+                        f"{PARKING_SERVICE_URL}/parking/slots/{slot_result.slot_id}/",
+                        headers=headers,
+                    )
+                    if check_resp.status_code == 200:
+                        if check_resp.json().get('status') == 'reserved':
+                            logger.debug(
+                                "Skipping camera update: slot %s is reserved",
+                                slot_result.slot_code
+                            )
+                            continue
+                except Exception:
+                    pass  # If fetch fails, allow the update
+
             try:
                 resp = await client.patch(
                     f"{PARKING_SERVICE_URL}/parking/slots/{slot_result.slot_id}/update-status/",

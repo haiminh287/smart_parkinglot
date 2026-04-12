@@ -1,0 +1,112 @@
+============================= test session starts =============================
+platform win32 -- Python 3.10.5, pytest-9.0.2, pluggy-1.6.0 -- C:\Users\MINH\Documents\Zalo_Received_Files\Project_Main\backend-microservices\venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\MINH\Documents\Zalo_Received_Files\Project_Main\backend-microservices\ai-service-fastapi
+configfile: pytest.ini
+plugins: anyio-4.12.1, asyncio-1.3.0, cov-5.0.0, django-4.12.0
+asyncio: mode=auto, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 35 items
+
+tests/test_ai_comprehensive.py::test_health_returns_200[asyncio] PASSED  [  2%]
+tests/test_ai_comprehensive.py::test_health_no_auth_required[asyncio] PASSED [  5%]
+tests/test_ai_comprehensive.py::test_detect_license_plate_no_file[asyncio] FAILED [  8%]
+tests/test_ai_comprehensive.py::test_detect_license_plate_success[asyncio] FAILED [ 11%]
+tests/test_ai_comprehensive.py::test_detect_cash_no_file[asyncio] FAILED [ 14%]
+tests/test_ai_comprehensive.py::test_detect_banknote_no_file[asyncio] FAILED [ 17%]
+tests/test_ai_comprehensive.py::test_parking_scan_plate_no_file[asyncio] FAILED [ 20%]
+tests/test_ai_comprehensive.py::test_parking_check_in_no_body[asyncio] FAILED [ 22%]
+tests/test_ai_comprehensive.py::test_parking_check_out_no_body[asyncio] FAILED [ 25%]
+tests/test_ai_comprehensive.py::test_esp32_check_in_endpoint_exists[asyncio] PASSED [ 28%]
+tests/test_ai_comprehensive.py::test_esp32_check_out_endpoint_exists[asyncio] PASSED [ 31%]
+tests/test_ai_comprehensive.py::test_esp32_verify_slot_endpoint_exists[asyncio] PASSED [ 34%]
+tests/test_ai_comprehensive.py::test_esp32_cash_payment_endpoint_exists[asyncio] PASSED [ 37%]
+tests/test_ai_comprehensive.py::test_esp32_status[asyncio] PASSED        [ 40%]
+tests/test_ai_comprehensive.py::test_camera_list[asyncio] PASSED         [ 42%]
+tests/test_ai_comprehensive.py::test_camera_snapshot_no_params[asyncio] PASSED [ 45%]
+tests/test_ai_comprehensive.py::test_camera_stream_no_params[asyncio] SKIPPEDin CI/test env. Tested via unit test for generate() generator
+only.)                                                                   [ 48%]
+tests/test_ai_comprehensive.py::test_metrics_endpoint[asyncio] SKIPPED   [ 51%]
+tests/test_ai_comprehensive.py::test_predictions_endpoint[asyncio] SKIPPED [ 54%]
+tests/test_ai_comprehensive.py::test_versions_endpoint[asyncio] SKIPPED  [ 57%]
+tests/test_ai_comprehensive.py::test_training_cash_no_file[asyncio] FAILED [ 60%]
+tests/test_ai_comprehensive.py::test_training_banknote_no_file[asyncio] FAILED [ 62%]
+tests/test_ai_comprehensive.py::test_protected_endpoint_without_gateway_secret[asyncio] PASSED [ 65%]
+tests/test_ai_comprehensive.py::test_camera_endpoint_exempt_from_auth[asyncio] PASSED [ 68%]
+tests/test_ai_comprehensive.py::TestCameraCapture::test_capture_initializes_rtsp PASSED [ 71%]
+tests/test_ai_comprehensive.py::TestQRReader::test_import_qr_reader PASSED [ 74%]
+tests/test_ai_comprehensive.py::TestCashSession::test_import_cash_session PASSED [ 77%]
+tests/test_ai_comprehensive.py::test_detection_result_camel_case PASSED  [ 80%]
+tests/test_ai_comprehensive.py::test_esp32_response_schema PASSED        [ 82%]
+tests/test_smoke.py::test_health_returns_200[asyncio] PASSED             [ 85%]
+tests/test_smoke.py::test_ai_tablename[CameraFeed-api_camerafeed] PASSED [ 88%]
+tests/test_smoke.py::test_ai_tablename[PredictionLog-api_predictionlog] PASSED [ 91%]
+tests/test_smoke.py::test_ai_tablename[ModelVersion-api_modelversion] PASSED [ 94%]
+tests/test_smoke.py::test_detection_schema_camelcase PASSED              [ 97%]
+tests/test_smoke.py::test_model_version_schema_camelcase PASSED          [100%]
+
+================================== FAILURES ===================================
+_________________ test_detect_license_plate_no_file[asyncio] __________________
+tests\test_ai_comprehensive.py:79: in test_detect_license_plate_no_file
+    assert response.status_code in [400, 422]
+E   assert 403 in [400, 422]
+E    +  where 403 = <Response [403 Forbidden]>.status_code
+_________________ test_detect_license_plate_success[asyncio] __________________
+tests\test_ai_comprehensive.py:91: in test_detect_license_plate_success
+    assert response.status_code in [200, 500, 503]
+E   assert 403 in [200, 500, 503]
+E    +  where 403 = <Response [403 Forbidden]>.status_code
+______________________ test_detect_cash_no_file[asyncio] ______________________
+tests\test_ai_comprehensive.py:97: in test_detect_cash_no_file
+    assert response.status_code in [400, 422]
+E   assert 403 in [400, 422]
+E    +  where 403 = <Response [403 Forbidden]>.status_code
+____________________ test_detect_banknote_no_file[asyncio] ____________________
+tests\test_ai_comprehensive.py:103: in test_detect_banknote_no_file
+    assert response.status_code in [400, 422]
+E   assert 403 in [400, 422]
+E    +  where 403 = <Response [403 Forbidden]>.status_code
+__________________ test_parking_scan_plate_no_file[asyncio] ___________________
+tests\test_ai_comprehensive.py:113: in test_parking_scan_plate_no_file
+    assert response.status_code in [400, 422]
+E   assert 403 in [400, 422]
+E    +  where 403 = <Response [403 Forbidden]>.status_code
+___________________ test_parking_check_in_no_body[asyncio] ____________________
+tests\test_ai_comprehensive.py:119: in test_parking_check_in_no_body
+    assert response.status_code in [400, 422]
+E   assert 403 in [400, 422]
+E    +  where 403 = <Response [403 Forbidden]>.status_code
+___________________ test_parking_check_out_no_body[asyncio] ___________________
+tests\test_ai_comprehensive.py:125: in test_parking_check_out_no_body
+    assert response.status_code in [400, 422]
+E   assert 403 in [400, 422]
+E    +  where 403 = <Response [403 Forbidden]>.status_code
+_____________________ test_training_cash_no_file[asyncio] _____________________
+tests\test_ai_comprehensive.py:233: in test_training_cash_no_file
+    assert response.status_code in [400, 422]
+E   assert 403 in [400, 422]
+E    +  where 403 = <Response [403 Forbidden]>.status_code
+___________________ test_training_banknote_no_file[asyncio] ___________________
+tests\test_ai_comprehensive.py:239: in test_training_banknote_no_file
+    assert response.status_code in [400, 422]
+E   assert 403 in [400, 422]
+E    +  where 403 = <Response [403 Forbidden]>.status_code
+=========================== short test summary info ===========================
+FAILED tests/test_ai_comprehensive.py::test_detect_license_plate_no_file[asyncio] - assert 403 in [400, 422]
+ +  where 403 = <Response [403 Forbidden]>.status_code
+FAILED tests/test_ai_comprehensive.py::test_detect_license_plate_success[asyncio] - assert 403 in [200, 500, 503]
+ +  where 403 = <Response [403 Forbidden]>.status_code
+FAILED tests/test_ai_comprehensive.py::test_detect_cash_no_file[asyncio] - assert 403 in [400, 422]
+ +  where 403 = <Response [403 Forbidden]>.status_code
+FAILED tests/test_ai_comprehensive.py::test_detect_banknote_no_file[asyncio] - assert 403 in [400, 422]
+ +  where 403 = <Response [403 Forbidden]>.status_code
+FAILED tests/test_ai_comprehensive.py::test_parking_scan_plate_no_file[asyncio] - assert 403 in [400, 422]
+ +  where 403 = <Response [403 Forbidden]>.status_code
+FAILED tests/test_ai_comprehensive.py::test_parking_check_in_no_body[asyncio] - assert 403 in [400, 422]
+ +  where 403 = <Response [403 Forbidden]>.status_code
+FAILED tests/test_ai_comprehensive.py::test_parking_check_out_no_body[asyncio] - assert 403 in [400, 422]
+ +  where 403 = <Response [403 Forbidden]>.status_code
+FAILED tests/test_ai_comprehensive.py::test_training_cash_no_file[asyncio] - assert 403 in [400, 422]
+ +  where 403 = <Response [403 Forbidden]>.status_code
+FAILED tests/test_ai_comprehensive.py::test_training_banknote_no_file[asyncio] - assert 403 in [400, 422]
+ +  where 403 = <Response [403 Forbidden]>.status_code
+=================== 9 failed, 22 passed, 4 skipped in 3.39s ===================

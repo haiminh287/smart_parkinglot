@@ -1,0 +1,1 @@
+- generic [ref=e2]: "{\"status\":\"healthy\",\"service\":\"chatbot-service\",\"version\":\"3.0.0\"}"

@@ -254,6 +254,17 @@ Hãy tạo response tự nhiên cho người dùng."""
         if intent == "pricing":
             return self._format_pricing(entities, action_result)
 
+        if intent == "operating_hours":
+            hours = action_result.get("operating_hours", {})
+            weekdays = hours.get("weekdays", "06:00 - 22:00")
+            weekends = hours.get("weekends", "06:00 - 23:00")
+            return (
+                f"🕐 **Giờ hoạt động:**\n"
+                f"• Thứ 2 - Thứ 6: {weekdays}\n"
+                f"• Thứ 7 - Chủ nhật: {weekends}\n"
+                f"• Mở cửa 7 ngày/tuần"
+            )
+
         if intent == "help":
             return (
                 "ℹ️ **Tôi có thể giúp bạn:**\n"
@@ -577,6 +588,7 @@ Hãy tạo response tự nhiên cho người dùng."""
             "check_out": ["Đặt chỗ mới", "Xem giá"],
             "my_bookings": ["Hủy booking", "Check-in"],
             "pricing": ["Đặt chỗ", "Xem chỗ trống"],
+            "operating_hours": ["Đặt chỗ", "Xem giá", "Xem chỗ trống"],
             "help": ["Xem chỗ trống", "Đặt chỗ"],
         }
         return suggestions_map.get(intent, ["Trợ giúp"])

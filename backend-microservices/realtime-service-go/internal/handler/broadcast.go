@@ -103,3 +103,45 @@ func (h *BroadcastHandler) BroadcastNotification(c *gin.Context) {
 	h.hub.Broadcast(group, "notification", data.Data)
 	c.JSON(http.StatusOK, gin.H{"status": "broadcast sent"})
 }
+
+// BroadcastCameraStatus broadcasts virtual camera slot detection results
+func (h *BroadcastHandler) BroadcastCameraStatus(c *gin.Context) {
+	var data struct {
+		CameraID string                   `json:"camera_id"`
+		Slots    []map[string]interface{} `json:"slots"`
+	}
+	if err := c.ShouldBindJSON(&data); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	if data.CameraID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "camera_id required"})
+		return
+	}
+
+	h.hub.Broadcast("parking_updates", "camera.slot_detection", gin.H{
+		"camera_id": data.CameraID,
+		"slots":     data.Slots,
+	})
+	c.JSON(http.StatusOK, gin.H{"status": "broadcast sent"})
+}
+
+// BroadcastUnityCommand broadcasts a Unity-targeted command to the parking_updates group.
+// Unity listens on /ws/parking (auto-registers to parking_updates) and acts on the command.
+func (h *BroadcastHandler) BroadcastUnityCommand(c *gin.Context) {
+	var req struct {
+		Type string                 `json:"type"`
+		Data map[string]interface{} `json:"data"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+	msgType := req.Type
+	if msgType == "" {
+		msgType = "unity.command"
+	}
+	h.hub.Broadcast("parking_updates", msgType, req.Data)
+	c.JSON(http.StatusOK, gin.H{"status": "broadcast sent", "type": msgType})
+}

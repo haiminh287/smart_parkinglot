@@ -21,6 +21,12 @@ logger = logging.getLogger(__name__)
 # ── Lazy-loaded pipeline singleton ──────────────
 _pipeline = None
 
+# ── Cash inference singleton (N+1 fix) ───────────
+_cash_inference = None
+
+# ── Plate pipeline singleton ──────────────────────
+_plate_pipeline_singleton = None
+
 
 def _get_pipeline():
     """Lazy-init the banknote recognition pipeline."""
@@ -31,59 +37,87 @@ def _get_pipeline():
     return _pipeline
 
 
+def _get_cash_inference():
+    """Get or create the singleton CashRecognitionInference. Loads model once per process."""
+    global _cash_inference
+    if _cash_inference is None:
+        from app.ml.inference.cash_recognition import CashRecognitionInference
+        model_path = os.path.join(settings.ML_MODELS_DIR, "cash_recognition_best.pth")
+        _cash_inference = CashRecognitionInference(model_path=model_path)
+    return _cash_inference
+
+
+def _get_plate_pipeline():
+    """Get or create the singleton plate recognition pipeline."""
+    global _plate_pipeline_singleton
+    if _plate_pipeline_singleton is None:
+        from app.engine.plate_pipeline import get_plate_pipeline
+        _plate_pipeline_singleton = get_plate_pipeline(model_path=settings.PLATE_MODEL_PATH)
+    return _plate_pipeline_singleton
+
+
 @router.post("/license-plate/")
 async def detect_license_plate(
     image: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):
-    """Detect license plates using pre-trained YOLO model."""
+    """Detect and OCR license plates using YOLOv8 finetune + TrOCR pipeline."""
     start_time = time.time()
-
-    temp_filename = f"temp_plate_{int(time.time())}_{image.filename}"
-    full_path = os.path.join(settings.MEDIA_ROOT, temp_filename)
 
     try:
         contents = await image.read()
-        with open(full_path, "wb") as f:
-            f.write(contents)
-
-        # Import detector from ml/ directory (copied from Django ai-service)
-        from app.ml.inference.license_plate_detector import LicensePlateDetector
-
-        detector = LicensePlateDetector()
-        detections = detector.detect(full_path)
+        pipeline = _get_plate_pipeline()
+        result = pipeline.process(contents)
 
         processing_time = time.time() - start_time
 
-        log = PredictionLog(
-            id=str(uuid.uuid4()),
-            prediction_type="license_plate",
-            input_data={"image": temp_filename},
-            output_data={"detections": detections},
-            confidence=detections[0]["confidence"] if detections else 0,
-            model_version="yolov8n",
-            processing_time=processing_time,
-        )
-        db.add(log)
-        db.commit()
+        # Build detections list for backward compatibility
+        detections = []
+        if result.plate_text:
+            bbox = []
+            if result.detection_result and result.detection_result.box:
+                b = result.detection_result.box
+                bbox = [b.x1, b.y1, b.x2, b.y2]
+            detections.append({
+                "plate_text": result.plate_text,
+                "confidence": round(result.confidence, 3),
+                "bbox": bbox,
+            })
+
+        try:
+            log = PredictionLog(
+                id=str(uuid.uuid4()),
+                prediction_type="license_plate",
+                input_data={"filename": image.filename},
+                output_data={
+                    "plate_text": result.plate_text,
+                    "decision": result.decision,
+                    "confidence": result.confidence,
+                },
+                confidence=result.confidence,
+                model_version="yolov8_finetune_v1m",
+                processing_time=processing_time,
+            )
+            db.add(log)
+            db.commit()
+        except Exception as db_err:
+            logger.warning(f"Failed to log plate prediction: {db_err}")
 
         return {
+            "plate_text": result.plate_text,
+            "decision": result.decision,
+            "confidence": round(result.confidence, 3),
+            "detection_confidence": round(result.detection_confidence, 3),
             "detections": detections,
             "processing_time": processing_time,
-            "model_version": "yolov8n",
+            "model_version": "yolov8_finetune_v1m",
+            "warning": result.warning,
+            "message": result.message,
         }
 
-    except ImportError:
-        raise HTTPException(
-            status_code=503,
-            detail="License plate detection model not loaded. Copy ml/ from ai-service.",
-        )
     except Exception as e:
         logger.error(f"License plate detection error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        if os.path.exists(full_path):
-            os.remove(full_path)
 
 
 @router.post("/cash/")
@@ -102,10 +136,8 @@ async def detect_cash(
         with open(full_path, "wb") as f:
             f.write(contents)
 
-        from app.ml.inference.cash_recognition import CashRecognitionInference
-
-        model_path = os.path.join(settings.ML_MODELS_DIR, "cash_recognition_best.pth")
-        inference = CashRecognitionInference(model_path=model_path)
+        # ImportError from _get_cash_inference() propagates to the except ImportError block below
+        inference = _get_cash_inference()
         result = inference.predict(full_path)
 
         processing_time = time.time() - start_time

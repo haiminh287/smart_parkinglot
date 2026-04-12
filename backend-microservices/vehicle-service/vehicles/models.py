@@ -33,6 +33,7 @@ class Vehicle(models.Model):
 
     class Meta:
         db_table = 'vehicle'
+        ordering = ['-created_at']
         indexes = [
             models.Index(fields=['user_id']),
             models.Index(fields=['license_plate']),

@@ -1,62 +1,122 @@
-# === Python / Django ===
+# ============================================
+# ParkSmart Project — .gitignore
+# ============================================
+
+# === Environment / Secrets ===
+.env
+.env.*
+!.env.example
+*.local
+
+# === Python ===
 __pycache__/
 *.py[cod]
-*.sqlite3
-*.log
-*.pot
-*.pyc
 *.pyo
 *.pyd
+*.pyc
 .Python
+*.egg-info/
+*.egg
+*.sqlite3
+*.db
+*.pot
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Virtual environments
 env/
 venv/
+.venv/
 ENV/
 VENV/
 env.bak/
 venv.bak/
-.idea/
-*.db
 
-# Django specific
-*.migrations/
+# Django
 staticfiles/
 media/
 
-# VSCode settings
-.vscode/
-
-# Mac/Linux
-.DS_Store
-
-# === ReactJS ===
-# Node modules
+# === Node.js / React ===
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-
-# Build output
+pnpm-debug.log*
 /build
 /dist
+dist-ssr/
 
-# dotenv files (cấu hình riêng tư)
-.env
-.env.local
-.env.*.local
+# === AI Model Weights (quá lớn cho git) ===
+*.pt
+*.pth
+*.onnx
+*.h5
+*.tflite
+*.pb
 
-# lock files (tuỳ chọn – nếu bạn không muốn commit)
-# package-lock.json
-# yarn.lock
+# === Logs ===
+*.log
+logs/
+test-logs/
+backend-microservices/logs/
+train_log.txt
+train_err.txt
 
-# === Git ===
-.git/
-.local-backups/
+# === IDE / Editor ===
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sw?
 
-# === Local automation / temp artifacts ===
+# === OS ===
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# === Unity ===
+ParkingSimulatorUnity/Library/
+ParkingSimulatorUnity/Temp/
+ParkingSimulatorUnity/Logs/
+ParkingSimulatorUnity/obj/
+ParkingSimulatorUnity/Build/
+ParkingSimulatorUnity/UserSettings/
+
+# === Testing / Reports ===
+playwright-report/
+test-results/
 .playwright-mcp/
+coverage/
+htmlcov/
+.pytest_cache/
+.coverage
+*.cover
+
+# === Docker (runtime data) ===
+docker-compose.override.yml
+
+# === Generated / Temp Files ===
 .tmp_*
+.tmp-*
 _tmp_*
 *-run.log
+cookies.txt
+*.bak
+*.old
+*.orig
+
+# === Build / Compile ===
+*.exe
+*.dll
+*.so
+*.dylib
+
+# === Audit logs ===
+.github/hooks/audit-logs/
+
+# === Local automation artifacts ===
+.local-backups/
 backend-test*.txt
 backend-ai-test-timeout.txt
 payment-rerun-log.txt
@@ -64,3 +124,15 @@ qc-fe-sanity.txt
 npm-audit.json
 pip-audit.json
 
+# === Captured images (runtime) ===
+backend-microservices/ai-service-fastapi/app/images/
+
+# === Generated QR images in root ===
+booking-*.png
+booking_qr_*.svg
+
+# === Test result files ===
+backend-microservices/test_e2e_results.json
+
+# === Vitest timestamp files ===
+vitest.config.ts.timestamp-*

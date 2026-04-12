@@ -49,6 +49,9 @@ const char* AI_SERVICE_BASE_URL = "http://192.168.100.194:8009";
 // Gateway Secret — phải trùng với server
 const char* GATEWAY_SECRET = "gateway-internal-secret-key";
 
+// Device Token — phải trùng với ESP32_DEVICE_TOKEN trên server
+const char* DEVICE_TOKEN = "your-device-token-here";
+
 // Gate IDs
 const char* GATE_IN_ID  = "GATE-IN-01";
 const char* GATE_OUT_ID = "GATE-OUT-01";
@@ -311,6 +314,7 @@ void sendHeartbeat(const char* deviceId) {
   http.begin(url);
   http.addHeader("Content-Type", "application/json");
   http.addHeader("X-Gateway-Secret", GATEWAY_SECRET);
+  http.addHeader("X-Device-Token", DEVICE_TOKEN);
   http.setTimeout(5000);  // Heartbeat timeout ngắn hơn
 
   int httpCode = http.POST(jsonBody);
@@ -352,6 +356,7 @@ void sendLog(const char* deviceId, const char* level, String message) {
   http.begin(url);
   http.addHeader("Content-Type", "application/json");
   http.addHeader("X-Gateway-Secret", GATEWAY_SECRET);
+  http.addHeader("X-Device-Token", DEVICE_TOKEN);
   http.setTimeout(5000);  // Log timeout ngắn
 
   int httpCode = http.POST(jsonBody);
@@ -550,6 +555,7 @@ String httpPost(String& url, String& jsonBody) {
   http.begin(url);
   http.addHeader("Content-Type", "application/json");
   http.addHeader("X-Gateway-Secret", GATEWAY_SECRET);
+  http.addHeader("X-Device-Token", DEVICE_TOKEN);
   http.setTimeout(HTTP_TIMEOUT_MS);
 
   int httpCode = http.POST(jsonBody);

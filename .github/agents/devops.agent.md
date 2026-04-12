@@ -1,17 +1,20 @@
 ---
 name: devops
 description: "DevOps/SRE — Git workflow, DB migrations (backup-first), containerization, CI/CD, deployment (rolling/blue-green), post-deploy monitoring, auto-rollback, artifact cleanup."
-user-invokable: false
+user-invocable: false
 tools:
   [
-    "editFiles",
-    "readFile",
-    "runInTerminal",
-    "codebase",
-    "filesystem/*",
+    "vscode",
+    "execute",
+    "read",
+    "edit",
+    "search",
+    "web",
+    "agent",
+    "todo",
+    "context7/*",
     "github/*",
     "docker/*",
-    "postgres/*",
   ]
 handoffs:
   - label: Task hoàn tất → Orchestrator

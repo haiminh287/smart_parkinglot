@@ -1,0 +1,172 @@
+[
+  {
+    "name": "health",
+    "method": "GET",
+    "path": "/api/health",
+    "url": "http://localhost:8080/api/health",
+    "status": 403,
+    "contentType": null,
+    "bodySnippet": "Response status code does not indicate success: 403 (Forbidden).",
+    "error": ""
+  },
+  {
+    "name": "auth-me-slash",
+    "method": "GET",
+    "path": "/api/auth/me/",
+    "url": "http://localhost:8080/api/auth/me/",
+    "status": 403,
+    "contentType": null,
+    "bodySnippet": "Response status code does not indicate success: 403 (Forbidden).",
+    "error": ""
+  },
+  {
+    "name": "auth-me",
+    "method": "GET",
+    "path": "/api/auth/me",
+    "url": "http://localhost:8080/api/auth/me",
+    "status": 403,
+    "contentType": null,
+    "bodySnippet": "Response status code does not indicate success: 403 (Forbidden).",
+    "error": ""
+  },
+  {
+    "name": "auth-login-slash",
+    "method": "POST",
+    "path": "/api/auth/login/",
+    "url": "http://localhost:8080/api/auth/login/",
+    "status": 403,
+    "contentType": null,
+    "bodySnippet": "Response status code does not indicate success: 403 (Forbidden).",
+    "error": ""
+  },
+  {
+    "name": "auth-login",
+    "method": "POST",
+    "path": "/api/auth/login",
+    "url": "http://localhost:8080/api/auth/login",
+    "status": 403,
+    "contentType": null,
+    "bodySnippet": "Response status code does not indicate success: 403 (Forbidden).",
+    "error": ""
+  },
+  {
+    "name": "auth-register-slash",
+    "method": "POST",
+    "path": "/api/auth/register/",
+    "url": "http://localhost:8080/api/auth/register/",
+    "status": 403,
+    "contentType": null,
+    "bodySnippet": "Response status code does not indicate success: 403 (Forbidden).",
+    "error": ""
+  },
+  {
+    "name": "auth-register",
+    "method": "POST",
+    "path": "/api/auth/register",
+    "url": "http://localhost:8080/api/auth/register",
+    "status": 403,
+    "contentType": null,
+    "bodySnippet": "Response status code does not indicate success: 403 (Forbidden).",
+    "error": ""
+  },
+  {
+    "name": "auth-refresh-slash",
+    "method": "POST",
+    "path": "/api/auth/refresh/",
+    "url": "http://localhost:8080/api/auth/refresh/",
+    "status": 403,
+    "contentType": null,
+    "bodySnippet": "Response status code does not indicate success: 403 (Forbidden).",
+    "error": ""
+  },
+  {
+    "name": "auth-refresh",
+    "method": "POST",
+    "path": "/api/auth/refresh",
+    "url": "http://localhost:8080/api/auth/refresh",
+    "status": 403,
+    "contentType": null,
+    "bodySnippet": "Response status code does not indicate success: 403 (Forbidden).",
+    "error": ""
+  },
+  {
+    "name": "auth-logout-slash",
+    "method": "POST",
+    "path": "/api/auth/logout/",
+    "url": "http://localhost:8080/api/auth/logout/",
+    "status": 403,
+    "contentType": null,
+    "bodySnippet": "Response status code does not indicate success: 403 (Forbidden).",
+    "error": ""
+  },
+  {
+    "name": "auth-logout",
+    "method": "POST",
+    "path": "/api/auth/logout",
+    "url": "http://localhost:8080/api/auth/logout",
+    "status": 403,
+    "contentType": null,
+    "bodySnippet": "Response status code does not indicate success: 403 (Forbidden).",
+    "error": ""
+  },
+  {
+    "name": "auth-google-start",
+    "method": "GET",
+    "path": "/api/auth/google/login/",
+    "url": "http://localhost:8080/api/auth/google/login/",
+    "status": 403,
+    "contentType": null,
+    "bodySnippet": "Response status code does not indicate success: 403 (Forbidden).",
+    "error": ""
+  },
+  {
+    "name": "auth-oauth-google",
+    "method": "GET",
+    "path": "/api/auth/oauth/google/",
+    "url": "http://localhost:8080/api/auth/oauth/google/",
+    "status": 403,
+    "contentType": null,
+    "bodySnippet": "Response status code does not indicate success: 403 (Forbidden).",
+    "error": ""
+  },
+  {
+    "name": "bookings-list",
+    "method": "GET",
+    "path": "/api/bookings/",
+    "url": "http://localhost:8080/api/bookings/",
+    "status": 403,
+    "contentType": null,
+    "bodySnippet": "Response status code does not indicate success: 403 (Forbidden).",
+    "error": ""
+  },
+  {
+    "name": "chatbot-health",
+    "method": "GET",
+    "path": "/api/chatbot/health",
+    "url": "http://localhost:8080/api/chatbot/health",
+    "status": 403,
+    "contentType": null,
+    "bodySnippet": "Response status code does not indicate success: 403 (Forbidden).",
+    "error": ""
+  },
+  {
+    "name": "parking-health",
+    "method": "GET",
+    "path": "/api/parking/health/",
+    "url": "http://localhost:8080/api/parking/health/",
+    "status": 403,
+    "contentType": null,
+    "bodySnippet": "Response status code does not indicate success: 403 (Forbidden).",
+    "error": ""
+  },
+  {
+    "name": "payment-health",
+    "method": "GET",
+    "path": "/api/payment/health",
+    "url": "http://localhost:8080/api/payment/health",
+    "status": 403,
+    "contentType": null,
+    "bodySnippet": "Response status code does not indicate success: 403 (Forbidden).",
+    "error": ""
+  }
+]

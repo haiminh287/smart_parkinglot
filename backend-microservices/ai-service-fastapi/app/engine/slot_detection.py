@@ -15,15 +15,23 @@ Usage:
 """
 
 import logging
+import shutil
 import time
 from dataclasses import dataclass, field
 from enum import Enum
+from pathlib import Path
 from typing import Optional
 
 import cv2
 import numpy as np
 
+from app.config import settings
+from app.schemas.ai import OccupancyDetectionResponse, SlotOccupancyResult
+
 logger = logging.getLogger(__name__)
+
+# Vehicle class IDs in COCO dataset (used by YOLO11n)
+VEHICLE_CLASS_IDS = frozenset({2, 3, 5, 7})  # car, motorcycle, bus, truck
 
 
 class SlotStatus(str, Enum):
@@ -93,14 +101,159 @@ class SlotDetector:
         self._bg_subtractor = cv2.createBackgroundSubtractorMOG2(
             history=500, varThreshold=50, detectShadows=True
         )
+        self._yolo_model = self._load_yolo()
+
+    def _load_yolo(self):
+        """Load YOLO model for vehicle detection.
+
+        Load order:
+          1. Configured path from settings (stable for Docker/local overrides)
+          2. Ultralytics auto-download using `YOLO("yolo11n.pt")`
+          3. OpenCV fallback (None)
+        """
+        configured_path = Path(settings.YOLO_PARKING_MODEL_PATH)
+
+        try:
+            from ultralytics import YOLO
+        except Exception as exc:
+            logger.warning(
+                "YOLO import unavailable, using OpenCV fallback: %s", exc
+            )
+            return None
+
+        if configured_path.exists():
+            try:
+                logger.info(
+                    "Loading YOLO parking model from configured path: %s",
+                    configured_path,
+                )
+                return YOLO(str(configured_path))
+            except Exception as exc:
+                logger.warning(
+                    "Failed to load YOLO from configured path %s: %s",
+                    configured_path,
+                    exc,
+                )
+
+        logger.info(
+            "Configured YOLO path not found (%s). Triggering ultralytics auto-download with yolo11n.pt",
+            configured_path,
+        )
+        try:
+            auto_model = YOLO("yolo11n.pt")
+            logger.info("YOLO auto-download/load succeeded with yolo11n.pt")
+        except Exception as exc:
+            logger.warning(
+                "YOLO auto-download failed, using OpenCV fallback: %s", exc
+            )
+            return None
+
+        self._sync_downloaded_weights(auto_model, configured_path)
+        return auto_model
+
+    def _sync_downloaded_weights(self, model, target_path: Path) -> None:
+        """Best-effort sync downloaded weights to configured path for stable next startup."""
+        try:
+            source = self._resolve_downloaded_weights_path(model)
+            if source is None or not source.exists():
+                logger.info(
+                    "YOLO source weights path not found after auto-download; keeping runtime model only"
+                )
+                return
+
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+
+            if source.resolve() == target_path.resolve():
+                logger.info("YOLO weights already at configured path: %s", target_path)
+                return
+
+            shutil.copy2(source, target_path)
+            logger.info("Synced YOLO weights to configured path: %s", target_path)
+        except Exception as exc:
+            logger.warning(
+                "Failed to sync auto-downloaded YOLO weights to %s: %s",
+                target_path,
+                exc,
+            )
+
+    @staticmethod
+    def _resolve_downloaded_weights_path(model) -> Optional[Path]:
+        """Resolve local weight file path from ultralytics model object."""
+        candidates = [
+            getattr(model, "ckpt_path", None),
+            getattr(getattr(model, "model", None), "ckpt_path", None),
+            getattr(getattr(model, "model", None), "pt_path", None),
+            "yolo11n.pt",
+        ]
+
+        for candidate in candidates:
+            if not candidate:
+                continue
+            path = Path(str(candidate))
+            if path.exists() and path.is_file():
+                return path
+        return None
+
+    def _compute_iou(self, box_a: tuple, box_b: tuple) -> float:
+        """Compute Intersection-over-Union for two bboxes (x1, y1, x2, y2)."""
+        ax1, ay1, ax2, ay2 = box_a
+        bx1, by1, bx2, by2 = box_b
+        ix1, iy1 = max(ax1, bx1), max(ay1, by1)
+        ix2, iy2 = min(ax2, bx2), min(ay2, by2)
+        inter = max(0, ix2 - ix1) * max(0, iy2 - iy1)
+        if inter == 0:
+            return 0.0
+        area_a = (ax2 - ax1) * (ay2 - ay1)
+        area_b = (bx2 - bx1) * (by2 - by1)
+        return inter / (area_a + area_b - inter)
+
+    def _detect_with_yolo(
+        self, frame: np.ndarray, slots: list
+    ) -> list[SlotOccupancyResult]:
+        """Run YOLO inference and match vehicles to parking slots via IoU."""
+        raw = self._yolo_model(frame, verbose=False)[0]
+        vehicle_boxes = [
+            (
+                int(b.xyxy[0][0]),
+                int(b.xyxy[0][1]),
+                int(b.xyxy[0][2]),
+                int(b.xyxy[0][3]),
+            )
+            for b in raw.boxes
+            if int(b.cls[0]) in VEHICLE_CLASS_IDS
+            and float(b.conf[0]) >= settings.YOLO_PARKING_CONF_THRESHOLD
+        ]
+
+        results: list[SlotOccupancyResult] = []
+        for slot in slots:
+            slot_box = (slot.x1, slot.y1, slot.x2, slot.y2)
+            best_iou = max(
+                (self._compute_iou(slot_box, vb) for vb in vehicle_boxes),
+                default=0.0,
+            )
+            is_occupied = best_iou >= settings.YOLO_PARKING_IOU_THRESHOLD
+            confidence = round(best_iou if is_occupied else 1.0 - best_iou, 3)
+            results.append(
+                SlotOccupancyResult(
+                    slot_id=slot.slot_id,
+                    slot_code=slot.slot_code,
+                    zone_id=slot.zone_id,
+                    status="occupied" if is_occupied else "available",
+                    confidence=confidence,
+                    method="yolo11n_iou",
+                )
+            )
+        return results
 
     def detect_occupancy(
         self,
         frame: np.ndarray,
         slots: list[SlotBbox],
         camera_id: str = "unknown",
-    ) -> FrameDetectionResult:
-        """Detect occupancy for all slots in a camera frame.
+    ) -> OccupancyDetectionResponse:
+        """Detect vehicle occupancy for all slots in a camera frame.
+
+        Uses YOLO11n if loaded. Falls back to OpenCV edge/contour/color analysis.
 
         Args:
             frame: BGR numpy array from camera.
@@ -108,46 +261,71 @@ class SlotDetector:
             camera_id: Camera identifier for logging.
 
         Returns:
-            FrameDetectionResult with per-slot status.
+            OccupancyDetectionResponse with per-slot status.
         """
         t0 = time.time()
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        results: list[SlotDetectionResult] = []
 
-        for slot_bbox in slots:
-            slot_t0 = time.time()
+        # Primary: YOLO detection
+        slot_results: Optional[list[SlotOccupancyResult]] = None
+        detection_method = "opencv_fallback"
+
+        if self._yolo_model is not None:
             try:
-                result = self._detect_single_slot(gray, frame, slot_bbox)
+                slot_results = self._detect_with_yolo(frame, slots)
+                detection_method = "yolo11n"
             except Exception as exc:
-                logger.warning(
-                    "Slot detection failed for %s: %s", slot_bbox.slot_code, exc
-                )
-                result = SlotDetectionResult(
-                    slot_id=slot_bbox.slot_id,
-                    slot_code=slot_bbox.slot_code,
-                    zone_id=slot_bbox.zone_id,
-                    status=SlotStatus.UNKNOWN,
-                    confidence=0.0,
-                    method="error",
-                )
-            result.processing_time_ms = (time.time() - slot_t0) * 1000
-            results.append(result)
+                logger.warning("YOLO detection failed, falling back to OpenCV: %s", exc)
 
-        total_time = (time.time() - t0) * 1000
-        available = sum(1 for r in results if r.status == SlotStatus.AVAILABLE)
-        occupied = sum(1 for r in results if r.status == SlotStatus.OCCUPIED)
+        # Fallback: OpenCV edge/contour/color analysis
+        if slot_results is None:
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            slot_results = []
+            for slot_bbox in slots:
+                try:
+                    r = self._detect_single_slot(gray, frame, slot_bbox)
+                    slot_results.append(
+                        SlotOccupancyResult(
+                            slot_id=r.slot_id,
+                            slot_code=r.slot_code,
+                            zone_id=r.zone_id,
+                            status=r.status.value,
+                            confidence=r.confidence,
+                            method=r.method,
+                        )
+                    )
+                except Exception as exc:
+                    logger.warning(
+                        "Slot detection failed for %s: %s", slot_bbox.slot_code, exc
+                    )
+                    slot_results.append(
+                        SlotOccupancyResult(
+                            slot_id=slot_bbox.slot_id,
+                            slot_code=slot_bbox.slot_code,
+                            zone_id=slot_bbox.zone_id,
+                            status="unknown",
+                            confidence=0.0,
+                            method="error",
+                        )
+                    )
+
+        total_time_ms = (time.time() - t0) * 1000
+        total_available = sum(1 for r in slot_results if r.status == "available")
+        total_occupied = sum(1 for r in slot_results if r.status == "occupied")
 
         logger.info(
-            "Frame detection for camera %s: %d slots (%d available, %d occupied) in %.1fms",
-            camera_id, len(results), available, occupied, total_time,
+            "Frame detection for camera %s: %d slots (%d available, %d occupied) in %.1fms via %s",
+            camera_id, len(slot_results), total_available, total_occupied,
+            total_time_ms, detection_method,
         )
 
-        return FrameDetectionResult(
+        return OccupancyDetectionResponse(
             camera_id=camera_id,
-            slots=results,
-            total_available=available,
-            total_occupied=occupied,
-            processing_time_ms=total_time,
+            total_slots=len(slot_results),
+            total_available=total_available,
+            total_occupied=total_occupied,
+            detection_method=detection_method,
+            processing_time_ms=round(total_time_ms, 1),
+            slots=slot_results,
         )
 
     def _detect_single_slot(

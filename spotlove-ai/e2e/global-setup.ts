@@ -13,7 +13,7 @@ import path from "path";
 const AUTH_DIR = path.resolve("e2e", ".auth");
 
 const GATEWAY_URL = "http://localhost:8000";
-const GATEWAY_SECRET = "gateway-internal-secret-key";
+const GATEWAY_SECRET = "gw-prod-wnMbXWEHc49KXVjhae4IGU7TZfoj4HHEDTOtzYvE";
 
 const USER_CREDENTIALS = {
   email: "e2e_playwright@parksmart.com",
@@ -94,7 +94,7 @@ setup("authenticate as user", async ({ page }) => {
 
   // Login via UI
   await page.goto("/login");
-  await page.waitForLoadState("networkidle");
+  await page.waitForLoadState("domcontentloaded");
 
   // Fill login form
   await page.locator("#email").fill(USER_CREDENTIALS.email);
@@ -122,7 +122,7 @@ setup("authenticate as admin", async ({ page }) => {
   fs.mkdirSync(AUTH_DIR, { recursive: true });
 
   await page.goto("/login");
-  await page.waitForLoadState("networkidle");
+  await page.waitForLoadState("domcontentloaded");
 
   await page.locator("#email").fill(ADMIN_CREDENTIALS.email);
   await page.locator("#password").fill(ADMIN_CREDENTIALS.password);

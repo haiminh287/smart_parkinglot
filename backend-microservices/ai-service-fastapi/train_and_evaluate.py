@@ -14,10 +14,17 @@ Usage:
     python train_and_evaluate.py
     python train_and_evaluate.py --epochs 80 --batch-size 24
     python train_and_evaluate.py --eval-only
+    python train_and_evaluate.py --enhanced --epochs 60 --batch-size 16
 """
 
 from __future__ import annotations
-import argparse, json, logging, shutil, sys, time
+
+import argparse
+import json
+import logging
+import shutil
+import sys
+import time
 from pathlib import Path
 
 import cv2
@@ -171,6 +178,20 @@ def color_predict(image_bgr: np.ndarray) -> tuple[str, float]:
 
 #  Dataset Preparation 
 
+
+def _extract_source_id(filename: str) -> str:
+    """Extract source video/image ID from augmented filename.
+
+    Augmented files have patterns like: 1000_front_20260315_001_hflip.jpg
+    Source ID = everything before the augmentation suffix.
+    """
+    stem = Path(filename).stem
+    # Remove known augmentation suffixes
+    for suffix in ("_hflip", "_bright", "_rot", "_blur", "_noise", "_orig"):
+        stem = stem.replace(suffix, "")
+    return stem
+
+
 def prepare_split(source_dir: Path, split_dir: Path, val_ratio: float = 0.2, seed: int = 42) -> dict:
     """Stratified split: 80% train / 20% val per denomination.
 
@@ -192,22 +213,38 @@ def prepare_split(source_dir: Path, split_dir: Path, val_ratio: float = 0.2, see
         src = source_dir / denom
         if not src.exists():
             logger.warning("  Missing: %s VND", denom); stats["skipped"] += 1; continue
-        images = sorted(f for f in src.iterdir()
-                        if f.suffix.lower() in {".jpg", ".jpeg", ".png"})
-        if len(images) < 10:
-            logger.warning("  %s VND: only %d images - skipped", denom, len(images))
+        all_files = sorted(f for f in src.iterdir()
+                           if f.suffix.lower() in {".jpg", ".jpeg", ".png"})
+        if len(all_files) < 10:
+            logger.warning("  %s VND: only %d images - skipped", denom, len(all_files))
             stats["skipped"] += 1; continue
-        idx   = rng.permutation(len(images))
-        n_val = max(1, int(len(images) * val_ratio))
-        val_s = set(idx[:n_val].tolist())
-        (split_dir/"train"/denom).mkdir(parents=True, exist_ok=True)
-        (split_dir/"val"/denom).mkdir(parents=True, exist_ok=True)
-        for i, img in enumerate(images):
-            dest = split_dir / ("val" if i in val_s else "train") / denom
-            shutil.copy2(img, dest / img.name)
-        stats["train"] += len(images) - n_val
+        train_cls_dir = split_dir / "train" / denom
+        val_cls_dir = split_dir / "val" / denom
+        train_cls_dir.mkdir(parents=True, exist_ok=True)
+        val_cls_dir.mkdir(parents=True, exist_ok=True)
+        # Group by source to prevent data leakage
+        from collections import defaultdict
+        groups: dict[str, list[Path]] = defaultdict(list)
+        for f in all_files:
+            sid = _extract_source_id(f.name)
+            groups[sid].append(f)
+        # Split by groups, not individual files
+        group_keys = sorted(groups.keys())
+        rng.shuffle(group_keys)
+        n_val_groups = max(1, int(len(group_keys) * val_ratio))
+        val_groups = set(group_keys[:n_val_groups])
+        n_train = n_val = 0
+        for sid, files in groups.items():
+            target = val_cls_dir if sid in val_groups else train_cls_dir
+            for f in files:
+                shutil.copy2(f, target / f.name)
+            if sid in val_groups:
+                n_val += len(files)
+            else:
+                n_train += len(files)
+        stats["train"] += n_train
         stats["val"]   += n_val
-        logger.info("  %6s VND -> %d train + %d val", denom, len(images)-n_val, n_val)
+        logger.info("  %6s VND -> %d train + %d val (%d source groups)", denom, n_train, n_val, len(group_keys))
     logger.info("  Total: %d train, %d val", stats["train"], stats["val"])
     return stats
 
@@ -289,6 +326,124 @@ def build_model(n_classes: int, color_feat_dim: int, gabor_feat_dim: int):
     return MultiBranchBanknoteNet()
 
 
+#  Enhanced MobileNetV3 Model 
+
+def build_enhanced_model(n_classes: int, gabor_dim: int = 24, lbp_dim: int = 10, edge_dim: int = 36):
+    """Build MobileNetV3-Large multi-branch model with texture features.
+
+    Architecture:
+        Branch 1: MobileNetV3-Large backbone -> 960-dim
+        Branch 2: Gabor texture features -> 48-dim
+        Branch 3: LBP micro-texture features -> 32-dim
+        Branch 4: Edge structural features -> 48-dim
+        Fusion: concat(960+48+32+48=1088) -> FC(256) -> FC(n_classes)
+    """
+    import torch
+    import torch.nn as nn
+    from torchvision.models import (MobileNet_V3_Large_Weights,
+                                    mobilenet_v3_large)
+
+    class EnhancedBanknoteNet(nn.Module):
+        def __init__(self):
+            super().__init__()
+            backbone = mobilenet_v3_large(weights=MobileNet_V3_Large_Weights.DEFAULT)
+            self.features = backbone.features
+            self.pool = nn.AdaptiveAvgPool2d(1)
+            vis_dim = 960
+
+            self.gabor_branch = nn.Sequential(
+                nn.Linear(gabor_dim, 48), nn.BatchNorm1d(48), nn.ReLU(True), nn.Dropout(0.2))
+            self.lbp_branch = nn.Sequential(
+                nn.Linear(lbp_dim, 32), nn.BatchNorm1d(32), nn.ReLU(True), nn.Dropout(0.2))
+            self.edge_branch = nn.Sequential(
+                nn.Linear(edge_dim, 48), nn.BatchNorm1d(48), nn.ReLU(True), nn.Dropout(0.2))
+
+            fused_dim = vis_dim + 48 + 32 + 48  # 1088
+            self.classifier = nn.Sequential(
+                nn.Dropout(0.3),
+                nn.Linear(fused_dim, 256), nn.BatchNorm1d(256), nn.ReLU(True),
+                nn.Dropout(0.2),
+                nn.Linear(256, n_classes),
+            )
+
+        def forward(self, image, gabor_feat, lbp_feat, edge_feat):
+            x = self.features(image)
+            x = self.pool(x).flatten(1)
+            g = self.gabor_branch(gabor_feat)
+            l = self.lbp_branch(lbp_feat)
+            e = self.edge_branch(edge_feat)
+            fused = torch.cat([x, g, l, e], dim=1)
+            return self.classifier(fused)
+
+    return EnhancedBanknoteNet()
+
+
+#  Enhanced Dataset 
+
+def make_enhanced_datasets(train_dir: Path, val_dir: Path, img_size: int = 224):
+    """Create datasets for enhanced MobileNetV3 training with texture features."""
+    from app.engine.feature_extractors import (extract_edge_features,
+                                               extract_gabor_features,
+                                               extract_lbp_features)
+    from PIL import Image
+    from torch.utils.data import Dataset
+    from torchvision import transforms
+
+    train_tf = transforms.Compose([
+        transforms.Resize((img_size, img_size)),
+        transforms.RandomHorizontalFlip(),
+        transforms.RandomRotation(15),
+        transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.5, hue=0.1),
+        transforms.RandomAffine(degrees=0, translate=(0.1, 0.1)),
+        transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 1.0)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        transforms.RandomErasing(p=0.1),
+    ])
+
+    val_tf = transforms.Compose([
+        transforms.Resize((img_size, img_size)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ])
+
+    class EnhancedBanknoteDataset(Dataset):
+        def __init__(self, root: Path, transform):
+            self.transform = transform
+            self.samples = []
+            self.classes = sorted([d.name for d in root.iterdir() if d.is_dir()])
+            self.class_to_idx = {c: i for i, c in enumerate(self.classes)}
+            for cls_dir in root.iterdir():
+                if cls_dir.is_dir() and cls_dir.name in self.class_to_idx:
+                    for img_path in cls_dir.iterdir():
+                        if img_path.suffix.lower() in {".jpg", ".jpeg", ".png", ".bmp", ".webp"}:
+                            self.samples.append((img_path, self.class_to_idx[cls_dir.name]))
+
+        def __len__(self):
+            return len(self.samples)
+
+        def __getitem__(self, idx):
+            import torch
+            path, label = self.samples[idx]
+            pil = Image.open(str(path)).convert("RGB")
+            img_tensor = self.transform(pil)
+
+            # Feature extraction from BGR image (no augmentation on features)
+            bgr = cv2.imread(str(path))
+            if bgr is None:
+                bgr = np.zeros((128, 128, 3), dtype=np.uint8)
+            bgr_resized = cv2.resize(bgr, (128, 128))
+
+            gabor = torch.tensor(extract_gabor_features(bgr_resized), dtype=torch.float32)
+            lbp = torch.tensor(extract_lbp_features(bgr_resized), dtype=torch.float32)
+            edge = torch.tensor(extract_edge_features(bgr_resized), dtype=torch.float32)
+            return img_tensor, gabor, lbp, edge, torch.tensor(label, dtype=torch.long)
+
+    train_ds = EnhancedBanknoteDataset(train_dir, train_tf)
+    val_ds = EnhancedBanknoteDataset(val_dir, val_tf)
+    return train_ds, val_ds, train_ds.classes, train_ds.class_to_idx
+
+
 #  Multi-Feature Dataset 
 
 def make_datasets(train_dir: Path, val_dir: Path, img_size: int):
@@ -303,9 +458,9 @@ def make_datasets(train_dir: Path, val_dir: Path, img_size: int):
         (train_dataset, val_dataset, class_to_idx)
     """
     import torch
+    from PIL import Image
     from torch.utils.data import Dataset
     from torchvision import transforms
-    from PIL import Image
 
     # Strong augment: force model to learn structure, not just appearance
     train_tf = transforms.Compose([
@@ -365,6 +520,130 @@ def make_datasets(train_dir: Path, val_dir: Path, img_size: int):
     train_ds = BanknoteDataset(train_dir, train_tf, augment=True)
     val_ds   = BanknoteDataset(val_dir,   val_tf,   augment=False)
     return train_ds, val_ds, class_to_idx
+
+
+#  Enhanced Training 
+
+def train_enhanced(train_dir: Path, val_dir: Path, output_dir: Path,
+                   epochs: int = 60, batch_size: int = 16, lr: float = 3e-4,
+                   patience: int = 15, unfreeze_at: int = 10) -> dict:
+    """Train enhanced MobileNetV3 multi-branch model."""
+    import torch
+    import torch.nn as nn
+    from torch.utils.data import DataLoader
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    logger.info(f"Training enhanced model on {device}")
+
+    train_ds, val_ds, classes, class_to_idx = make_enhanced_datasets(train_dir, val_dir)
+    n_classes = len(classes)
+    logger.info(f"Classes: {classes}, Train: {len(train_ds)}, Val: {len(val_ds)}")
+
+    if len(train_ds) == 0:
+        raise RuntimeError("No training data found")
+
+    # Class weights for imbalanced data
+    counts = torch.zeros(n_classes)
+    for _, _, _, _, label in train_ds:
+        counts[label] += 1
+    weights = 1.0 / (counts + 1e-8)
+    weights = weights / weights.sum() * n_classes
+
+    train_dl = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=0)
+    val_dl = DataLoader(val_ds, batch_size=batch_size, shuffle=False, num_workers=0)
+
+    model = build_enhanced_model(n_classes)
+
+    # Freeze backbone initially
+    for name, p in model.named_parameters():
+        if "features" in name:
+            p.requires_grad = False
+
+    criterion = nn.CrossEntropyLoss(weight=weights.to(device))
+    optimizer = torch.optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=lr, weight_decay=1e-4)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
+    model.to(device)
+
+    best_val_acc = 0.0
+    no_improve = 0
+    history = {"train_loss": [], "val_loss": [], "val_acc": []}
+
+    for epoch in range(epochs):
+        # Unfreeze backbone after unfreeze_at epochs
+        if epoch == unfreeze_at:
+            logger.info(f"Epoch {epoch}: Unfreezing backbone")
+            for p in model.parameters():
+                p.requires_grad = True
+            optimizer = torch.optim.AdamW(model.parameters(), lr=lr * 0.1, weight_decay=1e-4)
+            scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs - epoch)
+
+        # Train
+        model.train()
+        total_loss = 0
+        for img, gabor, lbp, edge, label in train_dl:
+            img, gabor, lbp, edge, label = img.to(device), gabor.to(device), lbp.to(device), edge.to(device), label.to(device)
+            optimizer.zero_grad()
+            out = model(img, gabor, lbp, edge)
+            loss = criterion(out, label)
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+            optimizer.step()
+            total_loss += loss.item()
+
+        avg_train_loss = total_loss / max(len(train_dl), 1)
+        scheduler.step()
+
+        # Validate
+        model.eval()
+        val_loss, correct, total = 0, 0, 0
+        with torch.no_grad():
+            for img, gabor, lbp, edge, label in val_dl:
+                img, gabor, lbp, edge, label = img.to(device), gabor.to(device), lbp.to(device), edge.to(device), label.to(device)
+                out = model(img, gabor, lbp, edge)
+                val_loss += criterion(out, label).item()
+                correct += (out.argmax(1) == label).sum().item()
+                total += label.size(0)
+
+        val_acc = correct / max(total, 1)
+        avg_val_loss = val_loss / max(len(val_dl), 1)
+        history["train_loss"].append(avg_train_loss)
+        history["val_loss"].append(avg_val_loss)
+        history["val_acc"].append(val_acc)
+
+        logger.info(f"Epoch {epoch+1}/{epochs} — loss: {avg_train_loss:.4f}, val_loss: {avg_val_loss:.4f}, val_acc: {val_acc:.4f}")
+
+        if val_acc > best_val_acc:
+            best_val_acc = val_acc
+            no_improve = 0
+            # Save checkpoint
+            output_dir.mkdir(parents=True, exist_ok=True)
+            save_path = output_dir / "banknote_enhanced_v3.pth"
+            torch.save({
+                "model_type": "enhanced_mobilenetv3",
+                "model_state_dict": model.state_dict(),
+                "class_to_idx": class_to_idx,
+                "idx_to_class": {v: k for k, v in class_to_idx.items()},
+                "num_classes": n_classes,
+                "best_val_acc": best_val_acc,
+                "epoch": epoch + 1,
+                "gabor_dim": 24,
+                "lbp_dim": 10,
+                "edge_dim": 36,
+            }, str(save_path))
+            logger.info(f"Saved best model: val_acc={best_val_acc:.4f}")
+        else:
+            no_improve += 1
+            if no_improve >= patience:
+                logger.info(f"Early stopping at epoch {epoch+1}")
+                break
+
+    return {
+        "best_val_acc": best_val_acc,
+        "epochs_trained": len(history["train_loss"]),
+        "classes": classes,
+        "model_path": str(output_dir / "banknote_enhanced_v3.pth"),
+        "history": history,
+    }
 
 
 #  Training 
@@ -556,7 +835,7 @@ def evaluate(model_path: Path, val_dir: Path) -> dict:
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     logger.info("Loading: %s", model_path)
-    ckpt  = torch.load(str(model_path), map_location=device)
+    ckpt  = torch.load(str(model_path), map_location=device, weights_only=False)
     c2i   = ckpt["class_to_idx"]
     i2c   = {v:k for k,v in c2i.items()}
     nc    = len(c2i)
@@ -699,6 +978,8 @@ def main() -> None:
     ap.add_argument("--data-dir",    default=str(DATASET_DIR))
     ap.add_argument("--output-dir",  default=str(OUTPUT_DIR))
     ap.add_argument("--eval-only",   action="store_true")
+    ap.add_argument("--enhanced",    action="store_true",
+                    help="Train enhanced MobileNetV3 model with texture features (Gabor+LBP+Edge)")
     args=ap.parse_args()
 
     data_dir=Path(args.data_dir); output_dir=Path(args.output_dir)
@@ -720,15 +1001,40 @@ def main() -> None:
         stats=prepare_split(data_dir, split_dir)
         if stats["train"]==0:
             logger.error("No training data found: %s", data_dir); sys.exit(1)
-        print("\n--- STEP 2: Multi-Feature GPU Training ---")
-        train(train_dir=split_dir/"train", val_dir=split_dir/"val",
-              output_dir=output_dir, epochs=args.epochs, batch_size=args.batch_size,
-              lr=args.lr, patience=args.patience, unfreeze_at=args.unfreeze_at)
 
-    print("\n--- STEP 3: Evaluation ---")
-    if not best_path.exists():
-        logger.error("No model: %s - run training first", best_path); sys.exit(1)
-    evaluate(model_path=best_path, val_dir=split_dir/"val")
+        if args.enhanced:
+            print("\n--- STEP 2: Enhanced MobileNetV3 Multi-Branch Training ---")
+            logger.info("=== ENHANCED MobileNetV3 Multi-Branch Training ===")
+            result = train_enhanced(
+                train_dir=split_dir / "train",
+                val_dir=split_dir / "val",
+                output_dir=output_dir,
+                epochs=args.epochs,
+                batch_size=args.batch_size,
+                lr=args.lr,
+            )
+            logger.info(f"Enhanced training complete: val_acc={result['best_val_acc']:.4f}")
+            logger.info(f"Model saved to: {result['model_path']}")
+        else:
+            print("\n--- STEP 2: Multi-Feature GPU Training ---")
+            train(train_dir=split_dir/"train", val_dir=split_dir/"val",
+                  output_dir=output_dir, epochs=args.epochs, batch_size=args.batch_size,
+                  lr=args.lr, patience=args.patience, unfreeze_at=args.unfreeze_at)
+
+    if not args.enhanced:
+        print("\n--- STEP 3: Evaluation ---")
+        if not best_path.exists():
+            logger.error("No model: %s - run training first", best_path); sys.exit(1)
+        evaluate(model_path=best_path, val_dir=split_dir/"val")
+
+if __name__=="__main__":
+    main()
+
+    if not args.enhanced:
+        print("\n--- STEP 3: Evaluation ---")
+        if not best_path.exists():
+            logger.error("No model: %s - run training first", best_path); sys.exit(1)
+        evaluate(model_path=best_path, val_dir=split_dir/"val")
 
 if __name__=="__main__":
     main()

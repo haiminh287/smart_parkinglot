@@ -67,8 +67,8 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'parksmartdb',
-        'USER': os.environ.get('DB_USER', 'parksmartuser'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', 'parksmartpass'),
+        'USER': os.environ['DB_USER'],       # Required: set DB_USER in environment
+        'PASSWORD': os.environ['DB_PASSWORD'],  # Required: set DB_PASSWORD in environment
         'HOST': os.environ.get('DB_HOST', 'localhost'),
         'PORT': os.environ.get('DB_PORT', '3307'),
         'OPTIONS': {
@@ -164,4 +164,5 @@ if ENV.lower() == 'production':
             raise ImproperlyConfigured('CORS_ALLOWED_ORIGINS cannot include localhost when ENV=production')
 
 # Gateway authentication - All requests must come through gateway
-GATEWAY_SECRET = config('GATEWAY_SECRET', default='gateway-internal-secret-key')
+# Required: GATEWAY_SECRET must be set in environment, no insecure default allowed
+GATEWAY_SECRET = config('GATEWAY_SECRET')

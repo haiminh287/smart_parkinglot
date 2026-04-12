@@ -26,6 +26,7 @@ class ParkingLot(models.Model):
 
     class Meta:
         db_table = 'parking_lot'
+        ordering = ['name']
         indexes = [
             models.Index(fields=['latitude', 'longitude']),
             models.Index(fields=['is_open']),
@@ -112,6 +113,7 @@ class CarSlot(models.Model):
     class Meta:
         db_table = 'car_slot'
         unique_together = [['zone', 'code']]
+        ordering = ['code']
         indexes = [
             models.Index(fields=['status']),
         ]

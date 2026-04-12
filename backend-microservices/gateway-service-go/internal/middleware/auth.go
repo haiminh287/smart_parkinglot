@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -74,21 +73,4 @@ func AuthMiddleware(cfg *config.Config, store *session.RedisStore) gin.HandlerFu
 	}
 }
 
-// isPublicEndpoint checks if the path is a public endpoint
-func isPublicEndpoint(path string) bool {
-	publicPaths := []string{
-		"auth/login/",
-		"auth/register/",
-		"auth/google/",
-		"auth/facebook/",
-		"auth/forgot-password/",
-		"auth/reset-password/",
-	}
 
-	for _, p := range publicPaths {
-		if strings.HasPrefix(path, p) {
-			return true
-		}
-	}
-	return false
-}

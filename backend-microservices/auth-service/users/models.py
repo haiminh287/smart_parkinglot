@@ -36,6 +36,14 @@ class User(AbstractUser):
         verbose_name = 'User'
         verbose_name_plural = 'Users'
     
+    def save(self, *args, **kwargs):
+        """Auto-sync is_staff with role to keep them consistent."""
+        if self.role == 'admin':
+            self.is_staff = True
+        else:
+            self.is_staff = False
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return self.email
 

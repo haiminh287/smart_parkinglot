@@ -262,6 +262,7 @@ class CarSlotViewSet(viewsets.ModelViewSet):
 
     queryset = CarSlot.objects.all()
     serializer_class = CarSlotSerializer
+    permission_classes = [IsGatewayAuthenticated]
     
     def get_queryset(self):
         """Filter slots by zone_id, status, vehicle_type."""

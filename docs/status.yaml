@@ -2,7 +2,7 @@ project:
   name: "smartparkinglot"
   phase: "deploying"
   started_at: "2026-03-13T00:00:00Z"
-  updated_at: "2026-03-14T17:50:46+07:00"
+  updated_at: "2026-03-16T09:10:00+07:00"
 
 task:
   id: "SECURITY-BLOCKERS-2026-03-13"
@@ -11,7 +11,7 @@ task:
   state: "blocked"
   prev_state: "qc_gate"
   started_at: "2026-03-13T05:30:00Z"
-  updated_at: "2026-03-14T17:50:46+07:00"
+  updated_at: "2026-03-16T09:10:00+07:00"
   stack:
     language: "Python + TypeScript"
     package_manager: "pip + npm"
@@ -55,10 +55,17 @@ agents:
   reviewer: { status: "done", current_task: "" }
   security: { status: "done", current_task: "" }
   qc: { status: "done", current_task: "" }
-  devops:
-    { status: "done", current_task: "" }
+  devops: { status: "done", current_task: "" }
 
 handoff_log:
+  - from: "devops"
+    to: "orchestrator"
+    timestamp: "2026-03-16T09:10:00+07:00"
+    reason: "Rebuild/recreate tối thiểu gateway-service-go + chatbot-service-fastapi và verify lại full API smoke qua localhost:8080 PASS; refresh routes nay trả JSON contract error, chatbot health slash/no-slash đều 200 không redirect lộ internal host"
+    artifacts:
+      - "docs/testing/runtime-smoke-chatbot-refresh-20260316-rebuild.md"
+      - "docs/status.yaml"
+
   - from: "devops"
     to: "orchestrator"
     timestamp: "2026-03-14T17:50:46+07:00"

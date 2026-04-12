@@ -10,6 +10,9 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
 
     EXEMPT_PATHS = [
         "/health/",
+        "/health",
+        "/ai/health/",
+        "/ai/health",
         "/docs",
         "/openapi.json",
         "/ai/cameras/",
@@ -29,8 +32,8 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
         if any(request.url.path.startswith(p) for p in self.EXEMPT_PATHS):
             return await call_next(request)
 
-        gateway_secret = request.headers.get("X-Gateway-Secret", "")
-        if gateway_secret != settings.GATEWAY_SECRET:
+        gateway_secret = request.headers.get("X-Gateway-Secret", "").strip()
+        if gateway_secret != settings.GATEWAY_SECRET.strip():
             return JSONResponse(
                 status_code=403,
                 content={"detail": "Access denied: requests must come through the API gateway"},

@@ -1,7 +1,6 @@
 """Seed camera data into parking-service database."""
 
 from django.core.management.base import BaseCommand
-
 from infrastructure.models import Camera
 
 
@@ -30,7 +29,7 @@ class Command(BaseCommand):
                 "name": "Camera Biển Số",
                 "ip_address": "192.168.100.23",
                 "port": 554,
-                "stream_url": "rtsp://admin:XGIMBN@192.168.100.23:554/H.264",
+                "stream_url": "rtsp://user:password@192.168.1.100:554/H.264",
                 "is_active": True,
             },
         ]

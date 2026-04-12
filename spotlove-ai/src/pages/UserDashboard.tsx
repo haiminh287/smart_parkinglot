@@ -21,6 +21,19 @@ import { useAuth, useBooking, useNotifications } from "@/hooks";
 export default function UserDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
+
+  // Zone name → virtual camera ID mapping
+  const ZONE_CAMERA_MAP: Record<string, string> = {
+    South: "virtual-zone-south",
+    south: "virtual-zone-south",
+    North: "virtual-zone-north",
+    north: "virtual-zone-north",
+    A: "virtual-zone-south",
+    B: "virtual-zone-north",
+    "Zone A": "virtual-zone-south",
+    "Zone B": "virtual-zone-north",
+  };
+
   const {
     currentParking,
     upcoming,
@@ -157,7 +170,12 @@ export default function UserDashboard() {
                 variant="outline"
                 className="flex-1"
                 size="sm"
-                onClick={() => navigate("/cameras")}
+                onClick={() => {
+                  const zoneName = currentParking?.booking?.zoneName || "";
+                  const cameraId =
+                    ZONE_CAMERA_MAP[zoneName] || "virtual-f1-overview";
+                  navigate(`/cameras?camera=${cameraId}`);
+                }}
               >
                 Xem camera
               </Button>

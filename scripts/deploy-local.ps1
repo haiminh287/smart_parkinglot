@@ -152,11 +152,15 @@ function Read-DockerLogs {
 function Invoke-AutoFix {
     param([array]$ErrorSummary, [string]$ComposeDir)
 
-    if ($ErrorSummary.Count -eq 0) { return }
+    $validErrorSummary = @($ErrorSummary | Where-Object {
+        $_ -ne $null -and $_.PSObject.Properties.Name -contains "Errors"
+    })
+
+    if ($validErrorSummary.Count -eq 0) { return }
 
     Write-Step "Thu tu-fix cac loi pho bien"
 
-    $allErrors = ($ErrorSummary | ForEach-Object { $_.Errors }) -join "`n"
+    $allErrors = ($validErrorSummary | ForEach-Object { $_.Errors }) -join "`n"
 
     Push-Location $ComposeDir
     try {
@@ -331,12 +335,19 @@ if (!$SkipDocker) {
     $logErrors = Read-DockerLogs -ComposeDir $BE_DIR -Lines 30
 
     # ── Auto-fix nếu phát hiện lỗi ───────────────────────────────────────────
-    if ($logErrors.Count -gt 0) {
+    $hasStructuredErrors = @($logErrors | Where-Object {
+        $_ -ne $null -and $_.PSObject.Properties.Name -contains "Errors"
+    }).Count -gt 0
+
+    if ($hasStructuredErrors) {
         Invoke-AutoFix -ErrorSummary $logErrors -ComposeDir $BE_DIR
         Write-Info "Da thu auto-fix – cho 15s roi kiem tra lai..."
         Start-Sleep -Seconds 15
         $logErrors2 = Read-DockerLogs -ComposeDir $BE_DIR -Lines 20
-        if ($logErrors2.Count -gt 0) {
+        $hasStructuredErrors2 = @($logErrors2 | Where-Object {
+            $_ -ne $null -and $_.PSObject.Properties.Name -contains "Errors"
+        }).Count -gt 0
+        if ($hasStructuredErrors2) {
             Write-Warn "Van con loi sau khi auto-fix – xem full logs tren. Tiep tuc deploy..."
         } else {
             Write-Ok "Loi da duoc fix!"

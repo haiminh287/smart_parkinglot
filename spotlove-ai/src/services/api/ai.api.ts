@@ -210,6 +210,35 @@ export interface ESP32DeviceLogsResponse {
   logs: ESP32DeviceLog[];
 }
 
+// ── Detection History Types ────────────────────
+
+export interface DetectionRecord {
+  id: string;
+  plate_text: string;
+  confidence: number;
+  decision: string;
+  image_url: string | null;
+  bbox: {
+    x1: number;
+    y1: number;
+    x2: number;
+    y2: number;
+    confidence: number;
+  } | null;
+  camera_id: string | null;
+  action: string;
+  prediction_type: string;
+  created_at: string;
+  processing_time_ms: number | null;
+}
+
+export interface DetectionHistoryResponse {
+  total: number;
+  page: number;
+  page_size: number;
+  results: DetectionRecord[];
+}
+
 // ── API Methods ────────────────────────────────
 
 export const aiApi = {
@@ -390,6 +419,24 @@ export const aiApi = {
   ): Promise<ESP32DeviceLogsResponse> => {
     const response = await apiClient.get<ESP32DeviceLogsResponse>(
       `/ai/parking/esp32/devices/${deviceId}/logs`,
+    );
+    return response.data;
+  },
+
+  /**
+   * Get paginated detection history with optional filters.
+   */
+  getDetectionHistory: async (params?: {
+    page?: number;
+    page_size?: number;
+    plate_text?: string;
+    date_from?: string;
+    date_to?: string;
+    action?: string;
+  }): Promise<DetectionHistoryResponse> => {
+    const response = await apiClient.get<DetectionHistoryResponse>(
+      "/ai/parking/detections/",
+      { params },
     );
     return response.data;
   },

@@ -146,7 +146,14 @@ app.include_router(notifications.router)
 app.include_router(actions.router)
 
 
+@app.get("/health")
 @app.get("/health/")
+@app.get("/chatbot/health")
 @app.get("/chatbot/health/")
 async def health_check():
-    return {"status": "healthy", "service": "chatbot-service", "version": "3.0.0"}
+    return {
+        "status": "healthy",
+        "service": "chatbot-service",
+        "version": "3.0.0",
+        "llmEnabled": bool(settings.GEMINI_API_KEY),
+    }

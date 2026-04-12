@@ -4,7 +4,7 @@ Authentication and authorization microservice.
 
 ## Features
 
-- JWT authentication
+- Gateway-managed session authentication
 - OAuth2 (Google, Facebook)
 - User registration/login
 - Password reset
@@ -15,13 +15,17 @@ Authentication and authorization microservice.
 - `POST /auth/login/` - Login with email/password
 - `POST /auth/register/` - Register new user
 - `POST /auth/logout/` - Logout
-- `POST /auth/token/refresh/` - Refresh JWT token
 - `GET /auth/google/` - Get Google OAuth2 URL
 - `GET /auth/facebook/` - Get Facebook OAuth2 URL
 - `GET /auth/me/` - Get current user info
 - `POST /auth/change-password/` - Change password
 - `POST /auth/forgot-password/` - Send password reset email
 - `POST /auth/reset-password/` - Reset password with token
+
+## Auth Contract Note
+
+- Runtime hiện tại dùng gateway session cookie và không expose token refresh endpoint.
+- Các request dạng `/auth/refresh/` hoặc `/auth/token/refresh/` không thuộc contract được support.
 
 ## Setup
 

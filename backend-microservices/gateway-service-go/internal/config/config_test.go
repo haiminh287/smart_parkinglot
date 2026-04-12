@@ -17,6 +17,8 @@ func TestLoad_WithEnvSet(t *testing.T) {
 }
 
 func TestGetServiceRoute_ValidRoutes(t *testing.T) {
+	os.Setenv("GATEWAY_SECRET", "test-secret")
+	t.Cleanup(func() { os.Unsetenv("GATEWAY_SECRET") })
 	cfg := config.Load()
 
 	tests := []struct {
@@ -52,6 +54,8 @@ func TestGetServiceRoute_ValidRoutes(t *testing.T) {
 }
 
 func TestGetServiceRoute_UnknownPath(t *testing.T) {
+	os.Setenv("GATEWAY_SECRET", "test-secret")
+	t.Cleanup(func() { os.Unsetenv("GATEWAY_SECRET") })
 	cfg := config.Load()
 
 	route := cfg.GetServiceRoute("unknown/path/")
@@ -61,6 +65,8 @@ func TestGetServiceRoute_UnknownPath(t *testing.T) {
 }
 
 func TestGetServiceRoute_AuthIsPublic(t *testing.T) {
+	os.Setenv("GATEWAY_SECRET", "test-secret")
+	t.Cleanup(func() { os.Unsetenv("GATEWAY_SECRET") })
 	cfg := config.Load()
 
 	route := cfg.GetServiceRoute("auth/login/")
@@ -72,7 +78,23 @@ func TestGetServiceRoute_AuthIsPublic(t *testing.T) {
 	}
 }
 
+func TestGetServiceRoute_AdminIsProtected(t *testing.T) {
+	os.Setenv("GATEWAY_SECRET", "test-secret")
+	t.Cleanup(func() { os.Unsetenv("GATEWAY_SECRET") })
+	cfg := config.Load()
+
+	route := cfg.GetServiceRoute("auth/admin/users/")
+	if route == nil {
+		t.Fatal("GetServiceRoute(auth/admin) returned nil")
+	}
+	if route.Public {
+		t.Error("Auth admin route should NOT be public — requires authentication")
+	}
+}
+
 func TestGetServiceRoute_BookingsIsProtected(t *testing.T) {
+	os.Setenv("GATEWAY_SECRET", "test-secret")
+	t.Cleanup(func() { os.Unsetenv("GATEWAY_SECRET") })
 	cfg := config.Load()
 
 	route := cfg.GetServiceRoute("bookings/")

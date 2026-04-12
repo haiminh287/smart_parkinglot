@@ -47,14 +47,15 @@ describe("authApi", () => {
       get: ReturnType<typeof vi.fn>;
     };
 
-    apiClient.get.mockResolvedValue({
-      data: {
-        id: "u2",
-        email: "admin@example.com",
-        username: "admin",
-        role: "admin",
-      },
-    });
+      apiClient.get.mockResolvedValue({
+        data: {
+          id: "u2",
+          email: "admin@example.com",
+          username: "admin",
+          role: "admin",
+        },
+        headers: { "content-type": "application/json" },
+      });
 
     const result = await authApi.getCurrentUser();
 

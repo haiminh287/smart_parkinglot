@@ -1,0 +1,23 @@
+# Cloudflare Tunnel – ParkSmart config
+# parksmart.ghepdoicaulong.shop → nginx port 80
+#
+# HƯỚNG DẪN CHẠY:
+#   cloudflared tunnel --config infra/cloudflare/cloudflared/config-parksmart.yml run parksmart
+
+tunnel: 5d3c98ed-b629-48a3-9377-4163315c91da
+credentials-file: C:\Users\MINH\.cloudflared\5d3c98ed-b629-48a3-9377-4163315c91da.json
+
+# Log level: debug | info | warn | error
+loglevel: info
+logfile: C:\Users\MINH\.cloudflared\cloudflared-parksmart.log
+
+ingress:
+  # ─── ParkSmart Frontend (parksmart subdomain) ─────────────────────────────
+  - hostname: parksmart.ghepdoicaulong.shop
+    service: http://localhost:80
+    originRequest:
+      connectTimeout: 30s
+      httpHostHeader: parksmart.ghepdoicaulong.shop
+
+  # ─── Fallback (bắt buộc phải có cuối cùng) ───────────────────────────────
+  - service: http_status:404

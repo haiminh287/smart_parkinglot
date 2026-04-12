@@ -42,6 +42,10 @@ interface ApiErrorPayload {
 }
 
 const getErrorMessage = (error: unknown, fallbackMessage: string): string => {
+  if (error instanceof Error && error.message === "AUTH_ME_INVALID_CONTENT_TYPE") {
+    return "Lỗi cấu hình API production: endpoint auth trả về dữ liệu không hợp lệ";
+  }
+
   const apiError = error as ApiErrorPayload;
   return apiError.response?.data?.message || fallbackMessage;
 };
@@ -59,8 +63,7 @@ const getUserFromCookie = (): User | null => {
     if (userInfo && userInfo !== "undefined") {
       return JSON.parse(userInfo);
     }
-  } catch (error) {
-    console.error("Failed to parse user cookie:", error);
+  } catch {
     Cookies.remove("user_info");
   }
   return null;

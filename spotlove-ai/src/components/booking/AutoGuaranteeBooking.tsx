@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { parkingApi } from '@/services/api/parking.api';
 import { 
   MapPin, 
   Clock, 
@@ -56,7 +57,7 @@ export function AutoGuaranteeBooking({ onComplete }: AutoGuaranteeBookingProps) 
   const [selectedLot, setSelectedLot] = useState<ParkingLotResult | null>(null);
   const [showAlmostFullWarning, setShowAlmostFullWarning] = useState(false);
 
-  // Mock AI prediction for "almost full" notification
+  // Show warning when selected lot is almost full
   useEffect(() => {
     if (searchResults.length > 0 && selectedLot?.almostFull) {
       const timer = setTimeout(() => {
@@ -74,47 +75,34 @@ export function AutoGuaranteeBooking({ onComplete }: AutoGuaranteeBookingProps) 
     setSelectedLot(null);
     setShowAlmostFullWarning(false);
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    try {
+      const response = await parkingApi.getLots({
+        vehicle_type: vehicleType,
+        is_open: true,
+        pageSize: 10,
+      });
 
-    // Mock results with multiple parking lots
-    const results: ParkingLotResult[] = [
-      {
-        id: '1',
-        name: 'ParkSmart Quận 1',
-        distance: '150m',
-        availableSlots: 8,
-        price: vehicleType === 'Car' ? 15000 : 5000,
-        rating: 4.8,
-        isBestMatch: true,
-        almostFull: true,
-        estimatedFillTime: '15 phút',
-      },
-      {
-        id: '2',
-        name: 'Bãi Vincom Center',
-        distance: '200m',
-        availableSlots: 45,
-        price: vehicleType === 'Car' ? 20000 : 7000,
-        rating: 4.5,
-        isBestMatch: false,
-        almostFull: false,
-      },
-      {
-        id: '3',
-        name: 'Parking Nguyễn Huệ',
-        distance: '350m',
-        availableSlots: 120,
-        price: vehicleType === 'Car' ? 12000 : 4000,
-        rating: 4.2,
-        isBestMatch: false,
-        almostFull: false,
-      },
-    ];
+      const results: ParkingLotResult[] = response.results.map(
+        (lot, index) => ({
+          id: lot.id,
+          name: lot.name,
+          distance: lot.distance != null ? `${Math.round(lot.distance)}m` : `${(index + 1) * 150}m`,
+          availableSlots: lot.availableSlots,
+          price: lot.pricePerHour,
+          rating: 4.5,
+          isBestMatch: index === 0,
+          almostFull: lot.totalSlots > 0 && lot.availableSlots / lot.totalSlots < 0.2,
+          estimatedFillTime: lot.availableSlots < 10 ? '15 phút' : undefined,
+        }),
+      );
 
-    setSearchResults(results);
-    setSelectedLot(results[0]); // Auto-select best match
-    setIsSearching(false);
+      setSearchResults(results);
+      if (results.length > 0) setSelectedLot(results[0]);
+    } catch {
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
   };
 
   const handleConfirm = () => {

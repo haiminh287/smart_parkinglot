@@ -1,0 +1,6 @@
+?   	gateway-service/cmd/server	[no test files]
+ok  	gateway-service/internal/config	(cached)
+ok  	gateway-service/internal/handler	(cached)
+ok  	gateway-service/internal/middleware	(cached)
+?   	gateway-service/internal/router	[no test files]
+?   	gateway-service/internal/session	[no test files]

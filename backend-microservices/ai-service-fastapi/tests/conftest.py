@@ -15,6 +15,12 @@ TEST_USER_ID = "test-user-uuid-001"
 TEST_USER_EMAIL = "testuser@parksmart.com"
 
 
+@pytest.fixture(params=["asyncio"])
+def anyio_backend(request):
+    """Restrict anyio tests to asyncio only."""
+    return request.param
+
+
 @pytest.fixture
 async def client():
     """Async test client with gateway auth headers."""

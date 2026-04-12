@@ -8,14 +8,14 @@ from app.config import settings
 class GatewayAuthMiddleware(BaseHTTPMiddleware):
     """Verify requests come through the API gateway."""
 
-    EXEMPT_PATHS = ["/health/", "/chatbot/health/", "/docs", "/openapi.json"]
+    EXEMPT_PATHS = ["/health/", "/health", "/chatbot/health/", "/chatbot/health", "/docs", "/openapi.json"]
 
     async def dispatch(self, request: Request, call_next):
         if any(request.url.path.startswith(p) for p in self.EXEMPT_PATHS):
             return await call_next(request)
 
-        gateway_secret = request.headers.get("X-Gateway-Secret", "")
-        if gateway_secret != settings.GATEWAY_SECRET:
+        gateway_secret = request.headers.get("X-Gateway-Secret", "").strip()
+        if gateway_secret != settings.GATEWAY_SECRET.strip():
             return JSONResponse(
                 status_code=403,
                 content={"detail": "Access denied: requests must come through the API gateway"},

@@ -9,7 +9,7 @@
  *   - Payment status indicator
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -61,9 +61,30 @@ export default function CheckInOutPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
+  // QR scan modal state
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+  const [qrScanStatus, setQrScanStatus] = useState<
+    "idle" | "scanning" | "found" | "error"
+  >("idle");
+  const [scannedQrData, setScannedQrData] = useState<string | null>(null);
+  const [qrCheckInLoading, setQrCheckInLoading] = useState(false);
+  const [qrCheckInResult, setQrCheckInResult] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
+
+  const qrPollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   useEffect(() => {
     loadCurrentParking();
   }, [loadCurrentParking]);
+
+  // Cleanup QR poll interval on unmount
+  useEffect(() => {
+    return () => {
+      if (qrPollIntervalRef.current) clearInterval(qrPollIntervalRef.current);
+    };
+  }, []);
 
   // Auto-switch to check-out if currently parked
   useEffect(() => {
@@ -144,6 +165,65 @@ export default function CheckInOutPage() {
     setSelectedFile(null);
     setPreviewUrl(null);
     setManualResult(null);
+  };
+
+  const startQrScan = () => {
+    setIsQrModalOpen(true);
+    setQrScanStatus("scanning");
+    setScannedQrData(null);
+    setQrCheckInResult(null);
+
+    qrPollIntervalRef.current = setInterval(async () => {
+      try {
+        const resp = await fetch(
+          "/ai/cameras/scan-qr?camera_id=qr-camera-droidcam",
+        );
+        const data = await resp.json();
+        if (data.found && data.qr_data) {
+          clearInterval(qrPollIntervalRef.current!);
+          qrPollIntervalRef.current = null;
+          setScannedQrData(data.qr_data);
+          setQrScanStatus("found");
+        }
+      } catch {
+        // network blip — keep polling
+      }
+    }, 1500);
+  };
+
+  const stopQrScan = () => {
+    if (qrPollIntervalRef.current) {
+      clearInterval(qrPollIntervalRef.current);
+      qrPollIntervalRef.current = null;
+    }
+    setIsQrModalOpen(false);
+    setQrScanStatus("idle");
+    setScannedQrData(null);
+  };
+
+  const confirmQrCheckIn = async () => {
+    if (!scannedQrData) return;
+    setQrCheckInLoading(true);
+    try {
+      const resp = await fetch("/ai/parking/esp32/check-in/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          gate_id: "GATE-IN-01",
+          qr_data: scannedQrData,
+        }),
+      });
+      const result = await resp.json();
+      setQrCheckInResult({
+        success: result.success ?? resp.ok,
+        message:
+          result.message || (resp.ok ? "Check-in thành công!" : "Thất bại"),
+      });
+    } catch (err) {
+      setQrCheckInResult({ success: false, message: "Lỗi kết nối server" });
+    } finally {
+      setQrCheckInLoading(false);
+    }
   };
 
   const formatDuration = (minutes: number): string => {
@@ -371,6 +451,18 @@ export default function CheckInOutPage() {
                 </Button>
               </div>
             )}
+
+            {activeTab === "check-in" && (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full gap-2"
+                onClick={startQrScan}
+              >
+                <Camera className="h-4 w-4" />
+                Quét QR tự động (DroidCam)
+              </Button>
+            )}
           </div>
         </div>
 
@@ -454,6 +546,195 @@ export default function CheckInOutPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* QR Scan Modal */}
+      {isQrModalOpen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0,0,0,0.7)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) stopQrScan();
+          }}
+        >
+          <div
+            style={{
+              background: "#1e1e2e",
+              borderRadius: "12px",
+              padding: "24px",
+              maxWidth: "480px",
+              width: "90%",
+              color: "#fff",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "16px",
+              }}
+            >
+              <h3 style={{ margin: 0 }}>📷 Quét mã QR Booking</h3>
+              <button
+                onClick={stopQrScan}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#fff",
+                  fontSize: "20px",
+                  cursor: "pointer",
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* DroidCam live stream */}
+            <div
+              style={{
+                position: "relative",
+                borderRadius: "8px",
+                overflow: "hidden",
+                marginBottom: "16px",
+              }}
+            >
+              <img
+                src="/ai/cameras/stream?camera_id=qr-camera-droidcam&fps=5"
+                alt="DroidCam Stream"
+                style={{ width: "100%", display: "block" }}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).alt =
+                    "⚠️ Không kết nối được camera";
+                }}
+              />
+              {qrScanStatus === "scanning" && (
+                <div
+                  style={{
+                    position: "absolute",
+                    bottom: "8px",
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    background: "rgba(0,0,0,0.6)",
+                    color: "#fff",
+                    padding: "4px 12px",
+                    borderRadius: "16px",
+                    fontSize: "13px",
+                  }}
+                >
+                  🔍 Đang quét QR...
+                </div>
+              )}
+            </div>
+
+            {qrScanStatus === "found" && scannedQrData && (
+              <div
+                style={{
+                  background: "#2a2a3e",
+                  borderRadius: "8px",
+                  padding: "12px",
+                  marginBottom: "16px",
+                }}
+              >
+                <p
+                  style={{
+                    margin: "0 0 4px",
+                    fontSize: "13px",
+                    color: "#a0a0b0",
+                  }}
+                >
+                  QR đã nhận diện:
+                </p>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "12px",
+                    wordBreak: "break-all",
+                    color: "#4ade80",
+                  }}
+                >
+                  {scannedQrData.length > 120
+                    ? scannedQrData.slice(0, 120) + "..."
+                    : scannedQrData}
+                </p>
+              </div>
+            )}
+
+            {qrCheckInResult && (
+              <div
+                style={{
+                  background: qrCheckInResult.success ? "#14532d" : "#7f1d1d",
+                  borderRadius: "8px",
+                  padding: "12px",
+                  marginBottom: "16px",
+                  color: qrCheckInResult.success ? "#4ade80" : "#fca5a5",
+                }}
+              >
+                {qrCheckInResult.success ? "✅ " : "❌ "}
+                {qrCheckInResult.message}
+                {qrCheckInResult.success && (
+                  <p
+                    style={{
+                      margin: "4px 0 0",
+                      fontSize: "12px",
+                      opacity: 0.8,
+                    }}
+                  >
+                    Xe sẽ xuất hiện tự động trong Unity Simulation
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div
+              style={{
+                display: "flex",
+                gap: "8px",
+                justifyContent: "flex-end",
+              }}
+            >
+              {qrScanStatus === "found" && !qrCheckInResult && (
+                <button
+                  onClick={confirmQrCheckIn}
+                  disabled={qrCheckInLoading}
+                  style={{
+                    background: "#4f46e5",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "6px",
+                    padding: "8px 20px",
+                    cursor: "pointer",
+                    fontWeight: 600,
+                  }}
+                >
+                  {qrCheckInLoading
+                    ? "⏳ Đang xử lý..."
+                    : "✅ Xác nhận Check-in"}
+                </button>
+              )}
+              <button
+                onClick={stopQrScan}
+                style={{
+                  background: "#374151",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "6px",
+                  padding: "8px 20px",
+                  cursor: "pointer",
+                }}
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </MainLayout>
   );
 }

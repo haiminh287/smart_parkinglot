@@ -35,6 +35,7 @@ class PackagePricing(models.Model):
     class Meta:
         db_table = 'package_pricing'
         unique_together = [['package_type', 'vehicle_type']]
+        ordering = ['package_type', 'vehicle_type']
 
     def __str__(self):
         return f"{self.package_type} - {self.vehicle_type}: {self.price}đ"
@@ -117,6 +118,7 @@ class Booking(models.Model):
 
     class Meta:
         db_table = 'booking'
+        ordering = ['-created_at']
         indexes = [
             models.Index(fields=['user_id']),
             models.Index(fields=['slot_id']),

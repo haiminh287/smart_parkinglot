@@ -36,6 +36,15 @@ class AdminUserUpdateSerializer(serializers.ModelSerializer):
             'is_staff': {'required': False},
         }
 
+    def validate(self, attrs):
+        """Sync is_staff when role changes and vice-versa."""
+        if 'role' in attrs and 'is_staff' not in attrs:
+            attrs['is_staff'] = attrs['role'] == 'admin'
+        elif 'is_staff' in attrs and 'role' not in attrs:
+            if attrs['is_staff']:
+                attrs['role'] = 'admin'
+        return attrs
+
 
 class AdminUserCreateSerializer(serializers.ModelSerializer):
     """Serializer for admin user creation (POST)."""

@@ -25,8 +25,8 @@ import os
 import re
 import sys
 import time
-import uuid
 import traceback
+import uuid
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -52,7 +52,7 @@ WRONG_PLATE_IMG = "30E-922.91.jpg"  # second image in images/
 RIGHT_PLATE_IMG = "51A-224.56.jpg"  # correct plate image
 
 # Camera RTSP (for future use — test with static images for now)
-CAMERA_RTSP = "rtsp://admin:XGIMBN@192.168.1.58:554/H264/ch1/sub/av_stream"
+CAMERA_RTSP = "rtsp://user:password@192.168.1.100:554/H264/ch1/sub/av_stream"
 
 
 class Colors:

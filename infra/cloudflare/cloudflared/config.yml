@@ -21,24 +21,32 @@ ingress:
   # ─── Frontend (app subdomain) ─────────────────────────────────────────────
   # Nginx serve static dist/ tại port 80
   - hostname: app.ghepdoicaulong.shop
-    service: http://localhost:80
+    service: http://127.0.0.1:80
     originRequest:
       connectTimeout: 30s
       httpHostHeader: app.ghepdoicaulong.shop
 
-  # ─── API Gateway ──────────────────────────────────────────────────────────
+  # ─── API subdomain (qua Nginx reverse proxy) ──────────────────────────────
   - hostname: api.ghepdoicaulong.shop
-    service: http://localhost:8000
+    service: http://127.0.0.1:80
     originRequest:
       connectTimeout: 30s
       httpHostHeader: api.ghepdoicaulong.shop
 
-  # ─── WebSocket Realtime ───────────────────────────────────────────────────
+  # ─── WebSocket subdomain (qua Nginx reverse proxy) ────────────────────────
   - hostname: ws.ghepdoicaulong.shop
-    service: http://localhost:8006
+    service: http://127.0.0.1:80
     originRequest:
       connectTimeout: 30s
+      httpHostHeader: ws.ghepdoicaulong.shop
       noTLSVerify: false
+
+  # ─── All-in-one subdomain (FE + API + WS qua Nginx) ────────────────────────
+  - hostname: parksmart.ghepdoicaulong.shop
+    service: http://127.0.0.1:80
+    originRequest:
+      connectTimeout: 30s
+      httpHostHeader: parksmart.ghepdoicaulong.shop
 
   # ─── Fallback (bắt buộc phải có cuối cùng) ───────────────────────────────
   - service: http_status:404

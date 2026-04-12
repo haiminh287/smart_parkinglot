@@ -26,7 +26,7 @@ from app.engine.color_classifier import (
     meets_threshold,
     ColorClassification,
 )
-from app.engine.ai_classifier import BanknoteAIClassifier, AIClassification
+from app.engine.ai_classifier import BanknoteAIClassifier, AIClassification, DENOMINATION_CLASSES
 
 logger = logging.getLogger(__name__)
 
@@ -188,6 +188,29 @@ class BanknoteRecognitionPipeline:
                 processing_time_ms=elapsed,
                 stages_executed=stages,
                 message=f"Color classification accepted: {color_result.denomination} VND",
+            )
+
+        # ── Out-of-vocabulary guard ─────────────────
+        # If color detected a denomination the AI model was not trained on,
+        # AI fallback will only make the result worse. Trust color instead.
+        if (color_result.denomination
+                and color_result.denomination not in DENOMINATION_CLASSES):
+            elapsed = (time.time() - start) * 1000
+            decision = (PipelineDecision.ACCEPT
+                        if color_result.confidence >= 0.5
+                        else PipelineDecision.LOW_CONFIDENCE)
+            return PipelineResult(
+                decision=decision,
+                denomination=color_result.denomination,
+                confidence=color_result.confidence,
+                method=ClassificationMethod.COLOR,
+                quality_result=quality,
+                detection_result=detection,
+                color_result=color_result,
+                all_probabilities=color_result.all_scores,
+                processing_time_ms=elapsed,
+                stages_executed=stages,
+                message=f"Color-only: {color_result.denomination} VND (not in AI vocabulary)",
             )
 
         # ── Stage 2B: AI Fallback ───────────────────

@@ -89,6 +89,7 @@ class ActionService:
             Intent.MY_BOOKINGS: self._my_bookings,
             Intent.CURRENT_PARKING: self._current_parking,
             Intent.PRICING: self._get_pricing,
+            Intent.OPERATING_HOURS: self._get_operating_hours,
         }
 
         dispatcher = dispatchers.get(intent)
@@ -413,6 +414,16 @@ class ActionService:
                 vehicle_type=self._map_vehicle_type(entities.get("vehicle_type")),
             )
         return {"status": "ok", "pricing": []}
+
+    async def _get_operating_hours(self, user_id: str, entities: dict) -> dict:
+        return {
+            "status": "ok",
+            "operating_hours": {
+                "weekdays": "06:00 - 22:00",
+                "weekends": "06:00 - 23:00",
+                "note": "Mở cửa 7 ngày/tuần"
+            }
+        }
 
     @staticmethod
     def _map_vehicle_type(vtype: Optional[str]) -> Optional[str]:

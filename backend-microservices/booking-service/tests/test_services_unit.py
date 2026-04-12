@@ -16,6 +16,7 @@ class BookingStub:
     package_type: str = "daily"
     hourly_end: object = None
     hourly_start: object = None
+    start_time: object = None
     price: Decimal = Decimal("0")
     late_fee_applied: bool = False
     update_fields_history: list[list[str]] = field(default_factory=list)

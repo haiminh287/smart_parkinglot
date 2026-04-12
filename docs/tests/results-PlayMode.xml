@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="41" result="Passed" total="41" passed="41" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.2348707">
+  <test-suite type="TestSuite" id="1000" name="ParkingSimulatorUnity" fullname="ParkingSimulatorUnity" runstate="Runnable" testcasecount="41" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.234871" total="41" passed="41" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties />
+    <test-suite type="Assembly" id="1045" name="ParkingSim.Tests.PlayMode.dll" fullname="C:/Users/MINH/Documents/Zalo_Received_Files/Project_Main/ParkingSimulatorUnity/Library/ScriptAssemblies/ParkingSim.Tests.PlayMode.dll" runstate="Runnable" testcasecount="41" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.226703" total="41" passed="41" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="282724" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+      </properties>
+      <test-suite type="TestSuite" id="1046" name="ParkingSim" fullname="ParkingSim" runstate="Runnable" testcasecount="41" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.224993" total="41" passed="41" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1047" name="Tests" fullname="ParkingSim.Tests" runstate="Runnable" testcasecount="41" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.223488" total="41" passed="41" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="1001" name="BarrierControllerTests" fullname="ParkingSim.Tests.BarrierControllerTests" classname="ParkingSim.Tests.BarrierControllerTests" runstate="Runnable" testcasecount="5" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.159175" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1004" name="should_close_after_open_then_close" fullname="ParkingSim.Tests.BarrierControllerTests.should_close_after_open_then_close" methodname="should_close_after_open_then_close" classname="ParkingSim.Tests.BarrierControllerTests" runstate="Runnable" seed="1657324260" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.031731" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+              </properties>
+              <output><![CDATA[[BarrierController] Opening exit barrier
+[BarrierController] Closing barrier
+]]></output>
+            </test-case>
+            <test-case id="1006" name="should_expose_isEntry_flag" fullname="ParkingSim.Tests.BarrierControllerTests.should_expose_isEntry_flag" methodname="should_expose_isEntry_flag" classname="ParkingSim.Tests.BarrierControllerTests" runstate="Runnable" seed="287913420" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.002434" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1003" name="should_open_and_fire_event" fullname="ParkingSim.Tests.BarrierControllerTests.should_open_and_fire_event" methodname="should_open_and_fire_event" classname="ParkingSim.Tests.BarrierControllerTests" runstate="Runnable" seed="1034574525" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.003830" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+              </properties>
+              <output><![CDATA[[BarrierController] Opening exit barrier
+]]></output>
+            </test-case>
+            <test-case id="1005" name="should_open_then_close_via_coroutine" fullname="ParkingSim.Tests.BarrierControllerTests.should_open_then_close_via_coroutine" methodname="should_open_then_close_via_coroutine" classname="ParkingSim.Tests.BarrierControllerTests" runstate="Runnable" seed="1311791840" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.103135" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+              </properties>
+              <output><![CDATA[[BarrierController] Opening exit barrier
+[BarrierController] Closing barrier
+]]></output>
+            </test-case>
+            <test-case id="1002" name="should_start_closed" fullname="ParkingSim.Tests.BarrierControllerTests.should_start_closed" methodname="should_start_closed" classname="ParkingSim.Tests.BarrierControllerTests" runstate="Runnable" seed="817390523" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.000548" asserts="0">
+              <properties />
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1007" name="ParkingSlotTests" fullname="ParkingSim.Tests.ParkingSlotTests" classname="ParkingSim.Tests.ParkingSlotTests" runstate="Runnable" testcasecount="21" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.035767" total="21" passed="21" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1008" name="should_infer_slot_type_garage_from_G_prefix" fullname="ParkingSim.Tests.ParkingSlotTests.should_infer_slot_type_garage_from_G_prefix" methodname="should_infer_slot_type_garage_from_G_prefix" classname="ParkingSim.Tests.ParkingSlotTests" runstate="Runnable" seed="1716609684" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.019055" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1009" name="should_infer_slot_type_garage_from_G_prefix_when_any_vehicle_type" fullname="ParkingSim.Tests.ParkingSlotTests.should_infer_slot_type_garage_from_G_prefix_when_any_vehicle_type" methodname="should_infer_slot_type_garage_from_G_prefix_when_any_vehicle_type" classname="ParkingSim.Tests.ParkingSlotTests" runstate="Runnable" seed="1209121244" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.000510" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1011" name="should_infer_slot_type_motorbike_case_insensitive" fullname="ParkingSim.Tests.ParkingSlotTests.should_infer_slot_type_motorbike_case_insensitive" methodname="should_infer_slot_type_motorbike_case_insensitive" classname="ParkingSim.Tests.ParkingSlotTests" runstate="Runnable" seed="1479389658" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.000380" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1010" name="should_infer_slot_type_motorbike_from_vehicle_type" fullname="ParkingSim.Tests.ParkingSlotTests.should_infer_slot_type_motorbike_from_vehicle_type" methodname="should_infer_slot_type_motorbike_from_vehicle_type" classname="ParkingSim.Tests.ParkingSlotTests" runstate="Runnable" seed="110969832" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.000368" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1012" name="should_infer_slot_type_motorbike_overrides_G_prefix" fullname="ParkingSim.Tests.ParkingSlotTests.should_infer_slot_type_motorbike_overrides_G_prefix" methodname="should_infer_slot_type_motorbike_overrides_G_prefix" classname="ParkingSim.Tests.ParkingSlotTests" runstate="Runnable" seed="310509207" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.000377" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1013" name="should_infer_slot_type_painted_for_car" fullname="ParkingSim.Tests.ParkingSlotTests.should_infer_slot_type_painted_for_car" methodname="should_infer_slot_type_painted_for_car" classname="ParkingSim.Tests.ParkingSlotTests" runstate="Runnable" seed="1393806160" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.000382" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1015" name="should_infer_slot_type_painted_for_empty_strings" fullname="ParkingSim.Tests.ParkingSlotTests.should_infer_slot_type_painted_for_empty_strings" methodname="should_infer_slot_type_painted_for_empty_strings" classname="ParkingSim.Tests.ParkingSlotTests" runstate="Runnable" seed="1241968721" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.000381" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1014" name="should_infer_slot_type_painted_for_null_code_and_null_type" fullname="ParkingSim.Tests.ParkingSlotTests.should_infer_slot_type_painted_for_null_code_and_null_type" methodname="should_infer_slot_type_painted_for_null_code_and_null_type" classname="ParkingSim.Tests.ParkingSlotTests" runstate="Runnable" seed="237091369" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.000577" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1027" name="should_initialize_motorbike_slot" fullname="ParkingSim.Tests.ParkingSlotTests.should_initialize_motorbike_slot" methodname="should_initialize_motorbike_slot" classname="ParkingSim.Tests.ParkingSlotTests" runstate="Runnable" seed="835641065" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.001006" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1028" name="should_initialize_painted_slot" fullname="ParkingSim.Tests.ParkingSlotTests.should_initialize_painted_slot" methodname="should_initialize_painted_slot" classname="ParkingSim.Tests.ParkingSlotTests" runstate="Runnable" seed="1410716809" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.000528" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1026" name="should_initialize_with_code_and_vehicle_type" fullname="ParkingSim.Tests.ParkingSlotTests.should_initialize_with_code_and_vehicle_type" methodname="should_initialize_with_code_and_vehicle_type" classname="ParkingSim.Tests.ParkingSlotTests" runstate="Runnable" seed="1367389800" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.000452" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1019" name="should_parse_empty_status_as_available" fullname="ParkingSim.Tests.ParkingSlotTests.should_parse_empty_status_as_available" methodname="should_parse_empty_status_as_available" classname="ParkingSim.Tests.ParkingSlotTests" runstate="Runnable" seed="947570797" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.000536" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1018" name="should_parse_null_status_as_available" fullname="ParkingSim.Tests.ParkingSlotTests.should_parse_null_status_as_available" methodname="should_parse_null_status_as_available" classname="ParkingSim.Tests.ParkingSlotTests" runstate="Runnable" seed="2089072649" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.000377" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1017" name="should_parse_status_case_insensitive" fullname="ParkingSim.Tests.ParkingSlotTests.should_parse_status_case_insensitive" methodname="should_parse_status_case_insensitive" classname="ParkingSim.Tests.ParkingSlotTests" runstate="Runnable" seed="268765506" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.000450" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1016" name="should_parse_status_strings_correctly" fullname="ParkingSim.Tests.ParkingSlotTests.should_parse_status_strings_correctly" methodname="should_parse_status_strings_correctly" classname="ParkingSim.Tests.ParkingSlotTests" runstate="Runnable" seed="1857925481" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.000421" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1020" name="should_parse_unknown_status_as_available" fullname="ParkingSim.Tests.ParkingSlotTests.should_parse_unknown_status_as_available" methodname="should_parse_unknown_status_as_available" classname="ParkingSim.Tests.ParkingSlotTests" runstate="Runnable" seed="243854862" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.000381" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1021" name="should_return_distinct_colors_for_each_status" fullname="ParkingSim.Tests.ParkingSlotTests.should_return_distinct_colors_for_each_status" methodname="should_return_distinct_colors_for_each_status" classname="ParkingSim.Tests.ParkingSlotTests" runstate="Runnable" seed="918441878" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.001536" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1022" name="should_return_green_color_for_available" fullname="ParkingSim.Tests.ParkingSlotTests.should_return_green_color_for_available" methodname="should_return_green_color_for_available" classname="ParkingSim.Tests.ParkingSlotTests" runstate="Runnable" seed="785227025" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.002319" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1023" name="should_return_red_color_for_occupied" fullname="ParkingSim.Tests.ParkingSlotTests.should_return_red_color_for_occupied" methodname="should_return_red_color_for_occupied" classname="ParkingSim.Tests.ParkingSlotTests" runstate="Runnable" seed="1525701213" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.000576" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1024" name="should_update_state_and_target_color" fullname="ParkingSim.Tests.ParkingSlotTests.should_update_state_and_target_color" methodname="should_update_state_and_target_color" classname="ParkingSim.Tests.ParkingSlotTests" runstate="Runnable" seed="390759433" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.000842" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1025" name="should_update_state_to_maintenance" fullname="ParkingSim.Tests.ParkingSlotTests.should_update_state_to_maintenance" methodname="should_update_state_to_maintenance" classname="ParkingSim.Tests.ParkingSlotTests" runstate="Runnable" seed="901235210" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.000543" asserts="0">
+              <properties />
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1029" name="WaypointGraphTests" fullname="ParkingSim.Tests.WaypointGraphTests" classname="ParkingSim.Tests.WaypointGraphTests" runstate="Runnable" testcasecount="15" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.025426" total="15" passed="15" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1031" name="should_assign_incremental_ids" fullname="ParkingSim.Tests.WaypointGraphTests.should_assign_incremental_ids" methodname="should_assign_incremental_ids" classname="ParkingSim.Tests.WaypointGraphTests" runstate="Runnable" seed="922533956" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.005462" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1044" name="should_clear_all_nodes" fullname="ParkingSim.Tests.WaypointGraphTests.should_clear_all_nodes" methodname="should_clear_all_nodes" classname="ParkingSim.Tests.WaypointGraphTests" runstate="Runnable" seed="1656906640" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.002812" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1032" name="should_connect_nodes_bidirectionally" fullname="ParkingSim.Tests.WaypointGraphTests.should_connect_nodes_bidirectionally" methodname="should_connect_nodes_bidirectionally" classname="ParkingSim.Tests.WaypointGraphTests" runstate="Runnable" seed="562063197" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.000684" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1042" name="should_find_gate_node" fullname="ParkingSim.Tests.WaypointGraphTests.should_find_gate_node" methodname="should_find_gate_node" classname="ParkingSim.Tests.WaypointGraphTests" runstate="Runnable" seed="1073397564" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.000591" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1038" name="should_find_nearest_node" fullname="ParkingSim.Tests.WaypointGraphTests.should_find_nearest_node" methodname="should_find_nearest_node" classname="ParkingSim.Tests.WaypointGraphTests" runstate="Runnable" seed="1139776543" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.001005" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1034" name="should_find_path_with_BFS" fullname="ParkingSim.Tests.WaypointGraphTests.should_find_path_with_BFS" methodname="should_find_path_with_BFS" classname="ParkingSim.Tests.WaypointGraphTests" runstate="Runnable" seed="2016337242" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.006113" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1035" name="should_find_shortest_path_in_branching_graph" fullname="ParkingSim.Tests.WaypointGraphTests.should_find_shortest_path_in_branching_graph" methodname="should_find_shortest_path_in_branching_graph" classname="ParkingSim.Tests.WaypointGraphTests" runstate="Runnable" seed="1891819814" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.000827" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1039" name="should_find_slot_entrance_by_code" fullname="ParkingSim.Tests.WaypointGraphTests.should_find_slot_entrance_by_code" methodname="should_find_slot_entrance_by_code" classname="ParkingSim.Tests.WaypointGraphTests" runstate="Runnable" seed="967809343" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.000431" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1033" name="should_not_connect_node_to_itself" fullname="ParkingSim.Tests.WaypointGraphTests.should_not_connect_node_to_itself" methodname="should_not_connect_node_to_itself" classname="ParkingSim.Tests.WaypointGraphTests" runstate="Runnable" seed="878245037" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.000394" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1030" name="should_register_node_and_assign_id" fullname="ParkingSim.Tests.WaypointGraphTests.should_register_node_and_assign_id" methodname="should_register_node_and_assign_id" classname="ParkingSim.Tests.WaypointGraphTests" runstate="Runnable" seed="949912555" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.000433" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1036" name="should_return_empty_path_when_no_route" fullname="ParkingSim.Tests.WaypointGraphTests.should_return_empty_path_when_no_route" methodname="should_return_empty_path_when_no_route" classname="ParkingSim.Tests.WaypointGraphTests" runstate="Runnable" seed="1437601619" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.001465" asserts="0">
+              <properties />
+              <output><![CDATA[[WaypointGraph] No path found from node 0 to 1
+]]></output>
+            </test-case>
+            <test-case id="1041" name="should_return_null_for_null_slot_code" fullname="ParkingSim.Tests.WaypointGraphTests.should_return_null_for_null_slot_code" methodname="should_return_null_for_null_slot_code" classname="ParkingSim.Tests.WaypointGraphTests" runstate="Runnable" seed="2066604438" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.000450" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1043" name="should_return_null_for_unknown_gate" fullname="ParkingSim.Tests.WaypointGraphTests.should_return_null_for_unknown_gate" methodname="should_return_null_for_unknown_gate" classname="ParkingSim.Tests.WaypointGraphTests" runstate="Runnable" seed="66718021" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.000277" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1040" name="should_return_null_for_unknown_slot_code" fullname="ParkingSim.Tests.WaypointGraphTests.should_return_null_for_unknown_slot_code" methodname="should_return_null_for_unknown_slot_code" classname="ParkingSim.Tests.WaypointGraphTests" runstate="Runnable" seed="1067320615" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.000277" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1037" name="should_return_single_node_path_when_from_equals_to" fullname="ParkingSim.Tests.WaypointGraphTests.should_return_single_node_path_when_from_equals_to" methodname="should_return_single_node_path_when_from_equals_to" classname="ParkingSim.Tests.WaypointGraphTests" runstate="Runnable" seed="599949338" result="Passed" start-time="2026-04-01 08:47:06Z" end-time="2026-04-01 08:47:06Z" duration="0.000460" asserts="0">
+              <properties />
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

@@ -13,9 +13,10 @@ import (
 	"realtime-service/internal/hub"
 	"realtime-service/internal/middleware"
 
-	"github.com/gin-gonic/gin"
-	gincors "github.com/gin-contrib/cors"
 	"time"
+
+	gincors "github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
 )
 
 func main() {
@@ -55,8 +56,11 @@ func main() {
 
 	// WebSocket endpoints
 	wsHandler := handler.NewWSHandler(h)
-	r.GET("/ws/parking/", wsHandler.HandleParkingWS)           // Public: parking updates
-	r.GET("/ws/user/:userId/", wsHandler.HandleUserWS)         // Authenticated: user-specific updates
+	// Hỗ trợ cả path có và không có trailing slash để tránh 403/404 khi qua edge proxy
+	r.GET("/ws/parking", wsHandler.HandleParkingWS)    // Public: parking updates
+	r.GET("/ws/parking/", wsHandler.HandleParkingWS)   // Public: parking updates
+	r.GET("/ws/user/:userId", wsHandler.HandleUserWS)  // Authenticated: user-specific updates
+	r.GET("/ws/user/:userId/", wsHandler.HandleUserWS) // Authenticated: user-specific updates
 
 	// Broadcast API (internal only — requires X-Gateway-Secret)
 	broadcast := r.Group("/api/broadcast")
@@ -68,6 +72,8 @@ func main() {
 		broadcast.POST("/lot-availability/", broadcastHandler.BroadcastLotAvailability)
 		broadcast.POST("/booking/", broadcastHandler.BroadcastBookingUpdate)
 		broadcast.POST("/notification/", broadcastHandler.BroadcastNotification)
+		broadcast.POST("/camera-status/", broadcastHandler.BroadcastCameraStatus)
+		broadcast.POST("/unity-command/", broadcastHandler.BroadcastUnityCommand)
 	}
 
 	// Graceful shutdown

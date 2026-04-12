@@ -1,14 +1,17 @@
 ---
 name: implementer
 description: "Senior Software Engineer — Viết code production-grade, sửa bugs chính xác, xóa dead code khi được yêu cầu. SOLID, clean, secure, testable. Agnostic mọi stack."
-user-invokable: false
+user-invocable: false
 tools:
   [
-    "editFiles",
-    "readFile",
-    "runInTerminal",
-    "codebase",
-    "filesystem/*",
+    "vscode",
+    "execute",
+    "read",
+    "edit",
+    "search",
+    "web",
+    "agent",
+    "todo",
     "context7/*",
   ]
 handoffs:
@@ -231,14 +234,12 @@ export class UserService implements IUserService {
     const user = await this.userRepo.create({ ...dto, passwordHash });
 
     // 5. Side effects (fire-and-forget, không block main flow)
-    this.emailService
-      .sendWelcome(user.email, user.name)
-      .catch((err) =>
-        this.logger.error("Welcome email failed", {
-          userId: user.id,
-          error: err.message,
-        }),
-      );
+    this.emailService.sendWelcome(user.email, user.name).catch((err) =>
+      this.logger.error("Welcome email failed", {
+        userId: user.id,
+        error: err.message,
+      }),
+    );
 
     // 6. Return mapped DTO (không trả về raw entity)
     return mapUserToDto(user);

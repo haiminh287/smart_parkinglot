@@ -220,11 +220,9 @@ export default function AdminStatsPage() {
         setRevenueData(mappedData);
 
         // Calculate year-over-year growth
-        const totalRevenue = reports.reduce((sum, r) => sum + r.revenue, 0);
-        const lastYearRevenue = totalRevenue * 0.85; // Mock last year as 85% of current
-        const growth =
-          ((totalRevenue - lastYearRevenue) / lastYearRevenue) * 100;
-        setYearlyGrowth(`${growth >= 0 ? "+" : ""}${growth.toFixed(1)}%`);
+        // Year-over-year growth — requires historical data from backend
+        // Currently not available, so we show N/A
+        setYearlyGrowth("N/A");
       }
     } catch (error) {
       console.error("Failed to load revenue report:", error);

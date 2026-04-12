@@ -109,8 +109,25 @@ class ModelVersionResponse(CamelModel):
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
-
 class MetricsResponse(CamelModel):
     license_plate: dict
     cash_recognition: dict
     banknote_recognition: dict
+
+class SlotOccupancyResult(CamelModel):
+    slot_id: str
+    slot_code: str
+    zone_id: str
+    status: str          # "available" | "occupied" | "unknown"
+    confidence: float    # 0.0 – 1.0
+    method: str          # "yolo11n_iou" | "edge_contour_color" | "error"
+
+
+class OccupancyDetectionResponse(CamelModel):
+    camera_id: str
+    total_slots: int
+    total_available: int
+    total_occupied: int
+    detection_method: str          # "yolo11n" | "opencv_fallback"
+    processing_time_ms: float
+    slots: list[SlotOccupancyResult]

@@ -127,6 +127,36 @@ func TestProxyHandler_BookingRoute(t *testing.T) {
 	}
 }
 
+func TestProxyHandler_ApiParkingHealthRoute(t *testing.T) {
+	var receivedPath string
+	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		receivedPath = r.URL.Path
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+	}))
+	defer backend.Close()
+
+	cfg := config.Load()
+	cfg.ParkingServiceURL = backend.URL
+	proxyH := handler.NewProxyHandler(cfg)
+
+	r := gin.New()
+	r.Any("/*path", func(c *gin.Context) {
+		proxyH.HandleProxy(c)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/parking/health", nil)
+	w := newCloseNotifierRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("API parking health proxy should return 200, got %d", w.Code)
+	}
+	if receivedPath != "/parking/health" {
+		t.Errorf("Expected upstream path /parking/health, got %s", receivedPath)
+	}
+}
+
 func TestProxyHandler_AiRoute(t *testing.T) {
 	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)

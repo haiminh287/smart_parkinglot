@@ -93,6 +93,11 @@ func (s *RedisStore) DeleteSession(sessionID string) error {
 	return s.client.Del(s.ctx, key).Err()
 }
 
+// Client returns the underlying Redis client for shared use
+func (s *RedisStore) Client() *redis.Client {
+	return s.client
+}
+
 // Close closes the Redis connection
 func (s *RedisStore) Close() error {
 	return s.client.Close()

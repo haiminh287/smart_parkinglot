@@ -1,0 +1,32 @@
+ M .github/hooks/audit-logs/audit-20260314.jsonl
+ M backend-microservices/docker-compose.prod.yml
+ M backend-microservices/docker-compose.yml
+ M backend-microservices/gateway-service-go/.env.example
+ M backend-microservices/gateway-service-go/internal/config/config.go
+ M backend-microservices/gateway-service-go/internal/config/config_test.go
+ M backend-microservices/gateway-service-go/internal/handler/proxy.go
+ M backend-microservices/gateway-service-go/internal/handler/proxy_test.go
+ M backend-microservices/gateway-service-go/internal/middleware/cors.go
+ M backend-microservices/gateway-service-go/internal/router/routes.go
+ M backend-microservices/realtime-service-go/cmd/server/main.go
+ M docs/status.yaml
+ M infra/cloudflare/cloudflared/config.yml
+ M infra/nginx/nginx.conf
+ M scripts/deploy-local.ps1
+ M spotlove-ai/.env.production
+ M spotlove-ai/src/services/api/auth.api.ts
+ M spotlove-ai/src/services/api/axios.client.ts
+ M spotlove-ai/src/store/slices/authSlice.ts
+ M spotlove-ai/vite.config.ts
+?? .github/hooks/audit-logs/audit-20260315.jsonl
+?? backend-microservices/docs/
+?? docs/research/ISSUE-SECURITY-BLOCKERS-2026-03-13-auth-login-403.md
+?? docs/testing/20260315-175044-gateway8080-auth-smoke.json
+?? docs/testing/implementer-gateway-go-test.txt
+?? docs/testing/implementer-git-status.txt
+?? docs/testing/runtime-smoke-cloudflare-2026-03-14.md
+?? docs/testing/smoke_runtime_check.py
+?? logs/
+?? spotlove-ai/.tmp-runtime-check.cjs
+?? spotlove-ai/playwright-report/
+?? spotlove-ai/test-results/

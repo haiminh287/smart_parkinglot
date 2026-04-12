@@ -9,9 +9,25 @@ import axios, {
   InternalAxiosRequestConfig,
   AxiosResponse,
 } from "axios";
+import webLogger from "@/lib/webLogger";
 
-// Base URL - Use relative path to leverage Vite proxy
-const BASE_URL = import.meta.env.VITE_API_URL || "/api";
+// Base URL
+// - Dev: default /api để đi qua Vite proxy
+// - Prod: nếu VITE_API_URL là domain API trần (không có /api) thì tự append /api
+const rawApiUrl =
+  (import.meta.env.VITE_API_URL as string | undefined)?.trim() || "/api";
+const BASE_URL = (() => {
+  if (rawApiUrl === "/api") return rawApiUrl;
+
+  const normalized = rawApiUrl.replace(/\/+$/, "");
+  const lower = normalized.toLowerCase();
+
+  if (lower.endsWith("/api")) {
+    return normalized;
+  }
+
+  return `${normalized}/api`;
+})();
 
 /**
  * Create Axios instance with default config
@@ -38,25 +54,60 @@ apiClient.interceptors.request.use(
       config.headers["X-CSRFToken"] = csrfToken;
     }
 
+    // Track request start time for duration calculation
+    (config as InternalAxiosRequestConfig & { _t: number })._t = Date.now();
+
+    // Log every outgoing request
+    webLogger.apiReq(
+      config.method ?? "GET",
+      config.url ?? "",
+      config.data
+        ? typeof config.data === "string"
+          ? JSON.parse(config.data)
+          : config.data
+        : undefined,
+    );
+
     return config;
   },
   (error: AxiosError) => {
+    webLogger.error("REQ", "Request setup failed", { message: error.message });
     return Promise.reject(error);
   },
 );
 
 /**
  * Response interceptor
- * - Log errors for debugging
+ * - Log all responses and errors
  * - Let Redux handle 401/403 (don't redirect here)
  */
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => {
+    const cfg = response.config as InternalAxiosRequestConfig & { _t?: number };
+    const duration = cfg._t ? Date.now() - cfg._t : 0;
+    webLogger.apiRes(
+      cfg.method ?? "GET",
+      cfg.url ?? "",
+      response.status,
+      duration,
+      response.data,
+    );
     return response;
   },
   async (error: AxiosError) => {
-    // Log all errors for debugging
+    const cfg = (error.config ?? {}) as InternalAxiosRequestConfig & {
+      _t?: number;
+    };
+    const duration = cfg._t ? Date.now() - cfg._t : 0;
+
     if (error.response) {
+      webLogger.apiErr(
+        cfg.method ?? "GET",
+        cfg.url ?? "",
+        error.response.status,
+        duration,
+        error.response.data,
+      );
       console.warn(`API Error ${error.response.status}:`, {
         url: error.config?.url,
         method: error.config?.method,
@@ -64,11 +115,16 @@ apiClient.interceptors.response.use(
         data: error.response.data,
       });
     } else if (error.request) {
+      webLogger.error("NET", "Network error — no response", {
+        url: cfg.url,
+        message: error.message,
+      });
       console.error("Network error - no response:", error.message);
+    } else {
+      webLogger.error("REQ", "Request error", { message: error.message });
     }
 
     // Don't auto-redirect on 401/403 - let Redux authSlice handle it
-    // This prevents conflicts between axios interceptor and Redux logic
     return Promise.reject(error);
   },
 );

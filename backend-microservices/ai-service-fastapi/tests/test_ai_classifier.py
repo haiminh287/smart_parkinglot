@@ -68,11 +68,11 @@ class TestBanknoteAIClassifier:
 
 
 class TestDenominationClasses:
-    def test_nine_classes(self):
-        assert len(DENOMINATION_CLASSES) == 9
+    def test_eight_classes(self):
+        assert len(DENOMINATION_CLASSES) == 8
 
     def test_all_valid_denominations(self):
-        expected = {"1000", "2000", "5000", "10000", "20000", "50000", "100000", "200000", "500000"}
+        expected = {"1000", "2000", "5000", "10000", "20000", "50000", "100000", "500000"}
         assert set(DENOMINATION_CLASSES) == expected
 
     def test_input_size(self):

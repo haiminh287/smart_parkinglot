@@ -56,7 +56,23 @@ def auto_cancel_unpaid_bookings():
                 )
             except Exception as e:
                 logger.warning("Failed to broadcast slot release: %s", e)
-        
+
+        if booking.slot_id:
+            try:
+                PARKING_SERVICE_URL = os.environ.get('PARKING_SERVICE_URL', 'http://parking-service:8000')
+                GATEWAY_SECRET = os.environ.get('GATEWAY_SECRET', 'gateway-internal-secret-key')
+                requests.patch(
+                    f'{PARKING_SERVICE_URL}/parking/slots/{booking.slot_id}/update-status/',
+                    json={'status': 'available'},
+                    headers={
+                        'X-Gateway-Secret': GATEWAY_SECRET,
+                        'Content-Type': 'application/json'
+                    },
+                    timeout=3
+                )
+            except Exception as e:
+                logger.warning("Failed to release slot %s in parking-service on auto-cancel: %s", booking.slot_id, e)
+
         # TODO: Send notification to user
         try:
             NOTIFICATION_SERVICE_URL = os.environ.get('NOTIFICATION_SERVICE_URL', 'http://notification-service:8000')
@@ -96,7 +112,6 @@ def check_no_show_bookings():
     
     no_show_bookings = Booking.objects.filter(
         package_type='hourly',
-        payment_method='on_exit',
         check_in_status='not_checked_in',
         hourly_start__lt=cutoff_time
     ).exclude(

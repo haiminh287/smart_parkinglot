@@ -15,8 +15,6 @@ export default defineConfig(({ mode }) => {
     throw new Error("VITE_GATEWAY_SECRET is required outside development mode");
   }
 
-  let hasWarnedMissingGatewaySecret = false;
-
   return {
     server: {
       host: "::",
@@ -32,33 +30,10 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           secure: false,
         },
-        // AI service endpoints go directly to local AI service (not via Docker gateway)
-        "/api/ai": {
-          target: aiServiceUrl,
-          changeOrigin: true,
-          secure: false,
-          rewrite: (path) => path.replace(/^\/api/, ""),
-          configure: (proxy) => {
-            proxy.on("proxyReq", (proxyReq) => {
-              if (gatewaySecret) {
-                proxyReq.setHeader("X-Gateway-Secret", gatewaySecret);
-                return;
-              }
-
-              if (!hasWarnedMissingGatewaySecret) {
-                hasWarnedMissingGatewaySecret = true;
-                console.warn(
-                  "[vite] VITE_GATEWAY_SECRET is not set; skipping X-Gateway-Secret header in development mode.",
-                );
-              }
-            });
-          },
-        },
         "/api": {
           target: gatewayUrl,
           changeOrigin: true,
           secure: false,
-          rewrite: (path) => path.replace(/^\/api/, ""), // Remove /api prefix, gateway routes by path
         },
         // WebSocket goes directly to realtime service
         "/ws": {

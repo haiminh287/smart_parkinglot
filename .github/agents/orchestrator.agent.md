@@ -3,13 +3,19 @@ name: orchestrator
 description: "Enterprise Team Lead v10 — Smart prompt expansion, cleanup pipeline, state machine, retry + self-healing, cost guard, strict delegation. Agnostic mọi stack."
 tools:
   [
+    "vscode",
+    "execute",
+    "read",
     "agent",
+    "edit",
+    "search",
+    "web",
+    "todo",
+    "playwright/*",
+    "stitch/*",
     "github/*",
     "memory/*",
     "sequential-thinking/*",
-    "filesystem/*",
-    "fetch/*",
-    "codebase",
   ]
 agents:
   [

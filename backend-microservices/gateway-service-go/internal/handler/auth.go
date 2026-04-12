@@ -102,17 +102,19 @@ func (h *AuthHandler) HandleLogin(c *gin.Context) {
 	}
 
 	// Determine role and is_staff
+	// auth-service uses CamelCaseJSONRenderer: is_staff → isStaff, but role is unchanged
 	role := "user"
 	isStaff := false
 	if r, ok := userData["role"].(string); ok {
-		role = r
-		isStaff = role == "admin"
+	role = r
+	isStaff = role == "admin"
 	}
-	if s, ok := userData["is_staff"].(bool); ok {
-		isStaff = s
-		if isStaff {
-			role = "admin"
-		}
+	// djangorestframework-camel-case renders is_staff as isStaff in JSON responses
+	if s, ok := userData["isStaff"].(bool); ok {
+	isStaff = s
+	if isStaff && role != "admin" {
+	role = "admin"
+	}
 	}
 
 	// Create gateway session in Redis
@@ -169,6 +171,11 @@ func (h *AuthHandler) HandleOAuthCallback(provider string, c *gin.Context) {
 		return
 	}
 	httpReq.Header.Set("X-Gateway-Secret", h.cfg.GatewaySecret)
+	// Forward the browser session cookie so auth-service can read the OAuth
+	// state it stored in its own session. Never log the cookie value.
+	if cookie := c.Request.Header.Get("Cookie"); cookie != "" {
+		httpReq.Header.Set("Cookie", cookie)
+	}
 
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(httpReq)
@@ -209,11 +216,11 @@ func (h *AuthHandler) HandleOAuthCallback(provider string, c *gin.Context) {
 		role = r
 		isStaff = role == "admin"
 	}
-	if s, ok := userData["is_staff"].(bool); ok {
-		isStaff = s
-		if isStaff {
-			role = "admin"
-		}
+	if s, ok := userData["isStaff"].(bool); ok {
+	isStaff = s
+	if isStaff && role != "admin" {
+	role = "admin"
+	}
 	}
 
 	sessionData := &session.SessionData{
@@ -258,6 +265,19 @@ func (h *AuthHandler) HandleLogout(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Logged out successfully",
+	})
+}
+
+// HandleUnsupportedRefresh returns an explicit JSON contract error for refresh routes
+// that are intentionally not implemented in the current session-based auth flow.
+func (h *AuthHandler) HandleUnsupportedRefresh(c *gin.Context) {
+	c.JSON(http.StatusNotFound, gin.H{
+		"success": false,
+		"error": gin.H{
+			"code":    "ERR_NOT_FOUND",
+			"message": "Refresh endpoint is not supported in the current session-based auth flow",
+			"details": []string{strings.TrimSpace(c.Request.URL.Path)},
+		},
 	})
 }
 

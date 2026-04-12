@@ -17,6 +17,10 @@ type Config struct {
 	RedisURL      string
 	Debug         bool
 
+	RateLimitRequests int
+	RateLimitWindow   int
+	RateLimitEnabled  bool
+
 	CORSAllowedOrigins    []string
 	FEAuthCallbackURL     string
 	SessionCookieDomain   string
@@ -44,6 +48,11 @@ func Load() *Config {
 		GatewaySecret: strings.TrimSpace(mustGetEnv("GATEWAY_SECRET")),
 		RedisURL:      getEnv("REDIS_URL", "redis://localhost:6379/1"),
 		Debug:         getEnv("DEBUG", "false") == "true",
+
+		RateLimitRequests: getEnvAsInt("RATE_LIMIT_REQUESTS", 100),
+		RateLimitWindow:   getEnvAsInt("RATE_LIMIT_WINDOW", 60),
+		RateLimitEnabled:  getEnvAsBool("RATE_LIMIT_ENABLED", true),
+
 		CORSAllowedOrigins: parseCSVEnv(
 			"CORS_ALLOWED_ORIGINS",
 			[]string{"http://localhost:5173", "http://localhost:3000", "http://localhost:8080"},
@@ -132,6 +141,9 @@ func (c *Config) GetServiceRoute(path string) *ServiceRoute {
 		prefix string
 		route  ServiceRoute
 	}{
+		{"auth/admin/", ServiceRoute{"auth", c.AuthServiceURL, false}}, // admin endpoints require authentication
+		{"auth/me", ServiceRoute{"auth", c.AuthServiceURL, false}},      // /auth/me requires authentication
+		{"auth/change-password/", ServiceRoute{"auth", c.AuthServiceURL, false}},
 		{"auth/", ServiceRoute{"auth", c.AuthServiceURL, true}},
 		{"parking/", ServiceRoute{"parking", c.ParkingServiceURL, false}},
 		{"vehicles/", ServiceRoute{"vehicle", c.VehicleServiceURL, false}},

@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="31" result="Passed" total="31" passed="31" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-04-01 08:44:49Z" end-time="2026-04-01 08:44:49Z" duration="0.3375057">
+  <test-suite type="TestSuite" id="1045" name="ParkingSimulatorUnity" fullname="ParkingSimulatorUnity" runstate="Runnable" testcasecount="31" result="Passed" start-time="2026-04-01 08:44:49Z" end-time="2026-04-01 08:44:49Z" duration="0.337506" total="31" passed="31" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties />
+    <test-suite type="Assembly" id="1076" name="ParkingSim.Tests.EditMode.dll" fullname="C:/Users/MINH/Documents/Zalo_Received_Files/Project_Main/ParkingSimulatorUnity/Library/ScriptAssemblies/ParkingSim.Tests.EditMode.dll" runstate="Runnable" testcasecount="27" result="Passed" start-time="2026-04-01 08:44:49Z" end-time="2026-04-01 08:44:49Z" duration="0.282842" total="27" passed="27" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="295000" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+      </properties>
+      <test-suite type="TestSuite" id="1077" name="ParkingSim" fullname="ParkingSim" runstate="Runnable" testcasecount="27" result="Passed" start-time="2026-04-01 08:44:49Z" end-time="2026-04-01 08:44:49Z" duration="0.281673" total="27" passed="27" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1078" name="Tests" fullname="ParkingSim.Tests" runstate="Runnable" testcasecount="27" result="Passed" start-time="2026-04-01 08:44:49Z" end-time="2026-04-01 08:44:49Z" duration="0.280655" total="27" passed="27" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="1046" name="DataModelsTests" fullname="ParkingSim.Tests.DataModelsTests" classname="ParkingSim.Tests.DataModelsTests" runstate="Runnable" testcasecount="7" result="Passed" start-time="2026-04-01 08:44:49Z" end-time="2026-04-01 08:44:49Z" duration="0.229446" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1053" name="should_deserialize_BookingData_with_nested_objects" fullname="ParkingSim.Tests.DataModelsTests.should_deserialize_BookingData_with_nested_objects" methodname="should_deserialize_BookingData_with_nested_objects" classname="ParkingSim.Tests.DataModelsTests" runstate="Runnable" seed="882496793" result="Passed" start-time="2026-04-01 08:44:49Z" end-time="2026-04-01 08:44:49Z" duration="0.140557" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1048" name="should_deserialize_ESP32Response_with_JObject_details" fullname="ParkingSim.Tests.DataModelsTests.should_deserialize_ESP32Response_with_JObject_details" methodname="should_deserialize_ESP32Response_with_JObject_details" classname="ParkingSim.Tests.DataModelsTests" runstate="Runnable" seed="1824114003" result="Passed" start-time="2026-04-01 08:44:49Z" end-time="2026-04-01 08:44:49Z" duration="0.030004" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1050" name="should_deserialize_PaginatedResponse_with_nested_results" fullname="ParkingSim.Tests.DataModelsTests.should_deserialize_PaginatedResponse_with_nested_results" methodname="should_deserialize_PaginatedResponse_with_nested_results" classname="ParkingSim.Tests.DataModelsTests" runstate="Runnable" seed="898877625" result="Passed" start-time="2026-04-01 08:44:49Z" end-time="2026-04-01 08:44:49Z" duration="0.013887" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1049" name="should_deserialize_SlotData_from_api_json" fullname="ParkingSim.Tests.DataModelsTests.should_deserialize_SlotData_from_api_json" methodname="should_deserialize_SlotData_from_api_json" classname="ParkingSim.Tests.DataModelsTests" runstate="Runnable" seed="223372320" result="Passed" start-time="2026-04-01 08:44:49Z" end-time="2026-04-01 08:44:49Z" duration="0.000893" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1051" name="should_parse_WsMessage_with_slot_status_update" fullname="ParkingSim.Tests.DataModelsTests.should_parse_WsMessage_with_slot_status_update" methodname="should_parse_WsMessage_with_slot_status_update" classname="ParkingSim.Tests.DataModelsTests" runstate="Runnable" seed="1398311369" result="Passed" start-time="2026-04-01 08:44:49Z" end-time="2026-04-01 08:44:49Z" duration="0.001731" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1047" name="should_serialize_BookingCreateRequest_with_correct_json_properties" fullname="ParkingSim.Tests.DataModelsTests.should_serialize_BookingCreateRequest_with_correct_json_properties" methodname="should_serialize_BookingCreateRequest_with_correct_json_properties" classname="ParkingSim.Tests.DataModelsTests" runstate="Runnable" seed="1229897384" result="Passed" start-time="2026-04-01 08:44:49Z" end-time="2026-04-01 08:44:49Z" duration="0.019263" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1052" name="should_serialize_ESP32CheckInRequest_with_null_value_handling" fullname="ParkingSim.Tests.DataModelsTests.should_serialize_ESP32CheckInRequest_with_null_value_handling" methodname="should_serialize_ESP32CheckInRequest_with_null_value_handling" classname="ParkingSim.Tests.DataModelsTests" runstate="Runnable" seed="1585718389" result="Passed" start-time="2026-04-01 08:44:49Z" end-time="2026-04-01 08:44:49Z" duration="0.003049" asserts="0">
+              <properties />
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1054" name="MockDataProviderTests" fullname="ParkingSim.Tests.MockDataProviderTests" classname="ParkingSim.Tests.MockDataProviderTests" runstate="Runnable" testcasecount="7" result="Passed" start-time="2026-04-01 08:44:49Z" end-time="2026-04-01 08:44:49Z" duration="0.024010" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1061" name="should_assign_correct_zone_references_to_slots" fullname="ParkingSim.Tests.MockDataProviderTests.should_assign_correct_zone_references_to_slots" methodname="should_assign_correct_zone_references_to_slots" classname="ParkingSim.Tests.MockDataProviderTests" runstate="Runnable" seed="2079321953" result="Passed" start-time="2026-04-01 08:44:49Z" end-time="2026-04-01 08:44:49Z" duration="0.003533" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1055" name="should_generate_correct_number_of_mock_slots" fullname="ParkingSim.Tests.MockDataProviderTests.should_generate_correct_number_of_mock_slots" methodname="should_generate_correct_number_of_mock_slots" classname="ParkingSim.Tests.MockDataProviderTests" runstate="Runnable" seed="296393675" result="Passed" start-time="2026-04-01 08:44:49Z" end-time="2026-04-01 08:44:49Z" duration="0.000916" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1059" name="should_generate_mock_bookings_with_valid_references" fullname="ParkingSim.Tests.MockDataProviderTests.should_generate_mock_bookings_with_valid_references" methodname="should_generate_mock_bookings_with_valid_references" classname="ParkingSim.Tests.MockDataProviderTests" runstate="Runnable" seed="255069021" result="Passed" start-time="2026-04-01 08:44:49Z" end-time="2026-04-01 08:44:49Z" duration="0.003438" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1060" name="should_generate_mock_floors_with_zones" fullname="ParkingSim.Tests.MockDataProviderTests.should_generate_mock_floors_with_zones" methodname="should_generate_mock_floors_with_zones" classname="ParkingSim.Tests.MockDataProviderTests" runstate="Runnable" seed="1157660667" result="Passed" start-time="2026-04-01 08:44:49Z" end-time="2026-04-01 08:44:49Z" duration="0.006548" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1058" name="should_generate_mock_vehicles_with_valid_data" fullname="ParkingSim.Tests.MockDataProviderTests.should_generate_mock_vehicles_with_valid_data" methodname="should_generate_mock_vehicles_with_valid_data" classname="ParkingSim.Tests.MockDataProviderTests" runstate="Runnable" seed="1431252540" result="Passed" start-time="2026-04-01 08:44:49Z" end-time="2026-04-01 08:44:49Z" duration="0.001694" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1056" name="should_generate_slots_with_valid_status_distribution" fullname="ParkingSim.Tests.MockDataProviderTests.should_generate_slots_with_valid_status_distribution" methodname="should_generate_slots_with_valid_status_distribution" classname="ParkingSim.Tests.MockDataProviderTests" runstate="Runnable" seed="1002404080" result="Passed" start-time="2026-04-01 08:44:49Z" end-time="2026-04-01 08:44:49Z" duration="0.003308" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1057" name="should_generate_unique_slot_codes" fullname="ParkingSim.Tests.MockDataProviderTests.should_generate_unique_slot_codes" methodname="should_generate_unique_slot_codes" classname="ParkingSim.Tests.MockDataProviderTests" runstate="Runnable" seed="1823639999" result="Passed" start-time="2026-04-01 08:44:49Z" end-time="2026-04-01 08:44:49Z" duration="0.000928" asserts="0">
+              <properties />
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1062" name="SharedBookingStateTests" fullname="ParkingSim.Tests.SharedBookingStateTests" classname="ParkingSim.Tests.SharedBookingStateTests" runstate="Runnable" testcasecount="13" result="Passed" start-time="2026-04-01 08:44:49Z" end-time="2026-04-01 08:44:49Z" duration="0.020389" total="13" passed="13" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1063" name="should_add_booking_and_retrieve_by_plate" fullname="ParkingSim.Tests.SharedBookingStateTests.should_add_booking_and_retrieve_by_plate" methodname="should_add_booking_and_retrieve_by_plate" classname="ParkingSim.Tests.SharedBookingStateTests" runstate="Runnable" seed="992640334" result="Passed" start-time="2026-04-01 08:44:49Z" end-time="2026-04-01 08:44:49Z" duration="0.005466" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1073" name="should_clear_all_bookings" fullname="ParkingSim.Tests.SharedBookingStateTests.should_clear_all_bookings" methodname="should_clear_all_bookings" classname="ParkingSim.Tests.SharedBookingStateTests" runstate="Runnable" seed="1102177106" result="Passed" start-time="2026-04-01 08:44:49Z" end-time="2026-04-01 08:44:49Z" duration="0.001139" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1066" name="should_fire_OnBookingAdded_event" fullname="ParkingSim.Tests.SharedBookingStateTests.should_fire_OnBookingAdded_event" methodname="should_fire_OnBookingAdded_event" classname="ParkingSim.Tests.SharedBookingStateTests" runstate="Runnable" seed="52739120" result="Passed" start-time="2026-04-01 08:44:49Z" end-time="2026-04-01 08:44:49Z" duration="0.000710" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1070" name="should_get_active_bookings_for_dropdown" fullname="ParkingSim.Tests.SharedBookingStateTests.should_get_active_bookings_for_dropdown" methodname="should_get_active_bookings_for_dropdown" classname="ParkingSim.Tests.SharedBookingStateTests" runstate="Runnable" seed="1587278716" result="Passed" start-time="2026-04-01 08:44:49Z" end-time="2026-04-01 08:44:49Z" duration="0.002781" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1072" name="should_get_not_checked_in_bookings" fullname="ParkingSim.Tests.SharedBookingStateTests.should_get_not_checked_in_bookings" methodname="should_get_not_checked_in_bookings" classname="ParkingSim.Tests.SharedBookingStateTests" runstate="Runnable" seed="1803203390" result="Passed" start-time="2026-04-01 08:44:49Z" end-time="2026-04-01 08:44:49Z" duration="0.001069" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1075" name="should_not_add_booking_when_booking_data_is_null" fullname="ParkingSim.Tests.SharedBookingStateTests.should_not_add_booking_when_booking_data_is_null" methodname="should_not_add_booking_when_booking_data_is_null" classname="ParkingSim.Tests.SharedBookingStateTests" runstate="Runnable" seed="1506389569" result="Passed" start-time="2026-04-01 08:44:49Z" end-time="2026-04-01 08:44:49Z" duration="0.000724" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1074" name="should_not_add_booking_when_response_is_null" fullname="ParkingSim.Tests.SharedBookingStateTests.should_not_add_booking_when_response_is_null" methodname="should_not_add_booking_when_response_is_null" classname="ParkingSim.Tests.SharedBookingStateTests" runstate="Runnable" seed="1765321012" result="Passed" start-time="2026-04-01 08:44:49Z" end-time="2026-04-01 08:44:49Z" duration="0.000682" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1067" name="should_not_fire_event_when_adding_duplicate_booking" fullname="ParkingSim.Tests.SharedBookingStateTests.should_not_fire_event_when_adding_duplicate_booking" methodname="should_not_fire_event_when_adding_duplicate_booking" classname="ParkingSim.Tests.SharedBookingStateTests" runstate="Runnable" seed="125177364" result="Passed" start-time="2026-04-01 08:44:49Z" end-time="2026-04-01 08:44:49Z" duration="0.000623" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1069" name="should_not_fire_remove_event_for_nonexistent_booking" fullname="ParkingSim.Tests.SharedBookingStateTests.should_not_fire_remove_event_for_nonexistent_booking" methodname="should_not_fire_remove_event_for_nonexistent_booking" classname="ParkingSim.Tests.SharedBookingStateTests" runstate="Runnable" seed="15547495" result="Passed" start-time="2026-04-01 08:44:49Z" end-time="2026-04-01 08:44:49Z" duration="0.000733" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1068" name="should_remove_booking_and_fire_event" fullname="ParkingSim.Tests.SharedBookingStateTests.should_remove_booking_and_fire_event" methodname="should_remove_booking_and_fire_event" classname="ParkingSim.Tests.SharedBookingStateTests" runstate="Runnable" seed="1673731481" result="Passed" start-time="2026-04-01 08:44:49Z" end-time="2026-04-01 08:44:49Z" duration="0.000794" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1065" name="should_retrieve_by_plate_case_insensitively" fullname="ParkingSim.Tests.SharedBookingStateTests.should_retrieve_by_plate_case_insensitively" methodname="should_retrieve_by_plate_case_insensitively" classname="ParkingSim.Tests.SharedBookingStateTests" runstate="Runnable" seed="48617934" result="Passed" start-time="2026-04-01 08:44:49Z" end-time="2026-04-01 08:44:49Z" duration="0.000439" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1064" name="should_return_null_for_nonexistent_plate" fullname="ParkingSim.Tests.SharedBookingStateTests.should_return_null_for_nonexistent_plate" methodname="should_return_null_for_nonexistent_plate" classname="ParkingSim.Tests.SharedBookingStateTests" runstate="Runnable" seed="556435208" result="Passed" start-time="2026-04-01 08:44:49Z" end-time="2026-04-01 08:44:49Z" duration="0.000375" asserts="0">
+              <properties />
+            </test-case>
+            <test-case id="1071" name="should_update_booking_status" fullname="ParkingSim.Tests.SharedBookingStateTests.should_update_booking_status" methodname="should_update_booking_status" classname="ParkingSim.Tests.SharedBookingStateTests" runstate="Runnable" seed="354717990" result="Passed" start-time="2026-04-01 08:44:49Z" end-time="2026-04-01 08:44:49Z" duration="0.000416" asserts="0">
+              <properties />
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+    <test-suite type="Assembly" id="1082" name="Tests.dll" fullname="C:/Users/MINH/Documents/Zalo_Received_Files/Project_Main/ParkingSimulatorUnity/Library/ScriptAssemblies/Tests.dll" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-04-01 08:44:49Z" end-time="2026-04-01 08:44:49Z" duration="0.013628" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="295000" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+      </properties>
+      <test-suite type="TestFixture" id="1079" name="NewTestScript" fullname="NewTestScript" classname="NewTestScript" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-04-01 08:44:49Z" end-time="2026-04-01 08:44:49Z" duration="0.012826" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-case id="1080" name="NewTestScriptSimplePasses" fullname="NewTestScript.NewTestScriptSimplePasses" methodname="NewTestScriptSimplePasses" classname="NewTestScript" runstate="Runnable" seed="1902043409" result="Passed" start-time="2026-04-01 08:44:49Z" end-time="2026-04-01 08:44:49Z" duration="0.000247" asserts="0">
+          <properties />
+        </test-case>
+        <test-case id="1081" name="NewTestScriptWithEnumeratorPasses" fullname="NewTestScript.NewTestScriptWithEnumeratorPasses" methodname="NewTestScriptWithEnumeratorPasses" classname="NewTestScript" runstate="Runnable" seed="631954245" result="Passed" start-time="2026-04-01 08:44:49Z" end-time="2026-04-01 08:44:49Z" duration="0.010937" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+          </properties>
+        </test-case>
+      </test-suite>
+    </test-suite>
+    <test-suite type="Assembly" id="1086" name="Tests1.dll" fullname="C:/Users/MINH/Documents/Zalo_Received_Files/Project_Main/ParkingSimulatorUnity/Library/ScriptAssemblies/Tests1.dll" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-04-01 08:44:49Z" end-time="2026-04-01 08:44:49Z" duration="0.019363" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="295000" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+      </properties>
+      <test-suite type="TestFixture" id="1083" name="NewTestScript" fullname="NewTestScript" classname="NewTestScript" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-04-01 08:44:49Z" end-time="2026-04-01 08:44:49Z" duration="0.015718" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-case id="1084" name="NewTestScriptSimplePasses" fullname="NewTestScript.NewTestScriptSimplePasses" methodname="NewTestScriptSimplePasses" classname="NewTestScript" runstate="Runnable" seed="1510800426" result="Passed" start-time="2026-04-01 08:44:49Z" end-time="2026-04-01 08:44:49Z" duration="0.000143" asserts="0">
+          <properties />
+        </test-case>
+        <test-case id="1085" name="NewTestScriptWithEnumeratorPasses" fullname="NewTestScript.NewTestScriptWithEnumeratorPasses" methodname="NewTestScriptWithEnumeratorPasses" classname="NewTestScript" runstate="Runnable" seed="1748136617" result="Passed" start-time="2026-04-01 08:44:49Z" end-time="2026-04-01 08:44:49Z" duration="0.010277" asserts="0">
+          <properties>
+            <property name="_JOINTYPE" value="UnityCombinatorial" />
+          </properties>
+        </test-case>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

@@ -3,9 +3,10 @@ Shared test fixtures for parking-service.
 """
 
 import uuid
+
 import pytest
+from infrastructure.models import Camera, CarSlot, Floor, ParkingLot, Zone
 from rest_framework.test import APIClient
-from infrastructure.models import ParkingLot, Floor, Zone, CarSlot, Camera
 
 GATEWAY_SECRET = "gateway-internal-secret-key"
 
@@ -97,6 +98,6 @@ def camera(db, zone):
         ip_address="192.168.100.23",
         port=554,
         zone=zone,
-        stream_url="rtsp://admin:XGIMBN@192.168.100.23:554/ch1/main",
+        stream_url="rtsp://user:password@192.168.1.100:554/H.264",
         is_active=True,
     )

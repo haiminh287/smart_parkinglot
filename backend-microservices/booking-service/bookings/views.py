@@ -2,18 +2,23 @@
 Views for booking-service.
 """
 
-from rest_framework import viewsets, status
+import logging
+import os
+from datetime import timedelta
+from decimal import Decimal
+
+import requests
+from django.conf import settings
+from django.utils import timezone
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django.utils import timezone
-from django.conf import settings
-from decimal import Decimal
-import requests
-import os
-import logging
 from shared.gateway_permissions import IsGatewayAuthenticated
-from .models import PackagePricing, Booking
-from .serializers import PackagePricingSerializer, BookingSerializer, CreateBookingSerializer
+
+from . import services
+from .models import Booking, PackagePricing
+from .serializers import (BookingSerializer, CreateBookingSerializer,
+                          PackagePricingSerializer)
 
 # Realtime service URL for WebSocket broadcasting
 REALTIME_SERVICE_URL = os.environ.get('REALTIME_SERVICE_URL', 'http://realtime-service:8006')
@@ -43,6 +48,7 @@ class PackagePricingViewSet(viewsets.ModelViewSet):
 
     queryset = PackagePricing.objects.all()
     serializer_class = PackagePricingSerializer
+    permission_classes = [IsGatewayAuthenticated]
 
 
 class BookingViewSet(viewsets.ModelViewSet):
@@ -81,10 +87,12 @@ class BookingViewSet(viewsets.ModelViewSet):
             broadcast_slot_status(
                 slot_id=str(booking.slot_id),
                 zone_id=str(booking.zone_id) if booking.zone_id else None,
-                slot_status='occupied' ,
-                # slot_status='occupied' if booking.status in ['confirmed', 'active'] else 'reserved',
+                slot_status='reserved',
                 vehicle_type=booking.vehicle_type
             )
+
+        # Auto-create payment record (best-effort, non-blocking)
+        services.create_payment_for_booking(booking)
 
         output_serializer = BookingSerializer(booking)
         return Response({
@@ -111,6 +119,12 @@ class BookingViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
+        if booking.start_time and timezone.now() < booking.start_time - timedelta(minutes=30):
+            return Response(
+                {'message': 'Chưa đến giờ check-in. Vui lòng đến trong vòng 30 phút trước giờ đặt.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         booking.check_in_status = 'checked_in'
         booking.checked_in_at = timezone.now()
         booking.save(update_fields=['check_in_status', 'checked_in_at'])
@@ -149,72 +163,21 @@ class BookingViewSet(viewsets.ModelViewSet):
     def checkout(self, request, pk=None):
         """Check-out from a booking (scan QR code at exit)."""
         booking = self.get_object()
-        
+
         if booking.check_in_status != 'checked_in':
             return Response(
                 {'error': 'Only checked-in bookings can be checked out'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
-        booking.check_in_status = 'checked_out'
-        booking.checked_out_at = timezone.now()
 
-        duration = booking.checked_out_at - booking.checked_in_at
-        total_hours = duration.total_seconds() / 3600
+        error = services.validate_checkout(booking)
+        if error:
+            return Response({'message': error}, status=status.HTTP_400_BAD_REQUEST)
 
-        hourly_price = self._get_hourly_price(booking.vehicle_type)
-        late_fee = 0
-
-        import math
-        
-        # Calculate late fee for hourly bookings
-        if booking.package_type == 'hourly' and booking.hourly_end:
-            # Check if checked out after scheduled end time
-            overtime_seconds = (booking.checked_out_at - booking.hourly_end).total_seconds()
-            if overtime_seconds > 0:
-                # Apply late fee: 30,000đ/hour instead of 20,000đ/hour
-                overtime_hours = math.ceil(overtime_seconds / 3600)
-                
-                # Calculate scheduled hours
-                if booking.hourly_start:
-                    scheduled_seconds = (booking.hourly_end - booking.hourly_start).total_seconds()
-                    scheduled_hours = math.ceil(scheduled_seconds / 3600)
-                else:
-                    scheduled_hours = 0
-                
-                # Base price for scheduled hours
-                base_amount = scheduled_hours * hourly_price
-                
-                # Late fee for overtime hours (30k/h for cars, 10k/h for motorbikes)
-                late_fee_rate = hourly_price * Decimal('1.5')  # 50% surcharge
-                late_fee = overtime_hours * late_fee_rate
-                
-                total_amount = base_amount + late_fee
-                booking.late_fee_applied = True
-            else:
-                # No overtime - charge for scheduled hours
-                if booking.hourly_start:
-                    scheduled_seconds = (booking.hourly_end - booking.hourly_start).total_seconds()
-                    scheduled_hours = math.ceil(scheduled_seconds / 3600)
-                else:
-                    scheduled_hours = math.ceil(total_hours)
-                total_amount = scheduled_hours * hourly_price
-        else:
-            # Non-hourly or no hourly_end - charge for actual duration
-            billable_hours = math.ceil(total_hours) if total_hours > 0 else 1
-            total_amount = billable_hours * hourly_price
-
-        booking.price = total_amount
-        booking.save(update_fields=['check_in_status', 'checked_out_at', 'price', 'late_fee_applied'])
+        pricing = services.calculate_checkout_price(booking)
+        services.perform_checkout(booking)
 
         if booking.slot_id:
-            broadcast_slot_status(
-                slot_id=str(booking.slot_id),
-                zone_id=str(booking.zone_id) if booking.zone_id else None,
-                slot_status='available',
-                vehicle_type=booking.vehicle_type
-            )
-            # Release slot in parking-service (Bug #5 fix)
             try:
                 PARKING_SERVICE_URL = os.environ.get('PARKING_SERVICE_URL', 'http://parking-service:8000')
                 GATEWAY_SECRET = os.environ.get('GATEWAY_SECRET', '')
@@ -229,18 +192,26 @@ class BookingViewSet(viewsets.ModelViewSet):
                 )
             except Exception as e:
                 logger.warning("Failed to release slot in parking-service: %s", e)
-        
-        serializer = self.get_serializer(booking)
+
+            broadcast_slot_status(
+                slot_id=str(booking.slot_id),
+                zone_id=str(booking.zone_id) if booking.zone_id else None,
+                slot_status='available',
+                vehicle_type=booking.vehicle_type
+            )
+
+        booking.refresh_from_db()
+        serializer = BookingSerializer(booking)
         return Response({
             'booking': serializer.data,
             'message': 'Check-out successful',
-            'durationHours': round(total_hours, 2),
-            'totalAmount': float(total_amount),
-            'pricePerHour': float(hourly_price),
-            'lateFee': float(late_fee) if late_fee > 0 else 0,
+            'durationHours': round(pricing['total_hours'], 2),
+            'totalAmount': float(pricing['total_amount']),
+            'pricePerHour': float(pricing['hourly_price']),
+            'lateFee': float(pricing.get('late_fee', 0)),
             'lateFeeApplied': booking.late_fee_applied
         })
-    
+
     def _get_hourly_price(self, vehicle_type):
         """Get hourly price for vehicle type from PackagePricing."""
         from decimal import Decimal
@@ -339,9 +310,10 @@ class BookingViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], url_path='stats')
     def booking_stats(self, request):
         """Get user booking statistics with monthly breakdown."""
-        from django.db.models import Sum, Count
-        from django.db.models.functions import TruncMonth
         from decimal import Decimal
+
+        from django.db.models import Count, Sum
+        from django.db.models.functions import TruncMonth
         
         user_bookings = Booking.objects.filter(user_id=request.user_id)
         
@@ -357,7 +329,7 @@ class BookingViewSet(viewsets.ModelViewSet):
         actual_total_spent = max(total_spent, exit_spent)
         
         # Calculate total hours parked using Django aggregation
-        from django.db.models import F, ExpressionWrapper, DurationField
+        from django.db.models import DurationField, ExpressionWrapper, F
         completed_bookings = user_bookings.filter(
             check_in_status__in=['checked_out'],
             checked_in_at__isnull=False,
@@ -373,6 +345,7 @@ class BookingViewSet(viewsets.ModelViewSet):
         
         # Monthly expenses breakdown (last 6 months)
         from datetime import timedelta
+
         from django.utils import timezone as tz
         
         six_months_ago = tz.now() - timedelta(days=180)
@@ -442,6 +415,7 @@ class BookingViewSet(viewsets.ModelViewSet):
             )
         
         from datetime import datetime
+
         from django.db.models import Q
         
         try:
@@ -488,16 +462,45 @@ class BookingViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # TODO: Integrate with payment gateway (MoMo, VNPay, ZaloPay)
-        payment_url = f"https://payment-gateway.com/pay?booking={booking.id}&method={payment_method}"
+        # Check for existing active payments first
+        existing = services.get_booking_payments(str(booking.id), str(booking.user_id))
+        if existing:
+            active = [p for p in existing if p.get('status') in ('pending', 'processing')]
+            if active:
+                return Response({
+                    'payment': active[0],
+                    'booking_id': str(booking.id),
+                    'amount': float(booking.price),
+                    'message': 'Active payment already exists for this booking',
+                })
+        
+        # Initiate new payment via payment service
+        result = services.initiate_payment(
+            booking_id=booking.id,
+            user_id=booking.user_id,
+            payment_method=payment_method,
+            amount=booking.price,
+        )
+        
+        if result is None:
+            return Response(
+                {'error': 'Payment service unavailable'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+        
+        if 'error' in result:
+            return Response(
+                {'error': result['error']},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
         booking.payment_status = 'processing'
         booking.save(update_fields=['payment_status'])
         
         return Response({
-            'payment_url': payment_url,
+            'payment': result,
             'booking_id': str(booking.id),
-            'amount': float(booking.price)
+            'amount': float(booking.price),
         })
     
     @action(detail=False, methods=['post'], url_path='payment')
@@ -537,16 +540,45 @@ class BookingViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
         
-        # TODO: Integrate with payment gateway
-        payment_url = f"https://payment-gateway.com/pay?booking={booking.id}&method={payment_method}"
+        # Check for existing active payments first
+        existing = services.get_booking_payments(str(booking.id), str(booking.user_id))
+        if existing:
+            active = [p for p in existing if p.get('status') in ('pending', 'processing')]
+            if active:
+                return Response({
+                    'payment': active[0],
+                    'booking_id': str(booking.id),
+                    'amount': float(booking.price),
+                    'message': 'Active payment already exists for this booking',
+                })
+        
+        # Initiate new payment via payment service
+        result = services.initiate_payment(
+            booking_id=booking.id,
+            user_id=booking.user_id,
+            payment_method=payment_method,
+            amount=booking.price,
+        )
+        
+        if result is None:
+            return Response(
+                {'error': 'Payment service unavailable'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+        
+        if 'error' in result:
+            return Response(
+                {'error': result['error']},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
         booking.payment_status = 'processing'
         booking.save(update_fields=['payment_status'])
         
         return Response({
-            'payment_url': payment_url,
+            'payment': result,
             'booking_id': str(booking.id),
-            'amount': float(booking.price)
+            'amount': float(booking.price),
         })
     
     @action(detail=False, methods=['get'])

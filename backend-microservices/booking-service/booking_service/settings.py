@@ -3,6 +3,7 @@ Django settings for booking_service project.
 """
 
 from pathlib import Path
+
 from decouple import config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -107,6 +108,7 @@ CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes
 
 # Redis Cache — DB 2 (booking-service dedicated)
 import os
+
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.redis.RedisCache',
@@ -146,3 +148,6 @@ REST_FRAMEWORK = {
 
 # Gateway authentication - All requests must come through gateway
 GATEWAY_SECRET = config('GATEWAY_SECRET', default='gateway-internal-secret-key')
+
+# Inter-service URLs
+PAYMENT_SERVICE_URL = os.environ.get('PAYMENT_SERVICE_URL', 'http://payment-service-fastapi:8007')

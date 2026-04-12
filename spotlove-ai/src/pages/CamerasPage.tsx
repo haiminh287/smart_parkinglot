@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -113,13 +113,71 @@ const MONITORING_CAMERAS: CameraFeed[] = [
     vehicleCount: 0,
     streamUrl: "/ai/cameras/stream?camera_id=qr-camera-droidcam&fps=3",
   },
+  {
+    id: "virtual-gate-in",
+    name: "Cổng Vào (Unity Sim)",
+    zone: "Cổng vào",
+    floor: 1,
+    isOnline: true,
+    vehicleCount: 0,
+    streamUrl: "/ai/cameras/stream?camera_id=virtual-gate-in&fps=5",
+  },
+  {
+    id: "virtual-gate-out",
+    name: "Cổng Ra (Unity Sim)",
+    zone: "Cổng ra",
+    floor: 1,
+    isOnline: true,
+    vehicleCount: 0,
+    streamUrl: "/ai/cameras/stream?camera_id=virtual-gate-out&fps=5",
+  },
+  {
+    id: "virtual-f1-overview",
+    name: "Tổng quan Tầng 1 (Sim)",
+    zone: "Floor 1",
+    floor: 1,
+    isOnline: true,
+    vehicleCount: 0,
+    streamUrl: "/ai/cameras/stream?camera_id=virtual-f1-overview&fps=5",
+  },
+  {
+    id: "virtual-f2-overview",
+    name: "Tổng quan Tầng 2 (Sim)",
+    zone: "Floor 2",
+    floor: 2,
+    isOnline: true,
+    vehicleCount: 0,
+    streamUrl: "/ai/cameras/stream?camera_id=virtual-f2-overview&fps=5",
+  },
+  {
+    id: "virtual-zone-south",
+    name: "Zone South (Sim)",
+    zone: "South",
+    floor: 1,
+    isOnline: true,
+    vehicleCount: 0,
+    streamUrl: "/ai/cameras/stream?camera_id=virtual-zone-south&fps=5",
+  },
+  {
+    id: "virtual-zone-north",
+    name: "Zone North (Sim)",
+    zone: "North",
+    floor: 1,
+    isOnline: true,
+    vehicleCount: 0,
+    streamUrl: "/ai/cameras/stream?camera_id=virtual-zone-north&fps=5",
+  },
 ];
 
 export default function CamerasPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const focusCameraId = searchParams.get("camera");
   const isAdmin = user?.role === "admin";
+  const focusCameraRef = useRef<HTMLDivElement>(null);
+  const hasAutoFocused = useRef(false);
 
   const [cameras, setCameras] = useState<CameraFeed[]>([]);
   const [userVehicles, setUserVehicles] = useState<UserVehicle[]>([]);
@@ -264,6 +322,24 @@ export default function CamerasPage() {
 
     fetchData();
   }, [isAdmin, toast]);
+
+  // Auto-focus camera from URL param (?camera=xxx)
+  useEffect(() => {
+    if (!focusCameraId || loading || hasAutoFocused.current) return;
+    const camera = cameras.find((c) => c.id === focusCameraId);
+    if (camera) {
+      hasAutoFocused.current = true;
+      setSelectedCamera(camera);
+      setShowFullscreen(true);
+      // Scroll to the camera card after a short delay for DOM render
+      setTimeout(() => {
+        focusCameraRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      }, 300);
+    }
+  }, [focusCameraId, loading, cameras]);
 
   // Filter cameras based on role and floor
   const monitoringCameraIds = new Set(MONITORING_CAMERAS.map((c) => c.id));
@@ -515,13 +591,16 @@ export default function CamerasPage() {
             const streamType = getStreamType(camera.streamUrl);
             const displayUrl = getDisplayStreamUrl(camera.streamUrl);
             const hasError = streamErrors.has(camera.id);
+            const isFocusedCamera = focusCameraId === camera.id;
 
             return (
               <div
                 key={camera.id}
+                ref={isFocusedCamera ? focusCameraRef : undefined}
                 className={cn(
                   "group relative overflow-hidden rounded-2xl border border-border bg-card transition-all duration-300 hover:border-primary/50 hover:shadow-lg animate-slide-up",
                   selectedCamera?.id === camera.id && "ring-2 ring-primary",
+                  isFocusedCamera && "ring-2 ring-success border-success/50",
                 )}
               >
                 {/* Camera Feed — Live stream or placeholder */}
@@ -700,7 +779,12 @@ export default function CamerasPage() {
                     </div>
                   )}
                   {!isAdmin && (
-                    <div className="mt-3">
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {isFocusedCamera && (
+                        <Badge className="bg-success/10 text-success border-success/20">
+                          📍 Vị trí xe của bạn
+                        </Badge>
+                      )}
                       <Badge
                         className={cn(
                           monitoringCameraIds.has(camera.id)

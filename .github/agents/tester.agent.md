@@ -1,14 +1,17 @@
 ---
 name: tester
 description: "QA Lead — Viết test tự động toàn diện (unit/integration/E2E), coverage ≥ 80%, phân tích root cause khi fail, test data factories, concurrency testing. Agnostic mọi stack."
-user-invokable: false
+user-invocable: false
 tools:
   [
-    "editFiles",
-    "readFile",
-    "runInTerminal",
-    "codebase",
-    "filesystem/*",
+    "vscode",
+    "execute",
+    "read",
+    "edit",
+    "search",
+    "web",
+    "agent",
+    "todo",
     "playwright/*",
     "context7/*",
   ]

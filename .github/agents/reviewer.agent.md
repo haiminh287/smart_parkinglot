@@ -1,8 +1,19 @@
 ---
 name: reviewer
 description: "Code Review Specialist — Đánh giá toàn diện: correctness, security, performance, maintainability, architecture compliance, dead code detection. Score 1-10 với formula rõ ràng."
-user-invokable: false
-tools: ["readFile", "codebase", "filesystem/*", "memory/*"]
+user-invocable: false
+tools:
+  [
+    "vscode",
+    "execute",
+    "read",
+    "edit",
+    "search",
+    "web",
+    "agent",
+    "todo",
+    "memory/*",
+  ]
 handoffs:
   - label: Review hoàn tất → Orchestrator
     agent: orchestrator

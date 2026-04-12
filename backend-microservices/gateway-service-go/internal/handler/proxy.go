@@ -1,12 +1,14 @@
 package handler
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -26,17 +28,14 @@ func NewProxyHandler(cfg *config.Config) *ProxyHandler {
 
 // HandleProxy forwards the request to the appropriate microservice
 func (h *ProxyHandler) HandleProxy(c *gin.Context) {
-	path := c.Param("path")
-	if path != "" && path[0] == '/' {
-		path = path[1:]
-	}
+	normalizedPath := config.NormalizeServicePath(c.Param("path"))
 
 	// Get target service
-	route := h.cfg.GetServiceRoute(path)
+	route := h.cfg.GetServiceRoute(normalizedPath)
 	if route == nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "Service not found",
-			"path":  path,
+			"path":  normalizedPath,
 		})
 		return
 	}
@@ -54,6 +53,11 @@ func (h *ProxyHandler) HandleProxy(c *gin.Context) {
 	// Create reverse proxy
 	proxy := httputil.NewSingleHostReverseProxy(targetURL)
 
+	// Set custom transport with response header timeout to prevent hung connections
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.ResponseHeaderTimeout = 60 * time.Second
+	proxy.Transport = transport
+
 	// Customize the Director to set the correct path and headers
 	originalDirector := proxy.Director
 	proxy.Director = func(req *http.Request) {
@@ -61,9 +65,18 @@ func (h *ProxyHandler) HandleProxy(c *gin.Context) {
 
 		// Set the path to include the service path prefix
 		// Backend services expect: /auth/login/, /bookings/, etc.
-		req.URL.Path = "/" + path
+		req.URL.Path = "/" + normalizedPath
 		req.URL.RawQuery = c.Request.URL.RawQuery
 		req.Host = targetURL.Host
+
+		// Strip client-supplied identity headers to prevent header injection:
+		// a malicious client could forge these to impersonate another user or
+		// bypass gateway auth checks on downstream services.
+		req.Header.Del("X-User-ID")
+		req.Header.Del("X-User-Email")
+		req.Header.Del("X-User-Role")
+		req.Header.Del("X-User-Is-Staff")
+		req.Header.Del("X-Gateway-Secret")
 
 		// Always inject gateway secret for inter-service auth
 		req.Header.Set("X-Gateway-Secret", h.cfg.GatewaySecret)
@@ -91,31 +104,29 @@ func (h *ProxyHandler) HandleProxy(c *gin.Context) {
 
 	// Handle errors
 	proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
-		log.Printf("Proxy error for %s -> %s: %v", path, route.URL, err)
+		log.Printf("Proxy error for %s -> %s: %v", normalizedPath, route.URL, err)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadGateway)
 		io.WriteString(w, `{"error":"Service unavailable","service":"`+route.Name+`"}`)
 	}
 
-	// Modify response to handle CORS and cookies
+	// Modify response to handle cookies and redirect path normalization
 	proxy.ModifyResponse = func(resp *http.Response) error {
-		// Copy Set-Cookie headers from downstream services
-		// This allows auth-service cookies to pass through
+		location := resp.Header.Get("Location")
+		if location == "" {
+			return nil
+		}
+
+		// Ensure redirects from downstream services keep public /api prefix
+		// to avoid falling into frontend SPA fallback (/auth/* -> index.html).
+		if strings.HasPrefix(location, "/") && !strings.HasPrefix(location, "/api/") && !strings.HasPrefix(location, "/ws/") {
+			trimmed := strings.TrimPrefix(location, "/")
+			resp.Header.Set("Location", fmt.Sprintf("/api/%s", trimmed))
+		}
+
 		return nil
 	}
 
 	// Serve the proxy
 	proxy.ServeHTTP(c.Writer, c.Request)
-}
-
-// HandleMultipartProxy handles multipart/form-data requests (file uploads)
-func (h *ProxyHandler) HandleMultipartProxy(c *gin.Context) {
-	// httputil.ReverseProxy handles multipart natively
-	// No special handling needed — it forwards the raw body
-	h.HandleProxy(c)
-}
-
-// stripPathPrefix removes the /api/ prefix from the path
-func stripPathPrefix(path string) string {
-	return strings.TrimPrefix(path, "/api/")
 }

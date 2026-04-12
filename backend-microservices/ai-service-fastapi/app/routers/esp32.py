@@ -19,44 +19,61 @@ ESP32 ↔ Arduino communication:
     "close" → UART send "CLOSE_1" / "CLOSE_2"
 """
 
+import hmac
 import json
 import logging
 import random
 import time
 import uuid
 from collections import deque
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Optional
 
-import httpx
 import cv2
+import httpx
 import numpy as np
-from fastapi import APIRouter, Depends, HTTPException
+from app.config import settings
+from app.database import get_db
+from app.engine.camera_capture import CameraCaptureError, get_camera_capture
+from app.engine.plate_pipeline import PlateReadDecision, get_plate_pipeline
+from app.engine.qr_reader import QRPayload, QRReadError, get_qr_reader
+from app.models.ai import PredictionLog
+from app.routers.camera import _STALE_THRESHOLD, _buffer_lock, _virtual_frame_buffer
+from app.schemas.base import CamelModel
+from app.schemas.esp32_device import (
+    ESP32AckResponse,
+    ESP32DeviceListResponse,
+    ESP32DeviceLogsResponse,
+    ESP32DeviceResponse,
+    ESP32HeartbeatRequest,
+    ESP32LogRequest,
+    ESP32RegisterRequest,
+    LogEntry,
+)
+from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from app.config import settings
-from app.database import get_db
-from app.engine.camera_capture import get_camera_capture, CameraCaptureError
-from app.engine.plate_pipeline import get_plate_pipeline, PlateReadDecision
-from app.engine.qr_reader import get_qr_reader, QRReadError, QRPayload
-from app.models.ai import PredictionLog
-from app.schemas.base import CamelModel
-from app.schemas.esp32_device import (
-    ESP32RegisterRequest,
-    ESP32HeartbeatRequest,
-    ESP32LogRequest,
-    ESP32AckResponse,
-    ESP32DeviceResponse,
-    ESP32DeviceListResponse,
-    ESP32DeviceLogsResponse,
-    LogEntry,
-)
-
-router = APIRouter(prefix="/ai/parking/esp32", tags=["esp32"])
 logger = logging.getLogger(__name__)
+
+
+async def verify_device_token(
+    x_device_token: str = Header(default=""),
+) -> None:
+    expected = settings.ESP32_DEVICE_TOKEN
+    if not expected:
+        return
+    if not x_device_token or not hmac.compare_digest(x_device_token, expected):
+        raise HTTPException(status_code=403, detail="Invalid or missing device token.")
+
+
+router = APIRouter(
+    prefix="/ai/parking/esp32",
+    tags=["esp32"],
+    dependencies=[Depends(verify_device_token)],
+)
 
 # ── Constants ────────────────────────────────────────────────────────────── #
 
@@ -65,8 +82,8 @@ PARKING_SERVICE_URL = settings.PARKING_SERVICE_URL
 REALTIME_SERVICE_URL = settings.REALTIME_SERVICE_URL
 GATEWAY_SECRET = settings.GATEWAY_SECRET
 
-DEVICE_OFFLINE_TIMEOUT_S = 30   # Device considered offline after this many seconds
-MAX_LOGS_PER_DEVICE = 100       # Circular buffer size per device
+DEVICE_OFFLINE_TIMEOUT_S = 30  # Device considered offline after this many seconds
+MAX_LOGS_PER_DEVICE = 100  # Circular buffer size per device
 
 # ── In-Memory Device Store ───────────────────────────────────────────────── #
 # Structure: { device_id: { "ip": str, "firmware": str, "status": str,
@@ -108,11 +125,13 @@ def seed_default_devices() -> None:
         if did in _esp32_devices:
             continue
         logs: deque = deque(maxlen=MAX_LOGS_PER_DEVICE)
-        logs.append({
-            "timestamp": now,
-            "level": "info",
-            "message": f"Device {did} pre-registered by AI Service startup.",
-        })
+        logs.append(
+            {
+                "timestamp": now,
+                "level": "info",
+                "message": f"Device {did} pre-registered by AI Service startup.",
+            }
+        )
         _esp32_devices[did] = {
             "ip": d["ip"],
             "firmware": d["firmware"],
@@ -153,6 +172,8 @@ def _auto_register_device(gate_id: str) -> None:
         "logs": deque(maxlen=MAX_LOGS_PER_DEVICE),
     }
     logger.info("ESP32 auto-registered via gate activity: device_id=%s", gate_id)
+
+
 QR_SCAN_TIMEOUT_S = 30  # Seconds to wait for user to show QR code
 
 # Path to test images — auto-detect local vs Docker
@@ -163,12 +184,16 @@ TEST_IMAGES_DIR = _LOCAL_IMAGES if _LOCAL_IMAGES.exists() else _DOCKER_IMAGES
 # Directory to save captured plate images
 PLATE_CAPTURES_DIR = _LOCAL_IMAGES
 
-# ── Default Camera URLs (hardcoded for prototype) ────────────────────────── #
-DEFAULT_QR_CAMERA_URL = "http://192.168.100.130:4747/video"
-DEFAULT_PLATE_CAMERA_URL = "rtsp://admin:XGIMBN@192.168.100.23:554/ch1/main"
+# Shared image save utility
+from app.utils.image_utils import save_plate_image as _shared_save_plate_image
+
+# ── Default Camera URLs (from env via Settings) ─────────────────────────── #
+DEFAULT_QR_CAMERA_URL = f"{settings.CAMERA_DROIDCAM_URL}/video"
+DEFAULT_PLATE_CAMERA_URL = settings.CAMERA_RTSP_URL
 
 
 # ── Enums ────────────────────────────────────────────────────────────────── #
+
 
 class BarrierAction(str, Enum):
     OPEN = "open"
@@ -188,24 +213,31 @@ class GateEvent(str, Enum):
 
 # ── Request / Response Schemas ───────────────────────────────────────────── #
 
+
 class ESP32CheckInRequest(BaseModel):
     """Request from ESP32 gate-in device.
 
     QR data can be provided directly (ESP32 scans QR itself) or the
     server can capture from a QR camera.  Similarly for the plate image.
     """
+
     gate_id: str = Field(..., description="Unique gate identifier, e.g. GATE-IN-01")
     qr_data: Optional[str] = Field(
         None,
         description='QR data scanned by ESP32, JSON string: {"booking_id":"...","user_id":"..."}',
     )
-    qr_camera_url: Optional[str] = Field(None, description="QR camera stream URL (override)")
-    plate_camera_url: Optional[str] = Field(None, description="Plate camera stream URL (override)")
+    qr_camera_url: Optional[str] = Field(
+        None, description="QR camera stream URL (override)"
+    )
+    plate_camera_url: Optional[str] = Field(
+        None, description="Plate camera stream URL (override)"
+    )
     request_id: Optional[str] = Field(None, description="Idempotency key (UUID)")
 
 
 class ESP32CheckOutRequest(BaseModel):
     """Request from ESP32 gate-out device."""
+
     gate_id: str = Field(..., description="Unique gate identifier, e.g. GATE-OUT-01")
     qr_data: Optional[str] = Field(
         None,
@@ -218,6 +250,7 @@ class ESP32CheckOutRequest(BaseModel):
 
 class ESP32VerifySlotRequest(BaseModel):
     """Request from ESP32 slot-level device."""
+
     slot_code: str = Field(..., description="Physical slot code, e.g. A-01")
     zone_id: str = Field(..., description="Zone UUID where the slot is located")
     gate_id: str = Field(..., description="Slot gate identifier, e.g. SLOT-GATE-01")
@@ -228,8 +261,11 @@ class ESP32VerifySlotRequest(BaseModel):
 
 class CashPaymentRequest(BaseModel):
     """Request when cash is inserted at exit gate."""
+
     booking_id: str = Field(..., description="Booking UUID")
-    image_base64: Optional[str] = Field(None, description="Base64-encoded image of cash")
+    image_base64: Optional[str] = Field(
+        None, description="Base64-encoded image of cash"
+    )
     camera_url: Optional[str] = Field(None, description="Cash slot camera URL")
     gate_id: str = Field(..., description="Gate identifier")
     request_id: Optional[str] = Field(None, description="Idempotency key")
@@ -237,6 +273,7 @@ class CashPaymentRequest(BaseModel):
 
 class ESP32Response(CamelModel):
     """Standard response for ESP32 endpoints."""
+
     success: bool
     event: GateEvent
     barrier_action: BarrierAction
@@ -247,10 +284,12 @@ class ESP32Response(CamelModel):
     amount_due: Optional[float] = None
     amount_paid: Optional[float] = None
     processing_time_ms: float = 0.0
+    plate_image_url: Optional[str] = None
     details: Optional[dict] = None
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────── #
+
 
 def _plate_pipeline():
     """Get the plate recognition pipeline singleton."""
@@ -258,9 +297,10 @@ def _plate_pipeline():
 
 
 def _normalize_plate(text: str) -> str:
-    """Normalize plate to uppercase, no spaces."""
+    """Normalize plate to uppercase, alphanumeric only."""
     import re
-    return re.sub(r'[\s.\-]', '', text.upper())
+
+    return re.sub(r"[^A-Z0-9]", "", text.upper())
 
 
 def _plates_match(ocr_plate: str, booking_plate: str) -> bool:
@@ -287,6 +327,7 @@ def _plates_match(ocr_plate: str, booking_plate: str) -> bool:
 
     # Different lengths — use subsequence ratio
     from difflib import SequenceMatcher
+
     ratio = SequenceMatcher(None, a, b).ratio()
     return ratio >= 0.70
 
@@ -300,7 +341,7 @@ async def _get_booking(booking_id: str, user_id: str) -> dict:
         if resp.status_code != 200:
             raise HTTPException(
                 status_code=resp.status_code,
-                detail=f"Booking không tồn tại hoặc không có quyền. (booking_id={booking_id})"
+                detail=f"Booking không tồn tại hoặc không có quyền. (booking_id={booking_id})",
             )
         return resp.json()
 
@@ -308,7 +349,11 @@ async def _get_booking(booking_id: str, user_id: str) -> dict:
 async def _call_booking_checkin(booking_id: str, user_id: str) -> dict:
     """Call booking-service checkin endpoint."""
     url = f"{BOOKING_SERVICE_URL}/bookings/{booking_id}/checkin/"
-    headers = {"X-Gateway-Secret": GATEWAY_SECRET, "X-User-ID": user_id, "Content-Type": "application/json"}
+    headers = {
+        "X-Gateway-Secret": GATEWAY_SECRET,
+        "X-User-ID": user_id,
+        "Content-Type": "application/json",
+    }
     async with httpx.AsyncClient(timeout=60.0) as client:
         resp = await client.post(url, headers=headers)
         return {"status_code": resp.status_code, "data": resp.json()}
@@ -317,7 +362,11 @@ async def _call_booking_checkin(booking_id: str, user_id: str) -> dict:
 async def _call_booking_checkout(booking_id: str, user_id: str) -> dict:
     """Call booking-service checkout endpoint."""
     url = f"{BOOKING_SERVICE_URL}/bookings/{booking_id}/checkout/"
-    headers = {"X-Gateway-Secret": GATEWAY_SECRET, "X-User-ID": user_id, "Content-Type": "application/json"}
+    headers = {
+        "X-Gateway-Secret": GATEWAY_SECRET,
+        "X-User-ID": user_id,
+        "Content-Type": "application/json",
+    }
     async with httpx.AsyncClient(timeout=60.0) as client:
         resp = await client.post(url, headers=headers)
         return {"status_code": resp.status_code, "data": resp.json()}
@@ -359,13 +408,53 @@ async def _broadcast_gate_event(event: str, data: dict) -> None:
     headers = {"X-Gateway-Secret": GATEWAY_SECRET, "Content-Type": "application/json"}
     async with httpx.AsyncClient(timeout=5.0) as client:
         try:
-            await client.post(url, headers=headers, json={
-                "type": event,
-                "message": data.get("message", ""),
-                "data": data,
-            })
+            await client.post(
+                url,
+                headers=headers,
+                json={
+                    "type": event,
+                    "message": data.get("message", ""),
+                    "data": data,
+                },
+            )
         except Exception as exc:
             logger.warning("Failed to broadcast gate event: %s", exc)
+
+
+async def _broadcast_unity_spawn(
+    booking_id: str,
+    plate: str,
+    slot_code: str,
+    vehicle_type: str,
+    qr_data: str,
+) -> None:
+    """Broadcast unity.spawn_vehicle command to Unity via realtime service."""
+    url = f"{REALTIME_SERVICE_URL}/api/broadcast/unity-command/"
+    headers = {"X-Gateway-Secret": GATEWAY_SECRET, "Content-Type": "application/json"}
+    async with httpx.AsyncClient(timeout=5.0) as client:
+        try:
+            await client.post(
+                url,
+                headers=headers,
+                json={
+                    "type": "unity.spawn_vehicle",
+                    "data": {
+                        "booking_id": booking_id,
+                        "plate": plate,
+                        "slot_code": slot_code,
+                        "vehicle_type": vehicle_type,
+                        "qr_data": qr_data,
+                    },
+                },
+            )
+            logger.info(
+                "Broadcast unity.spawn_vehicle: booking=%s plate=%s slot=%s",
+                booking_id,
+                plate,
+                slot_code,
+            )
+        except Exception as exc:
+            logger.warning("Failed to broadcast unity spawn: %s", exc)
 
 
 def _save_plate_image(
@@ -375,26 +464,9 @@ def _save_plate_image(
 ) -> Optional[str]:
     """Save captured plate image to disk for records.
 
-    Args:
-        image_bytes: JPEG bytes of plate image.
-        booking_id: Booking UUID for filename.
-        action: 'checkin' or 'checkout'.
-
-    Returns:
-        Saved file path, or None if save failed.
+    Delegates to shared utility. Returns filename or None.
     """
-    try:
-        PLATE_CAPTURES_DIR.mkdir(parents=True, exist_ok=True)
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        short_id = booking_id[:8] if len(booking_id) > 8 else booking_id
-        filename = f"plate_{action}_{short_id}_{timestamp}.jpg"
-        filepath = PLATE_CAPTURES_DIR / filename
-        filepath.write_bytes(image_bytes)
-        logger.info("Plate image saved: %s (%d bytes)", filepath, len(image_bytes))
-        return str(filepath)
-    except Exception as exc:
-        logger.warning("Failed to save plate image: %s", exc)
-        return None
+    return _shared_save_plate_image(image_bytes, action=action, identifier=booking_id)
 
 
 def _get_camera_url(camera_type: str = "qr") -> str:
@@ -433,12 +505,18 @@ def _get_test_image_bytes(plate_hint: Optional[str] = None) -> Optional[bytes]:
     chosen = None
     if plate_hint:
         # Normalise hint: remove dots, dashes, spaces for fuzzy match
-        hint_clean = plate_hint.replace("-", "").replace(".", "").replace(" ", "").upper()
+        hint_clean = (
+            plate_hint.replace("-", "").replace(".", "").replace(" ", "").upper()
+        )
         for img in images:
-            stem_clean = img.stem.replace("-", "").replace(".", "").replace(" ", "").upper()
+            stem_clean = (
+                img.stem.replace("-", "").replace(".", "").replace(" ", "").upper()
+            )
             if hint_clean in stem_clean or stem_clean in hint_clean:
                 chosen = img
-                logger.info("Test image matched plate hint '%s': %s", plate_hint, img.name)
+                logger.info(
+                    "Test image matched plate hint '%s': %s", plate_hint, img.name
+                )
                 break
 
     if chosen is None:
@@ -449,7 +527,8 @@ def _get_test_image_bytes(plate_hint: Optional[str] = None) -> Optional[bytes]:
 
 
 async def _capture_plate_image(
-    camera_url: Optional[str], plate_hint: Optional[str] = None,
+    camera_url: Optional[str],
+    plate_hint: Optional[str] = None,
 ) -> tuple[Optional[bytes], bool]:
     """Capture plate image from camera or fall back to test image.
 
@@ -470,7 +549,8 @@ async def _capture_plate_image(
         except CameraCaptureError as exc:
             logger.warning(
                 "Camera %s unreachable, falling back to test image: %s",
-                camera_url, exc,
+                camera_url,
+                exc,
             )
 
     # Fallback to test image
@@ -503,10 +583,14 @@ def _parse_qr_data(qr_data_str: str) -> dict:
     try:
         data = json.loads(text)
         if isinstance(data, dict):
-            booking_id = data.get("booking_id") or data.get("id") or data.get("bookingId")
+            booking_id = (
+                data.get("booking_id") or data.get("id") or data.get("bookingId")
+            )
             user_id = data.get("user_id") or data.get("userId") or "system"
             if not booking_id:
-                raise ValueError(f"QR JSON missing booking_id. Keys: {list(data.keys())}")
+                raise ValueError(
+                    f"QR JSON missing booking_id. Keys: {list(data.keys())}"
+                )
             return {"booking_id": str(booking_id), "user_id": str(user_id)}
     except json.JSONDecodeError:
         pass
@@ -516,8 +600,12 @@ def _parse_qr_data(qr_data_str: str) -> dict:
 
 
 def _log_prediction(
-    db: Session, pred_type: str, input_data: dict, output_data: dict,
-    confidence: float, proc_time: float,
+    db: Session,
+    pred_type: str,
+    input_data: dict,
+    output_data: dict,
+    confidence: float,
+    proc_time: float,
 ) -> None:
     """Log prediction to database."""
     try:
@@ -545,8 +633,12 @@ async def _check_payment_status(booking: dict) -> bool:
     Returns:
         True if payment is completed or payment method is on_exit.
     """
-    payment_status = booking.get("paymentStatus", booking.get("payment_status", "pending"))
-    payment_method = booking.get("paymentMethod", booking.get("payment_method", "online"))
+    payment_status = booking.get(
+        "paymentStatus", booking.get("payment_status", "pending")
+    )
+    payment_method = booking.get(
+        "paymentMethod", booking.get("payment_method", "online")
+    )
 
     # On-exit payment is verified at checkout time
     if payment_method == "on_exit":
@@ -556,6 +648,7 @@ async def _check_payment_status(booking: dict) -> bool:
 
 
 # ── ESP32 CHECK-IN ENDPOINT ──────────────────────────────────────────────── #
+
 
 @router.post("/check-in/", response_model=ESP32Response)
 async def esp32_check_in(
@@ -586,41 +679,40 @@ async def esp32_check_in(
     # Auto-register this ESP32 so it appears in /devices list
     _auto_register_device(gate_id)
 
-    # ── Step 1: Open QR camera → scan loop until QR found ────────────── #
-    qr_url = payload.qr_camera_url or _get_camera_url("qr")
-    logger.info("CHECK-IN: Opening QR camera for scanning: %s", qr_url)
-    logger.info("CHECK-IN: Waiting up to %ds for user to show QR code...", QR_SCAN_TIMEOUT_S)
+    # ── Step 1: Get QR data (direct or camera scan) ────────────────── #
+    qr_text: str = ""
+    booking_id: str = ""
+    user_id: str = "system"
 
-    capture = get_camera_capture()
-    qr_reader = get_qr_reader()
-
-    try:
-        _qr_frame, qr_text = await capture.scan_qr_loop(
-            qr_url, qr_reader, timeout_s=QR_SCAN_TIMEOUT_S,
-        )
-        logger.info("CHECK-IN: QR scanned from camera: %s", qr_text[:80])
-    except CameraCaptureError as exc:
-        logger.error("CHECK-IN: QR camera/scan FAILED: %s", exc)
+    if payload.qr_data:
+        # QR data provided directly (web frontend or ESP32 self-scan) — skip camera
+        qr_text = payload.qr_data.strip()
+        logger.info("CHECK-IN: QR data provided directly: %s", qr_text[:80])
+        try:
+            qr_payload_parsed = QRPayload.from_json(qr_text)
+            booking_id = qr_payload_parsed.booking_id
+            user_id = qr_payload_parsed.user_id
+            logger.info(
+                "CHECK-IN: QR parsed → booking=%s, user=%s", booking_id, user_id
+            )
+        except QRReadError as exc:
+            logger.warning("CHECK-IN: QR parse failed: %s", exc)
+            return ESP32Response(
+                success=False,
+                event=GateEvent.CHECK_IN_FAILED,
+                barrier_action=BarrierAction.CLOSE,
+                message=f"❌ QR không hợp lệ: {exc}",
+                gate_id=gate_id,
+                processing_time_ms=(time.time() - t0) * 1000,
+            )
+    else:
+        # No QR data and no camera available in simulation mode
+        logger.warning("CHECK-IN: No qr_data provided and no camera available")
         return ESP32Response(
-            success=False, event=GateEvent.CHECK_IN_FAILED,
+            success=False,
+            event=GateEvent.CHECK_IN_FAILED,
             barrier_action=BarrierAction.CLOSE,
-            message=f"❌ Lỗi quét QR: {exc}",
-            gate_id=gate_id,
-            processing_time_ms=(time.time() - t0) * 1000,
-        )
-
-    # Parse QR text into booking data
-    try:
-        qr_payload_parsed = QRPayload.from_json(qr_text)
-        booking_id = qr_payload_parsed.booking_id
-        user_id = qr_payload_parsed.user_id
-        logger.info("CHECK-IN: QR decoded → booking=%s, user=%s", booking_id, user_id)
-    except QRReadError as exc:
-        logger.warning("CHECK-IN: QR parse failed: %s", exc)
-        return ESP32Response(
-            success=False, event=GateEvent.CHECK_IN_FAILED,
-            barrier_action=BarrierAction.CLOSE,
-            message=f"❌ {exc}",
+            message="❌ Thiếu QR data. Vui lòng cung cấp qr_data trong request.",
             gate_id=gate_id,
             processing_time_ms=(time.time() - t0) * 1000,
         )
@@ -630,10 +722,12 @@ async def esp32_check_in(
         booking = await _get_booking(booking_id, user_id)
     except HTTPException as exc:
         return ESP32Response(
-            success=False, event=GateEvent.CHECK_IN_FAILED,
+            success=False,
+            event=GateEvent.CHECK_IN_FAILED,
             barrier_action=BarrierAction.CLOSE,
             message=f"❌ Booking không hợp lệ: {exc.detail}",
-            gate_id=gate_id, booking_id=booking_id,
+            gate_id=gate_id,
+            booking_id=booking_id,
             processing_time_ms=(time.time() - t0) * 1000,
         )
 
@@ -648,15 +742,18 @@ async def esp32_check_in(
         }
         msg = status_map.get(check_in_status, f"trạng thái: {check_in_status}")
         return ESP32Response(
-            success=False, event=GateEvent.CHECK_IN_FAILED,
+            success=False,
+            event=GateEvent.CHECK_IN_FAILED,
             barrier_action=BarrierAction.CLOSE,
             message=f"❌ Booking {msg}. Không thể check-in.",
-            gate_id=gate_id, booking_id=booking_id,
+            gate_id=gate_id,
+            booking_id=booking_id,
             processing_time_ms=(time.time() - t0) * 1000,
         )
 
     # Validate time window — allow 15 min early
     import dateutil.parser as dp
+
     try:
         start_time = dp.parse(booking.get("startTime", booking.get("start_time", "")))
         now = datetime.now(tz=timezone.utc)
@@ -664,10 +761,12 @@ async def esp32_check_in(
         if now < earliest:
             remaining = int((earliest - now).total_seconds() / 60)
             return ESP32Response(
-                success=False, event=GateEvent.CHECK_IN_FAILED,
+                success=False,
+                event=GateEvent.CHECK_IN_FAILED,
                 barrier_action=BarrierAction.CLOSE,
                 message=f"❌ Chưa đến giờ check-in. Còn {remaining} phút.",
-                gate_id=gate_id, booking_id=booking_id,
+                gate_id=gate_id,
+                booking_id=booking_id,
                 processing_time_ms=(time.time() - t0) * 1000,
             )
     except Exception:
@@ -679,10 +778,12 @@ async def esp32_check_in(
         is_paid = await _check_payment_status(booking)
         if not is_paid:
             return ESP32Response(
-                success=False, event=GateEvent.CHECK_IN_FAILED,
+                success=False,
+                event=GateEvent.CHECK_IN_FAILED,
                 barrier_action=BarrierAction.CLOSE,
                 message="❌ Booking chưa thanh toán. Vui lòng thanh toán trước.",
-                gate_id=gate_id, booking_id=booking_id,
+                gate_id=gate_id,
+                booking_id=booking_id,
                 processing_time_ms=(time.time() - t0) * 1000,
             )
 
@@ -695,24 +796,41 @@ async def esp32_check_in(
     )
     booking_plate = _normalize_plate(booking_plate_raw)
 
-    # --- TẠM THỜI: Dùng ảnh tĩnh thay vì camera thực ---
-    # plate_url = payload.plate_camera_url or _get_camera_url("plate")
-    # logger.info("CHECK-IN: Plate camera URL: %s", plate_url)
-    # plate_image_bytes, plate_from_real_camera = await _capture_plate_image(
-    #     plate_url, plate_hint=booking_plate_raw,
-    # )
-    _static_plate_img = _LOCAL_IMAGES / "51A-224.56.jpg"
-    if _static_plate_img.exists():
-        plate_image_bytes: bytes | None = _static_plate_img.read_bytes()
-        plate_from_real_camera = False
-        logger.info("CHECK-IN: Using static plate image: %s", _static_plate_img)
+    # --- Capture plate from virtual gate camera (or fallback) ---
+    _virtual_cam_id = "virtual-gate-in"
+    plate_image_bytes: bytes | None = None
+    plate_from_real_camera = False
+
+    # Try virtual camera first
+    with _buffer_lock:
+        _vf = _virtual_frame_buffer.get(_virtual_cam_id)
+    if _vf and (time.monotonic() - _vf.timestamp) < _STALE_THRESHOLD:
+        plate_image_bytes = _vf.jpeg_data
+        plate_from_real_camera = (
+            True  # treat virtual camera as "real" for plate matching
+        )
+        logger.info("CHECK-IN: Using virtual camera frame from %s", _virtual_cam_id)
     else:
-        plate_image_bytes = None
-        plate_from_real_camera = False
-        logger.warning("CHECK-IN: Static plate image not found: %s", _static_plate_img)
-    # --- KẾT THÚC TẠM THỜI ---
+        # Fallback: try real RTSP camera
+        plate_url = payload.plate_camera_url or _get_camera_url("plate")
+        try:
+            capture = get_camera_capture()
+            frame = await capture.capture_frame(plate_url, retries=2)
+            _, buf = cv2.imencode(".jpg", frame)
+            plate_image_bytes = buf.tobytes()
+            plate_from_real_camera = True
+            logger.info("CHECK-IN: Captured plate from real camera: %s", plate_url)
+        except Exception as exc:
+            logger.warning(
+                "CHECK-IN: Real plate camera failed: %s — using test image", exc
+            )
+            _static_plate_img = _LOCAL_IMAGES / "51A-224.56.jpg"
+            if _static_plate_img.exists():
+                plate_image_bytes = _static_plate_img.read_bytes()
+                logger.info("CHECK-IN: Fallback to static plate image")
 
     # Save plate image to disk for records
+    saved_path: Optional[str] = None
     if plate_image_bytes:
         saved_path = _save_plate_image(plate_image_bytes, booking_id, "checkin")
         if saved_path:
@@ -727,45 +845,70 @@ async def esp32_check_in(
         pipeline = _plate_pipeline()
         plate_result = pipeline.process(plate_image_bytes)
 
-        if plate_result.decision in [PlateReadDecision.NOT_FOUND, PlateReadDecision.BLURRY]:
+        if plate_result.decision in [
+            PlateReadDecision.NOT_FOUND,
+            PlateReadDecision.BLURRY,
+        ]:
             # Only block if from real camera; test images may not have a plate
             if plate_from_real_camera:
                 _log_prediction(
-                    db, "esp32_checkin_plate_fail",
+                    db,
+                    "esp32_checkin_plate_fail",
                     {"booking_id": booking_id, "decision": plate_result.decision},
-                    {}, 0.0, time.time() - t0,
+                    {},
+                    0.0,
+                    time.time() - t0,
                 )
                 return ESP32Response(
-                    success=False, event=GateEvent.CHECK_IN_FAILED,
+                    success=False,
+                    event=GateEvent.CHECK_IN_FAILED,
                     barrier_action=BarrierAction.CLOSE,
                     message="❌ Không đọc được biển số xe. Vui lòng tiến gần camera.",
-                    gate_id=gate_id, booking_id=booking_id,
+                    gate_id=gate_id,
+                    booking_id=booking_id,
                     processing_time_ms=(time.time() - t0) * 1000,
                 )
             else:
-                logger.info("Plate read failed on test image — skipping plate verification")
+                logger.info(
+                    "Plate read failed on test image — skipping plate verification"
+                )
         else:
             ocr_plate = _normalize_plate(plate_result.plate_text)
             plate_confidence = plate_result.confidence
 
             # Only enforce plate match when using REAL camera
-            if plate_from_real_camera and booking_plate and not _plates_match(ocr_plate, booking_plate):
+            if (
+                plate_from_real_camera
+                and booking_plate
+                and not _plates_match(ocr_plate, booking_plate)
+            ):
                 _log_prediction(
-                    db, "esp32_checkin_plate_mismatch",
-                    {"booking_id": booking_id, "ocr": ocr_plate, "booking": booking_plate},
-                    {"match": False}, plate_confidence, time.time() - t0,
+                    db,
+                    "esp32_checkin_plate_mismatch",
+                    {
+                        "booking_id": booking_id,
+                        "ocr": ocr_plate,
+                        "booking": booking_plate,
+                    },
+                    {"match": False},
+                    plate_confidence,
+                    time.time() - t0,
                 )
                 return ESP32Response(
-                    success=False, event=GateEvent.CHECK_IN_FAILED,
+                    success=False,
+                    event=GateEvent.CHECK_IN_FAILED,
                     barrier_action=BarrierAction.CLOSE,
                     message=f"❌ Biển số không khớp! Đọc: {ocr_plate}, Đăng ký: {booking_plate}",
-                    gate_id=gate_id, booking_id=booking_id, plate_text=ocr_plate,
+                    gate_id=gate_id,
+                    booking_id=booking_id,
+                    plate_text=ocr_plate,
                     processing_time_ms=(time.time() - t0) * 1000,
                 )
             elif not plate_from_real_camera:
                 logger.info(
                     "Plate mismatch skipped (test image): OCR=%s, booking=%s",
-                    ocr_plate, booking_plate,
+                    ocr_plate,
+                    booking_plate,
                 )
     else:
         logger.info("Plate check skipped (no image available)")
@@ -774,10 +917,13 @@ async def esp32_check_in(
     checkin_resp = await _call_booking_checkin(booking_id, user_id)
     if checkin_resp["status_code"] not in (200, 201):
         return ESP32Response(
-            success=False, event=GateEvent.CHECK_IN_FAILED,
+            success=False,
+            event=GateEvent.CHECK_IN_FAILED,
             barrier_action=BarrierAction.CLOSE,
             message=f"❌ Lỗi check-in: {checkin_resp['data']}",
-            gate_id=gate_id, booking_id=booking_id, plate_text=ocr_plate,
+            gate_id=gate_id,
+            booking_id=booking_id,
+            plate_text=ocr_plate,
             processing_time_ms=(time.time() - t0) * 1000,
         )
 
@@ -788,29 +934,62 @@ async def esp32_check_in(
 
     proc_time = (time.time() - t0) * 1000
     _log_prediction(
-        db, "esp32_checkin_success",
+        db,
+        "esp32_checkin_success",
         {"booking_id": booking_id, "ocr": ocr_plate, "gate_id": gate_id},
-        {"match": True, "barrier": "open"}, plate_confidence, proc_time / 1000,
+        {"match": True, "barrier": "open"},
+        plate_confidence,
+        proc_time / 1000,
     )
 
     # Broadcast event
-    await _broadcast_gate_event("gate.check_in", {
-        "booking_id": booking_id, "gate_id": gate_id,
-        "plate": ocr_plate, "message": "Check-in thành công",
-    })
+    await _broadcast_gate_event(
+        "gate.check_in",
+        {
+            "booking_id": booking_id,
+            "gate_id": gate_id,
+            "plate": ocr_plate,
+            "message": "Check-in thành công",
+        },
+    )
+
+    # Broadcast Unity vehicle spawn command
+    checkin_data = (
+        checkin_resp.get("data", {}) if isinstance(checkin_resp, dict) else {}
+    )
+    car_slot_info = checkin_data.get("carSlot") or checkin_data.get("car_slot") or {}
+    spawned_slot_code = (
+        car_slot_info.get("code") if isinstance(car_slot_info, dict) else None
+    ) or "A-01"
+    vehicle_info = booking.get("vehicle", {})
+    spawned_vehicle_type = (
+        vehicle_info.get("vehicleType") or vehicle_info.get("vehicle_type") or "Car"
+    )
+    await _broadcast_unity_spawn(
+        booking_id=booking_id,
+        plate=ocr_plate or booking_plate or "",
+        slot_code=spawned_slot_code,
+        vehicle_type=spawned_vehicle_type,
+        qr_data=qr_text,
+    )
 
     display_plate = ocr_plate or booking_plate or "(không rõ)"
     return ESP32Response(
-        success=True, event=GateEvent.CHECK_IN_SUCCESS,
+        success=True,
+        event=GateEvent.CHECK_IN_SUCCESS,
         barrier_action=BarrierAction.OPEN,
         message=f"✅ Check-in thành công! Biển số: {display_plate}",
-        gate_id=gate_id, booking_id=booking_id, plate_text=ocr_plate or booking_plate,
+        gate_id=gate_id,
+        booking_id=booking_id,
+        plate_text=ocr_plate or booking_plate,
         processing_time_ms=proc_time,
+        plate_image_url=f"/ai/images/{Path(saved_path).name}" if saved_path else None,
         details=checkin_resp["data"],
     )
 
 
 # ── ESP32 CHECK-OUT ENDPOINT ─────────────────────────────────────────────── #
+
 
 @router.post("/check-out/", response_model=ESP32Response)
 async def esp32_check_out(
@@ -842,41 +1021,40 @@ async def esp32_check_out(
     # Auto-register this ESP32 so it appears in /devices list
     _auto_register_device(gate_id)
 
-    # ── Step 1: Open QR camera → scan loop until QR found ────────────── #
-    qr_url = payload.qr_camera_url or _get_camera_url("qr")
-    logger.info("CHECK-OUT: Opening QR camera for scanning: %s", qr_url)
-    logger.info("CHECK-OUT: Waiting up to %ds for user to show QR code...", QR_SCAN_TIMEOUT_S)
+    # ── Step 1: Get QR data (direct or camera scan) ────────────────── #
+    qr_text: str = ""
+    booking_id: str = ""
+    user_id: str = "system"
 
-    capture = get_camera_capture()
-    qr_reader = get_qr_reader()
-
-    try:
-        _qr_frame, qr_text = await capture.scan_qr_loop(
-            qr_url, qr_reader, timeout_s=QR_SCAN_TIMEOUT_S,
-        )
-        logger.info("CHECK-OUT: QR scanned from camera: %s", qr_text[:80])
-    except CameraCaptureError as exc:
-        logger.error("CHECK-OUT: QR camera/scan FAILED: %s", exc)
+    if payload.qr_data:
+        # QR data provided directly — skip camera
+        qr_text = payload.qr_data.strip()
+        logger.info("CHECK-OUT: QR data provided directly: %s", qr_text[:80])
+        try:
+            qr_payload_parsed = QRPayload.from_json(qr_text)
+            booking_id = qr_payload_parsed.booking_id
+            user_id = qr_payload_parsed.user_id
+            logger.info(
+                "CHECK-OUT: QR parsed → booking=%s, user=%s", booking_id, user_id
+            )
+        except QRReadError as exc:
+            logger.warning("CHECK-OUT: QR parse failed: %s", exc)
+            return ESP32Response(
+                success=False,
+                event=GateEvent.CHECK_OUT_FAILED,
+                barrier_action=BarrierAction.CLOSE,
+                message=f"❌ QR không hợp lệ: {exc}",
+                gate_id=gate_id,
+                processing_time_ms=(time.time() - t0) * 1000,
+            )
+    else:
+        # No QR data and no camera available in simulation mode
+        logger.warning("CHECK-OUT: No qr_data provided and no camera available")
         return ESP32Response(
-            success=False, event=GateEvent.CHECK_OUT_FAILED,
+            success=False,
+            event=GateEvent.CHECK_OUT_FAILED,
             barrier_action=BarrierAction.CLOSE,
-            message=f"❌ Lỗi quét QR: {exc}",
-            gate_id=gate_id,
-            processing_time_ms=(time.time() - t0) * 1000,
-        )
-
-    # Parse QR text into booking data
-    try:
-        qr_payload_parsed = QRPayload.from_json(qr_text)
-        booking_id = qr_payload_parsed.booking_id
-        user_id = qr_payload_parsed.user_id
-        logger.info("CHECK-OUT: QR decoded → booking=%s, user=%s", booking_id, user_id)
-    except QRReadError as exc:
-        logger.warning("CHECK-OUT: QR parse failed: %s", exc)
-        return ESP32Response(
-            success=False, event=GateEvent.CHECK_OUT_FAILED,
-            barrier_action=BarrierAction.CLOSE,
-            message=f"❌ {exc}",
+            message="❌ Thiếu QR data. Vui lòng cung cấp qr_data trong request.",
             gate_id=gate_id,
             processing_time_ms=(time.time() - t0) * 1000,
         )
@@ -886,10 +1064,12 @@ async def esp32_check_out(
         booking = await _get_booking(booking_id, user_id)
     except HTTPException as exc:
         return ESP32Response(
-            success=False, event=GateEvent.CHECK_OUT_FAILED,
+            success=False,
+            event=GateEvent.CHECK_OUT_FAILED,
             barrier_action=BarrierAction.CLOSE,
             message=f"❌ {exc.detail}",
-            gate_id=gate_id, booking_id=booking_id,
+            gate_id=gate_id,
+            booking_id=booking_id,
             processing_time_ms=(time.time() - t0) * 1000,
         )
 
@@ -903,10 +1083,12 @@ async def esp32_check_out(
         }
         msg = status_map.get(check_in_status, f"trạng thái: {check_in_status}")
         return ESP32Response(
-            success=False, event=GateEvent.CHECK_OUT_FAILED,
+            success=False,
+            event=GateEvent.CHECK_OUT_FAILED,
             barrier_action=BarrierAction.CLOSE,
             message=f"❌ Booking {msg}.",
-            gate_id=gate_id, booking_id=booking_id,
+            gate_id=gate_id,
+            booking_id=booking_id,
             processing_time_ms=(time.time() - t0) * 1000,
         )
 
@@ -919,24 +1101,41 @@ async def esp32_check_out(
     )
     booking_plate = _normalize_plate(booking_plate_raw)
 
-    # --- TẠM THỜI: Dùng ảnh tĩnh thay vì camera thực ---
-    # plate_url = payload.plate_camera_url or _get_camera_url("plate")
-    # logger.info("CHECK-OUT: Plate camera URL: %s", plate_url)
-    # plate_image_bytes, plate_from_real_camera = await _capture_plate_image(
-    #     plate_url, plate_hint=booking_plate_raw,
-    # )
-    _static_plate_img = _LOCAL_IMAGES / "51A-224.56.jpg"
-    if _static_plate_img.exists():
-        plate_image_bytes: bytes | None = _static_plate_img.read_bytes()
-        plate_from_real_camera = False
-        logger.info("CHECK-OUT: Using static plate image: %s", _static_plate_img)
+    # --- Capture plate from virtual gate camera (or fallback) ---
+    _virtual_cam_id = "virtual-gate-out"
+    plate_image_bytes: bytes | None = None
+    plate_from_real_camera = False
+
+    # Try virtual camera first
+    with _buffer_lock:
+        _vf = _virtual_frame_buffer.get(_virtual_cam_id)
+    if _vf and (time.monotonic() - _vf.timestamp) < _STALE_THRESHOLD:
+        plate_image_bytes = _vf.jpeg_data
+        plate_from_real_camera = (
+            True  # treat virtual camera as "real" for plate matching
+        )
+        logger.info("CHECK-OUT: Using virtual camera frame from %s", _virtual_cam_id)
     else:
-        plate_image_bytes = None
-        plate_from_real_camera = False
-        logger.warning("CHECK-OUT: Static plate image not found: %s", _static_plate_img)
-    # --- KẾT THÚC TẠM THỜI ---
+        # Fallback: try real RTSP camera
+        plate_url = payload.plate_camera_url or _get_camera_url("plate")
+        try:
+            capture = get_camera_capture()
+            frame = await capture.capture_frame(plate_url, retries=2)
+            _, buf = cv2.imencode(".jpg", frame)
+            plate_image_bytes = buf.tobytes()
+            plate_from_real_camera = True
+            logger.info("CHECK-OUT: Captured plate from real camera: %s", plate_url)
+        except Exception as exc:
+            logger.warning(
+                "CHECK-OUT: Real plate camera failed: %s — using test image", exc
+            )
+            _static_plate_img = _LOCAL_IMAGES / "51A-224.56.jpg"
+            if _static_plate_img.exists():
+                plate_image_bytes = _static_plate_img.read_bytes()
+                logger.info("CHECK-OUT: Fallback to static plate image")
 
     # Save plate image to disk for records
+    saved_path: Optional[str] = None
     if plate_image_bytes:
         saved_path = _save_plate_image(plate_image_bytes, booking_id, "checkout")
         if saved_path:
@@ -949,23 +1148,34 @@ async def esp32_check_out(
         pipeline = _plate_pipeline()
         plate_result = pipeline.process(plate_image_bytes)
 
-        if plate_result.decision not in [PlateReadDecision.NOT_FOUND, PlateReadDecision.BLURRY]:
+        if plate_result.decision not in [
+            PlateReadDecision.NOT_FOUND,
+            PlateReadDecision.BLURRY,
+        ]:
             ocr_plate = _normalize_plate(plate_result.plate_text)
             plate_confidence = plate_result.confidence
 
             # Only enforce plate match when using REAL camera
-            if plate_from_real_camera and booking_plate and not _plates_match(ocr_plate, booking_plate):
+            if (
+                plate_from_real_camera
+                and booking_plate
+                and not _plates_match(ocr_plate, booking_plate)
+            ):
                 return ESP32Response(
-                    success=False, event=GateEvent.CHECK_OUT_FAILED,
+                    success=False,
+                    event=GateEvent.CHECK_OUT_FAILED,
                     barrier_action=BarrierAction.CLOSE,
                     message=f"❌ Biển số không khớp! Đọc: {ocr_plate}, Đăng ký: {booking_plate}",
-                    gate_id=gate_id, booking_id=booking_id, plate_text=ocr_plate,
+                    gate_id=gate_id,
+                    booking_id=booking_id,
+                    plate_text=ocr_plate,
                     processing_time_ms=(time.time() - t0) * 1000,
                 )
             elif not plate_from_real_camera:
                 logger.info(
                     "CHECK-OUT: Plate mismatch skipped (test image): OCR=%s, booking=%s",
-                    ocr_plate, booking_plate,
+                    ocr_plate,
+                    booking_plate,
                 )
     else:
         logger.info("Plate check skipped at checkout (no image available)")
@@ -976,18 +1186,23 @@ async def esp32_check_out(
 
     if not is_paid:
         _log_prediction(
-            db, "esp32_checkout_awaiting_payment",
+            db,
+            "esp32_checkout_awaiting_payment",
             {"booking_id": booking_id, "gate_id": gate_id},
             {"paid": False, "amount": booking_price},
-            0.0, time.time() - t0,
+            0.0,
+            time.time() - t0,
         )
         return ESP32Response(
-            success=False, event=GateEvent.CHECK_OUT_AWAITING_PAYMENT,
+            success=False,
+            event=GateEvent.CHECK_OUT_AWAITING_PAYMENT,
             barrier_action=BarrierAction.CLOSE,
             message=f"⏳ Vui lòng thanh toán {booking_price:,.0f}đ trước khi ra.",
-            gate_id=gate_id, booking_id=booking_id,
+            gate_id=gate_id,
+            booking_id=booking_id,
             plate_text=ocr_plate or booking_plate,
-            amount_due=booking_price, amount_paid=0.0,
+            amount_due=booking_price,
+            amount_paid=0.0,
             processing_time_ms=(time.time() - t0) * 1000,
         )
 
@@ -995,10 +1210,12 @@ async def esp32_check_out(
     checkout_resp = await _call_booking_checkout(booking_id, user_id)
     if checkout_resp["status_code"] not in (200, 201):
         return ESP32Response(
-            success=False, event=GateEvent.CHECK_OUT_FAILED,
+            success=False,
+            event=GateEvent.CHECK_OUT_FAILED,
             barrier_action=BarrierAction.CLOSE,
             message=f"❌ Lỗi checkout: {checkout_resp['data']}",
-            gate_id=gate_id, booking_id=booking_id,
+            gate_id=gate_id,
+            booking_id=booking_id,
             plate_text=ocr_plate or booking_plate,
             processing_time_ms=(time.time() - t0) * 1000,
         )
@@ -1009,22 +1226,31 @@ async def esp32_check_out(
         await _update_slot_status(str(slot_id), "available")
 
     checkout_data = checkout_resp["data"]
-    total_amount = float(checkout_data.get("totalAmount", checkout_data.get("total_amount", 0)))
+    total_amount = float(
+        checkout_data.get("totalAmount", checkout_data.get("total_amount", 0))
+    )
     late_fee = float(checkout_data.get("lateFee", checkout_data.get("late_fee", 0)))
 
     proc_time = (time.time() - t0) * 1000
     _log_prediction(
-        db, "esp32_checkout_success",
+        db,
+        "esp32_checkout_success",
         {"booking_id": booking_id, "ocr": ocr_plate, "gate_id": gate_id},
         {"paid": True, "total": total_amount, "late_fee": late_fee},
-        plate_confidence, proc_time / 1000,
+        plate_confidence,
+        proc_time / 1000,
     )
 
-    await _broadcast_gate_event("gate.check_out", {
-        "booking_id": booking_id, "gate_id": gate_id,
-        "plate": ocr_plate or booking_plate,
-        "total_amount": total_amount, "message": "Check-out thành công",
-    })
+    await _broadcast_gate_event(
+        "gate.check_out",
+        {
+            "booking_id": booking_id,
+            "gate_id": gate_id,
+            "plate": ocr_plate or booking_plate,
+            "total_amount": total_amount,
+            "message": "Check-out thành công",
+        },
+    )
 
     msg = f"✅ Check-out thành công! Biển số: {ocr_plate or booking_plate}"
     if late_fee > 0:
@@ -1032,18 +1258,23 @@ async def esp32_check_out(
     msg += f"\nTổng: {total_amount:,.0f}đ"
 
     return ESP32Response(
-        success=True, event=GateEvent.CHECK_OUT_SUCCESS,
+        success=True,
+        event=GateEvent.CHECK_OUT_SUCCESS,
         barrier_action=BarrierAction.OPEN,
         message=msg,
-        gate_id=gate_id, booking_id=booking_id,
+        gate_id=gate_id,
+        booking_id=booking_id,
         plate_text=ocr_plate or booking_plate,
-        amount_due=total_amount, amount_paid=total_amount,
+        amount_due=total_amount,
+        amount_paid=total_amount,
         processing_time_ms=proc_time,
+        plate_image_url=f"/ai/images/{Path(saved_path).name}" if saved_path else None,
         details=checkout_data,
     )
 
 
 # ── ESP32 VERIFY-SLOT ENDPOINT ───────────────────────────────────────────── #
+
 
 @router.post("/verify-slot/", response_model=ESP32Response)
 async def esp32_verify_slot(
@@ -1073,40 +1304,39 @@ async def esp32_verify_slot(
     # Auto-register this ESP32 so it appears in /devices list
     _auto_register_device(gate_id)
 
-    # Get QR data
+    # Get QR data (direct or camera scan)
     booking_id: Optional[str] = None
     user_id: Optional[str] = None
 
-    # Open REAL QR camera & scan QR
-    qr_url = payload.qr_camera_url or _get_camera_url("qr")
-    logger.info("VERIFY-SLOT: Opening QR camera: %s", qr_url)
-
-    capture = get_camera_capture()
-    try:
-        qr_frame = await capture.capture_frame(qr_url, retries=3)
-        logger.info("VERIFY-SLOT: QR frame captured, shape=%s", qr_frame.shape)
-    except CameraCaptureError as exc:
-        logger.error("VERIFY-SLOT: QR camera FAILED: %s", exc)
+    if payload.qr_data:
+        # QR data provided directly — skip camera
+        qr_text = payload.qr_data.strip()
+        logger.info("VERIFY-SLOT: QR data provided directly: %s", qr_text[:80])
+        try:
+            qr_payload = QRPayload.from_json(qr_text)
+            booking_id = qr_payload.booking_id
+            user_id = qr_payload.user_id
+            logger.info(
+                "VERIFY-SLOT: QR parsed → booking=%s, user=%s", booking_id, user_id
+            )
+        except QRReadError as exc:
+            logger.warning("VERIFY-SLOT: QR parse failed: %s", exc)
+            return ESP32Response(
+                success=False,
+                event=GateEvent.VERIFY_SLOT_FAILED,
+                barrier_action=BarrierAction.CLOSE,
+                message=f"❌ QR không hợp lệ: {exc}",
+                gate_id=gate_id,
+                processing_time_ms=(time.time() - t0) * 1000,
+            )
+    else:
+        # No QR data and no camera available in simulation mode
+        logger.warning("VERIFY-SLOT: No qr_data provided and no camera available")
         return ESP32Response(
-            success=False, event=GateEvent.VERIFY_SLOT_FAILED,
+            success=False,
+            event=GateEvent.VERIFY_SLOT_FAILED,
             barrier_action=BarrierAction.CLOSE,
-            message=f"❌ Lỗi camera QR ({qr_url}): {exc}",
-            gate_id=gate_id,
-            processing_time_ms=(time.time() - t0) * 1000,
-        )
-
-    qr_reader = get_qr_reader()
-    try:
-        qr_payload = qr_reader.read_booking_qr(qr_frame)
-        booking_id = qr_payload.booking_id
-        user_id = qr_payload.user_id
-        logger.info("VERIFY-SLOT: QR decoded → booking=%s, user=%s", booking_id, user_id)
-    except QRReadError as exc:
-        logger.warning("VERIFY-SLOT: QR decode failed: %s", exc)
-        return ESP32Response(
-            success=False, event=GateEvent.VERIFY_SLOT_FAILED,
-            barrier_action=BarrierAction.CLOSE,
-            message=f"❌ {exc}",
+            message="❌ Thiếu QR data. Vui lòng cung cấp qr_data trong request.",
             gate_id=gate_id,
             processing_time_ms=(time.time() - t0) * 1000,
         )
@@ -1116,10 +1346,12 @@ async def esp32_verify_slot(
         booking = await _get_booking(booking_id, user_id)
     except HTTPException as exc:
         return ESP32Response(
-            success=False, event=GateEvent.VERIFY_SLOT_FAILED,
+            success=False,
+            event=GateEvent.VERIFY_SLOT_FAILED,
             barrier_action=BarrierAction.CLOSE,
             message=f"❌ {exc.detail}",
-            gate_id=gate_id, booking_id=booking_id,
+            gate_id=gate_id,
+            booking_id=booking_id,
             processing_time_ms=(time.time() - t0) * 1000,
         )
 
@@ -1127,10 +1359,12 @@ async def esp32_verify_slot(
     check_in_status = booking.get("checkInStatus", booking.get("check_in_status", ""))
     if check_in_status != "checked_in":
         return ESP32Response(
-            success=False, event=GateEvent.VERIFY_SLOT_FAILED,
+            success=False,
+            event=GateEvent.VERIFY_SLOT_FAILED,
             barrier_action=BarrierAction.CLOSE,
             message="❌ Booking chưa check-in hoặc đã hoàn thành.",
-            gate_id=gate_id, booking_id=booking_id,
+            gate_id=gate_id,
+            booking_id=booking_id,
             processing_time_ms=(time.time() - t0) * 1000,
         )
 
@@ -1143,36 +1377,51 @@ async def esp32_verify_slot(
 
     if not slot_match or not zone_match:
         _log_prediction(
-            db, "esp32_verify_slot_mismatch",
-            {"booking_id": booking_id, "physical_slot": slot_code, "booking_slot": booking_slot},
-            {"match": False}, 0.0, time.time() - t0,
+            db,
+            "esp32_verify_slot_mismatch",
+            {
+                "booking_id": booking_id,
+                "physical_slot": slot_code,
+                "booking_slot": booking_slot,
+            },
+            {"match": False},
+            0.0,
+            time.time() - t0,
         )
         return ESP32Response(
-            success=False, event=GateEvent.VERIFY_SLOT_FAILED,
+            success=False,
+            event=GateEvent.VERIFY_SLOT_FAILED,
             barrier_action=BarrierAction.CLOSE,
             message=f"❌ Sai ô đậu! Đặt: {booking_slot}, Thực tế: {slot_code}. Vui lòng di chuyển đúng ô.",
-            gate_id=gate_id, booking_id=booking_id,
+            gate_id=gate_id,
+            booking_id=booking_id,
             processing_time_ms=(time.time() - t0) * 1000,
             details={"booking_slot": booking_slot, "physical_slot": slot_code},
         )
 
     proc_time = (time.time() - t0) * 1000
     _log_prediction(
-        db, "esp32_verify_slot_success",
-        {"booking_id": booking_id, "slot": slot_code}, {"match": True},
-        1.0, proc_time / 1000,
+        db,
+        "esp32_verify_slot_success",
+        {"booking_id": booking_id, "slot": slot_code},
+        {"match": True},
+        1.0,
+        proc_time / 1000,
     )
 
     return ESP32Response(
-        success=True, event=GateEvent.VERIFY_SLOT_SUCCESS,
+        success=True,
+        event=GateEvent.VERIFY_SLOT_SUCCESS,
         barrier_action=BarrierAction.OPEN,
         message=f"✅ Đúng ô đậu {slot_code}. Chào mừng!",
-        gate_id=gate_id, booking_id=booking_id,
+        gate_id=gate_id,
+        booking_id=booking_id,
         processing_time_ms=proc_time,
     )
 
 
 # ── CASH PAYMENT ENDPOINT ────────────────────────────────────────────────── #
+
 
 @router.post("/cash-payment/", response_model=ESP32Response)
 async def esp32_cash_payment(
@@ -1207,10 +1456,12 @@ async def esp32_cash_payment(
         booking = await _get_booking(booking_id, "system")
     except HTTPException as exc:
         return ESP32Response(
-            success=False, event=GateEvent.CHECK_OUT_FAILED,
+            success=False,
+            event=GateEvent.CHECK_OUT_FAILED,
             barrier_action=BarrierAction.CLOSE,
             message=f"❌ {exc.detail}",
-            gate_id=gate_id, booking_id=booking_id,
+            gate_id=gate_id,
+            booking_id=booking_id,
             processing_time_ms=(time.time() - t0) * 1000,
         )
 
@@ -1225,37 +1476,44 @@ async def esp32_cash_payment(
             cash_image_bytes = await capture.capture_frame_bytes(payload.camera_url)
         except CameraCaptureError as exc:
             return ESP32Response(
-                success=False, event=GateEvent.CHECK_OUT_FAILED,
+                success=False,
+                event=GateEvent.CHECK_OUT_FAILED,
                 barrier_action=BarrierAction.CLOSE,
                 message=f"❌ Lỗi camera tiền: {exc}",
-                gate_id=gate_id, booking_id=booking_id,
+                gate_id=gate_id,
+                booking_id=booking_id,
                 processing_time_ms=(time.time() - t0) * 1000,
             )
     elif payload.image_base64:
         import base64
+
         try:
             cash_image_bytes = base64.b64decode(payload.image_base64)
         except Exception:
             return ESP32Response(
-                success=False, event=GateEvent.CHECK_OUT_FAILED,
+                success=False,
+                event=GateEvent.CHECK_OUT_FAILED,
                 barrier_action=BarrierAction.CLOSE,
                 message="❌ Base64 ảnh không hợp lệ.",
-                gate_id=gate_id, booking_id=booking_id,
+                gate_id=gate_id,
+                booking_id=booking_id,
                 processing_time_ms=(time.time() - t0) * 1000,
             )
 
     if not cash_image_bytes:
         return ESP32Response(
-            success=False, event=GateEvent.CHECK_OUT_FAILED,
+            success=False,
+            event=GateEvent.CHECK_OUT_FAILED,
             barrier_action=BarrierAction.CLOSE,
             message="❌ Không có ảnh tiền mặt.",
-            gate_id=gate_id, booking_id=booking_id,
+            gate_id=gate_id,
+            booking_id=booking_id,
             processing_time_ms=(time.time() - t0) * 1000,
         )
 
     # Detect denomination using banknote pipeline
     try:
-        from app.engine.pipeline import get_banknote_pipeline, PipelineDecision
+        from app.engine.pipeline import PipelineDecision, get_banknote_pipeline
 
         # Convert bytes to numpy array for pipeline
         nparr = np.frombuffer(cash_image_bytes, np.uint8)
@@ -1265,24 +1523,32 @@ async def esp32_cash_payment(
 
         bnk_pipeline = get_banknote_pipeline()
         result = bnk_pipeline.process(cash_img)
-        denomination = int(result.denomination) if result.denomination and result.decision == PipelineDecision.ACCEPT else 0
+        denomination = (
+            int(result.denomination)
+            if result.denomination and result.decision == PipelineDecision.ACCEPT
+            else 0
+        )
     except Exception as exc:
         logger.warning("Cash detection failed: %s", exc)
         denomination = 0
 
     if denomination <= 0:
         return ESP32Response(
-            success=False, event=GateEvent.CHECK_OUT_AWAITING_PAYMENT,
+            success=False,
+            event=GateEvent.CHECK_OUT_AWAITING_PAYMENT,
             barrier_action=BarrierAction.CLOSE,
             message="❌ Không nhận diện được tiền. Vui lòng thử lại.",
-            gate_id=gate_id, booking_id=booking_id,
-            amount_due=amount_due, amount_paid=0.0,
+            gate_id=gate_id,
+            booking_id=booking_id,
+            amount_due=amount_due,
+            amount_paid=0.0,
             processing_time_ms=(time.time() - t0) * 1000,
         )
 
     # Track running total in-memory (Redis would be better in production)
     # For prototype, use a simple dict
     from app.engine.cash_session import get_cash_session_manager
+
     session_mgr = get_cash_session_manager()
     new_total = session_mgr.add_payment(booking_id, denomination)
 
@@ -1290,10 +1556,16 @@ async def esp32_cash_payment(
     proc_time = (time.time() - t0) * 1000
 
     _log_prediction(
-        db, "esp32_cash_payment",
-        {"booking_id": booking_id, "denomination": denomination, "running_total": new_total},
+        db,
+        "esp32_cash_payment",
+        {
+            "booking_id": booking_id,
+            "denomination": denomination,
+            "running_total": new_total,
+        },
         {"amount_due": amount_due, "remaining": remaining},
-        1.0, proc_time / 1000,
+        1.0,
+        proc_time / 1000,
     )
 
     if new_total >= amount_due:
@@ -1302,7 +1574,11 @@ async def esp32_cash_payment(
             async with httpx.AsyncClient(timeout=30.0) as client:
                 await client.patch(
                     f"{BOOKING_SERVICE_URL}/bookings/{booking_id}/",
-                    headers={"X-Gateway-Secret": GATEWAY_SECRET, "X-User-ID": "system", "Content-Type": "application/json"},
+                    headers={
+                        "X-Gateway-Secret": GATEWAY_SECRET,
+                        "X-User-ID": "system",
+                        "Content-Type": "application/json",
+                    },
                     json={"payment_status": "completed"},
                 )
         except Exception as exc:
@@ -1316,28 +1592,39 @@ async def esp32_cash_payment(
             msg += f"\n💰 Tiền thừa: {change:,.0f}đ"
 
         return ESP32Response(
-            success=True, event=GateEvent.CHECK_OUT_SUCCESS,
+            success=True,
+            event=GateEvent.CHECK_OUT_SUCCESS,
             barrier_action=BarrierAction.OPEN,
             message=msg,
-            gate_id=gate_id, booking_id=booking_id,
-            amount_due=amount_due, amount_paid=new_total,
+            gate_id=gate_id,
+            booking_id=booking_id,
+            amount_due=amount_due,
+            amount_paid=new_total,
             processing_time_ms=proc_time,
             details={"denomination": denomination, "change": change},
         )
 
     # Still needs more cash
     return ESP32Response(
-        success=False, event=GateEvent.CHECK_OUT_AWAITING_PAYMENT,
+        success=False,
+        event=GateEvent.CHECK_OUT_AWAITING_PAYMENT,
         barrier_action=BarrierAction.CLOSE,
         message=f"💵 Đã nhận {denomination:,.0f}đ. Tổng: {new_total:,.0f}đ / {amount_due:,.0f}đ. Còn thiếu: {remaining:,.0f}đ",
-        gate_id=gate_id, booking_id=booking_id,
-        amount_due=amount_due, amount_paid=new_total,
+        gate_id=gate_id,
+        booking_id=booking_id,
+        amount_due=amount_due,
+        amount_paid=new_total,
         processing_time_ms=proc_time,
-        details={"denomination": denomination, "running_total": new_total, "remaining": remaining},
+        details={
+            "denomination": denomination,
+            "running_total": new_total,
+            "remaining": remaining,
+        },
     )
 
 
 # ── STATUS ENDPOINT ──────────────────────────────────────────────────────── #
+
 
 @router.get("/status/")
 async def esp32_status() -> dict:
@@ -1368,19 +1655,22 @@ async def esp32_status() -> dict:
                             reachable = True
                         except Exception:
                             pass
-                    cameras_status.append({
-                        "name": name,
-                        "url": stream,
-                        "reachable": reachable,
-                    })
+                    cameras_status.append(
+                        {
+                            "name": name,
+                            "url": stream,
+                            "reachable": reachable,
+                        }
+                    )
     except Exception as exc:
         logger.warning("Failed to check cameras: %s", exc)
 
     test_images: list[str] = []
     if TEST_IMAGES_DIR.exists():
         test_images = [
-            f.name for f in TEST_IMAGES_DIR.glob("*")
-            if f.suffix.lower() in ('.jpg', '.jpeg', '.png')
+            f.name
+            for f in TEST_IMAGES_DIR.glob("*")
+            if f.suffix.lower() in (".jpg", ".jpeg", ".png")
         ]
 
     return {
@@ -1390,8 +1680,7 @@ async def esp32_status() -> dict:
         "test_images": test_images,
         "test_images_dir": str(TEST_IMAGES_DIR),
         "fallback_mode": (
-            len(cameras_status) == 0
-            or all(not c["reachable"] for c in cameras_status)
+            len(cameras_status) == 0 or all(not c["reachable"] for c in cameras_status)
         ),
     }
 
@@ -1516,11 +1805,13 @@ async def esp32_log(body: ESP32LogRequest) -> ESP32AckResponse:
         device = _esp32_devices[body.device_id]
 
     device["last_seen"] = datetime.now(timezone.utc)
-    device["logs"].append({
-        "timestamp": datetime.now(timezone.utc),
-        "level": body.level,
-        "message": body.message,
-    })
+    device["logs"].append(
+        {
+            "timestamp": datetime.now(timezone.utc),
+            "level": body.level,
+            "message": body.message,
+        }
+    )
 
     log_fn = {
         "debug": logger.debug,
@@ -1546,10 +1837,7 @@ async def esp32_list_devices() -> ESP32DeviceListResponse:
 
     Requires gateway auth (called by the frontend, not by ESP32 directly).
     """
-    devices = [
-        _build_device_response(did, dev)
-        for did, dev in _esp32_devices.items()
-    ]
+    devices = [_build_device_response(did, dev) for did, dev in _esp32_devices.items()]
     return ESP32DeviceListResponse(count=len(devices), devices=devices)
 
 

@@ -1,8 +1,19 @@
 ---
 name: security
 description: "Application Security Engineer — OWASP Top 10, STRIDE threat modeling, SAST, dependency scan, secrets detection, supply chain awareness. Không deploy khi còn Critical/High."
-user-invokable: false
-tools: ["readFile", "runInTerminal", "codebase", "filesystem/*", "fetch/*"]
+user-invocable: false
+tools:
+  [
+"vscode",
+    "execute",
+    "read",
+    "edit",
+    "search",
+    "web",
+    "agent",
+    "todo",
+    "fetch/*",
+  ]
 handoffs:
   - label: Audit hoàn tất → Orchestrator
     agent: orchestrator

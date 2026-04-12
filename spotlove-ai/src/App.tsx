@@ -11,6 +11,7 @@ import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import { ContactWidget } from "@/components/support/ContactWidget";
 import { SnowfallEffect } from "@/components/effects/SnowfallEffect";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { DevLogPanel } from "@/components/DevLogPanel";
 import Index from "./pages/Index";
 import BookingPage from "./pages/BookingPage";
 import HistoryPage from "./pages/HistoryPage";
@@ -36,6 +37,7 @@ import CheckInOutPage from "./pages/CheckInOutPage";
 import AdminViolationsPage from "./pages/admin/AdminViolationsPage";
 import AdminESP32Page from "./pages/admin/AdminESP32Page";
 import AdminRevenuePage from "./pages/admin/AdminRevenuePage";
+import DetectionHistoryPage from "./pages/DetectionHistoryPage";
 
 const queryClient = new QueryClient();
 
@@ -49,6 +51,8 @@ const App = () => (
             <Sonner />
             {/* Snowfall effect for dark mode */}
             <SnowfallEffect />
+            {/* Dev log panel — download full session log while testing */}
+            <DevLogPanel />
             <BrowserRouter>
               <ErrorBoundary>
                 <Routes>
@@ -143,6 +147,14 @@ const App = () => (
                     element={
                       <ProtectedRoute>
                         <CheckInOutPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/detection-history"
+                    element={
+                      <ProtectedRoute>
+                        <DetectionHistoryPage />
                       </ProtectedRoute>
                     }
                   />

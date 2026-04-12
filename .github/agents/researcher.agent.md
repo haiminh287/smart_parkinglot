@@ -1,14 +1,20 @@
 ---
 name: researcher
 description: "Technical Research Specialist — Phân tích codebase hiện tại, tra cứu docs thư viện, research bugs phức tạp, đánh giá công nghệ. Output: research report có chất lượng cao cho team."
-user-invokable: false
+user-invocable: false
 tools:
   [
+    "vscode",
+    "execute",
+    "read",
+    "edit",
+    "search",
+    "web",
+    "agent",
+    "todo",
     "fetch/*",
     "context7/*",
-    "filesystem/*",
     "memory/*",
-    "codebase",
     "playwright/*",
   ]
 handoffs:

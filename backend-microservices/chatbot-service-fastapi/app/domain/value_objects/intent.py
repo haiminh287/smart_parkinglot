@@ -23,6 +23,7 @@ class Intent(str, Enum):
     FEEDBACK = "feedback"
     HANDOFF = "handoff"
     UNKNOWN = "unknown"
+    OPERATING_HOURS = "operating_hours"
 
     @property
     def is_high_stakes(self) -> bool:

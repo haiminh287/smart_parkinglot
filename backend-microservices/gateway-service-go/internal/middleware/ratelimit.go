@@ -1,53 +1,77 @@
 package middleware
 
 import (
+	"context"
+	"fmt"
+	"log"
 	"net/http"
-	"sync"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
+
+	"gateway-service/internal/config"
 )
 
-// RateLimiter is a simple token bucket rate limiter
-type RateLimiter struct {
-	mu       sync.Mutex
-	visitors map[string]*visitor
-	rate     int           // requests per window
-	window   time.Duration // time window
-}
+var rateLimitScript = redis.NewScript(`
+local key = KEYS[1]
+local limit = tonumber(ARGV[1])
+local window = tonumber(ARGV[2])
+local current = redis.call('INCR', key)
+if current == 1 then
+    redis.call('EXPIRE', key, window)
+end
+local ttl = redis.call('TTL', key)
+return {current, ttl}
+`)
 
-type visitor struct {
-	tokens    int
-	lastReset time.Time
-}
-
-var limiter *RateLimiter
-
-func init() {
-	limiter = &RateLimiter{
-		visitors: make(map[string]*visitor),
-		rate:     100,            // 100 requests
-		window:   1 * time.Minute, // per minute
-	}
-
-	// Cleanup old visitors periodically
-	go func() {
-		for {
-			time.Sleep(5 * time.Minute)
-			limiter.cleanup()
-		}
-	}()
-}
-
-// RateLimitMiddleware limits requests per IP
-func RateLimitMiddleware() gin.HandlerFunc {
+// RateLimitMiddleware limits requests per IP using Redis
+func RateLimitMiddleware(cfg *config.Config, rdb *redis.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		ip := c.ClientIP()
+		if !cfg.RateLimitEnabled {
+			c.Next()
+			return
+		}
 
-		if !limiter.allow(ip) {
+		ip := c.ClientIP()
+		key := fmt.Sprintf("ratelimit:%s", ip)
+
+		if rdb == nil {
+			log.Printf("[WARN] Redis client is nil — allowing request")
+			c.Next()
+			return
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+
+		result, err := rateLimitScript.Run(ctx, rdb, []string{key}, cfg.RateLimitRequests, cfg.RateLimitWindow).Int64Slice()
+		if err != nil {
+			log.Printf("[WARN] Redis rate limit unavailable: %v — allowing request", err)
+			c.Next()
+			return
+		}
+
+		current := result[0]
+		ttl := result[1]
+		limit := int64(cfg.RateLimitRequests)
+		remaining := limit - current
+		if remaining < 0 {
+			remaining = 0
+		}
+
+		c.Header("X-RateLimit-Limit", strconv.FormatInt(limit, 10))
+		c.Header("X-RateLimit-Remaining", strconv.FormatInt(remaining, 10))
+		c.Header("X-RateLimit-Reset", strconv.FormatInt(ttl, 10))
+
+		if current > limit {
 			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
-				"error":   "Rate limit exceeded",
-				"message": "Too many requests. Please try again later.",
+				"success": false,
+				"error": gin.H{
+					"code":    "ERR_RATE_LIMIT",
+					"message": "Too many requests. Please try again later.",
+				},
 			})
 			return
 		}
@@ -56,47 +80,7 @@ func RateLimitMiddleware() gin.HandlerFunc {
 	}
 }
 
-func (rl *RateLimiter) allow(key string) bool {
-	rl.mu.Lock()
-	defer rl.mu.Unlock()
-
-	v, exists := rl.visitors[key]
-	if !exists {
-		rl.visitors[key] = &visitor{
-			tokens:    rl.rate - 1,
-			lastReset: time.Now(),
-		}
-		return true
-	}
-
-	// Reset tokens if window has passed
-	if time.Since(v.lastReset) > rl.window {
-		v.tokens = rl.rate - 1
-		v.lastReset = time.Now()
-		return true
-	}
-
-	if v.tokens <= 0 {
-		return false
-	}
-
-	v.tokens--
-	return true
-}
-
-func (rl *RateLimiter) cleanup() {
-	rl.mu.Lock()
-	defer rl.mu.Unlock()
-
-	for key, v := range rl.visitors {
-		if time.Since(v.lastReset) > 2*rl.window {
-			delete(rl.visitors, key)
-		}
-	}
-}
-
 // CleanupRateLimiter is called on shutdown
 func CleanupRateLimiter() error {
-	// Nothing to clean up for in-memory limiter
 	return nil
 }

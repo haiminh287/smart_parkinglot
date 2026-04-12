@@ -174,6 +174,7 @@ services:
       - PARKING_SERVICE_URL=http://parking-service:8000
       - AUTH_SERVICE_URL=http://auth-service:8000
       - NOTIFICATION_SERVICE_URL=http://notification-service-fastapi:8005
+      - PAYMENT_SERVICE_URL=http://payment-service-fastapi:8007
       - GATEWAY_SECRET=${GATEWAY_SECRET:?GATEWAY_SECRET must be set in .env}
       - PYTHONPATH=/app:/app/shared
     ports:
@@ -211,6 +212,7 @@ services:
       - PARKING_SERVICE_URL=http://parking-service:8000
       - AUTH_SERVICE_URL=http://auth-service:8000
       - NOTIFICATION_SERVICE_URL=http://notification-service-fastapi:8005
+      - PAYMENT_SERVICE_URL=http://payment-service-fastapi:8007
       - GATEWAY_SECRET=${GATEWAY_SECRET:?GATEWAY_SECRET must be set in .env}
       - PYTHONPATH=/app:/app/shared
     volumes:
@@ -331,7 +333,13 @@ services:
       - MEDIA_ROOT=/app/media
       - ML_MODELS_DIR=/app/ml/models
       - YOLO_PARKING_MODEL_PATH=/app/ml/models/yolo11n.pt
+      - CAMERA_DROIDCAM_URL=${CAMERA_DROIDCAM_URL:-http://192.168.100.130:4747}
+      - CAMERA_RTSP_URL=${CAMERA_RTSP_URL:-rtsp://user:password@192.168.1.100:554/H.264}
+      - CAMERA_HTTP_URL=${CAMERA_HTTP_URL:-http://192.168.100.130:80}
+      - ESP32_DEVICE_TOKEN=${ESP32_DEVICE_TOKEN:-}
       - DEBUG=${DEBUG:-False}
+    ports:
+      - "8009:8009"
     expose:
       - "8009"
     volumes:

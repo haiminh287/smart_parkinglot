@@ -4,12 +4,19 @@ All price calculations, late fee logic, validation, and
 check-in/check-out rules live here. Views ONLY call service methods.
 """
 
+import logging
 import math
 from datetime import timedelta
 from decimal import Decimal
+
+import requests
+from django.conf import settings as django_settings
+from django.db.models import DurationField, ExpressionWrapper, F, Sum
 from django.utils import timezone
-from django.db.models import Sum, F, ExpressionWrapper, DurationField
-from .models import PackagePricing, Booking
+
+from .models import Booking, PackagePricing
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -118,6 +125,8 @@ def validate_checkin(booking: Booking) -> str | None:
     """Return error message if booking cannot be checked-in, else None."""
     if booking.check_in_status != 'not_checked_in':
         return 'Only confirmed bookings can be checked in'
+    if booking.start_time and timezone.now() < booking.start_time - timedelta(minutes=30):
+        return 'Chưa đến giờ check-in. Vui lòng đến trong vòng 30 phút trước giờ đặt.'
     return None
 
 
@@ -169,6 +178,92 @@ def perform_cancel(booking: Booking) -> Booking:
     booking.check_in_status = 'cancelled'
     booking.save(update_fields=['check_in_status'])
     return booking
+
+
+# ---------------------------------------------------------------------------
+# Payment service integration
+# ---------------------------------------------------------------------------
+
+# Map booking payment_method to payment service valid methods
+_PAYMENT_METHOD_MAP = {
+    'on_exit': 'cash',
+    'online': 'cash',  # Default; user initiates specific method (momo/vnpay/zalopay) later
+}
+
+
+def _payment_service_headers(user_id):
+    """Build headers for payment service inter-service calls."""
+    return {
+        'Content-Type': 'application/json',
+        'X-Gateway-Secret': django_settings.GATEWAY_SECRET,
+        'X-User-ID': str(user_id),
+    }
+
+
+def create_payment_for_booking(booking):
+    """Call payment service to create a payment for a confirmed booking.
+
+    Best-effort: never raises. Returns response dict on success, None on failure.
+    """
+    try:
+        url = f"{django_settings.PAYMENT_SERVICE_URL}/api/payments/initiate/"
+        payload = {
+            "bookingId": str(booking.id),
+            "paymentMethod": _PAYMENT_METHOD_MAP.get(booking.payment_method, 'cash'),
+            "amount": float(booking.price),
+        }
+        headers = _payment_service_headers(booking.user_id)
+        response = requests.post(url, json=payload, headers=headers, timeout=5)
+        if response.status_code in (200, 201):
+            logger.info("Payment created for booking %s", booking.id)
+            return response.json()
+        logger.error(
+            "Payment service returned %s: %s", response.status_code, response.text
+        )
+        return None
+    except requests.RequestException as e:
+        logger.error("Failed to create payment for booking %s: %s", booking.id, e)
+        return None
+
+
+def get_booking_payments(booking_id, user_id):
+    """Fetch existing payments for a booking from payment service.
+
+    Returns list of payment dicts on success, None on failure.
+    """
+    try:
+        url = f"{django_settings.PAYMENT_SERVICE_URL}/api/payments/booking/{booking_id}/"
+        headers = _payment_service_headers(user_id)
+        response = requests.get(url, headers=headers, timeout=5)
+        if response.status_code == 200:
+            return response.json()
+        return None
+    except requests.RequestException as e:
+        logger.error("Failed to fetch payments for booking %s: %s", booking_id, e)
+        return None
+
+
+def initiate_payment(booking_id, user_id, payment_method, amount):
+    """Initiate a payment with a specific method via the payment service.
+
+    Returns payment response dict on success, None on failure.
+    """
+    try:
+        url = f"{django_settings.PAYMENT_SERVICE_URL}/api/payments/initiate/"
+        payload = {
+            "bookingId": str(booking_id),
+            "paymentMethod": payment_method,
+            "amount": float(amount),
+        }
+        headers = _payment_service_headers(user_id)
+        response = requests.post(url, json=payload, headers=headers, timeout=5)
+        if response.status_code in (200, 201):
+            return response.json()
+        # 400 = duplicate payment or invalid method
+        return {'error': response.json().get('detail', 'Payment initiation failed'), 'status_code': response.status_code}
+    except requests.RequestException as e:
+        logger.error("Failed to initiate payment for booking %s: %s", booking_id, e)
+        return None
 
 
 # ---------------------------------------------------------------------------

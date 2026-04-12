@@ -55,8 +55,8 @@ def django_password_hash(password: str) -> str:
     Returns:
         Django-format password hash string.
     """
-    import hashlib
     import base64
+    import hashlib
     import secrets
 
     salt = secrets.token_hex(12)
@@ -397,7 +397,7 @@ def seed_cameras(conn: pymysql.Connection, ctx: dict) -> None:
             "name": "Camera Biển Số",
             "ip_address": "192.168.100.23",
             "port": 554,
-            "stream_url": "rtsp://admin:XGIMBN@192.168.100.23:554/ch1/main",
+            "stream_url": "rtsp://user:password@192.168.1.100:554/H.264",
             "zone_id": None,  # License plate camera is not tied to a zone
             "is_active": True,
         },

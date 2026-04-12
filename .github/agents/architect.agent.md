@@ -1,13 +1,17 @@
 ---
 name: architect
 description: "Chief System Architect — Thiết kế hệ thống production-grade: DB schema, API contracts, ADR, resilience patterns, observability-by-design. Phán quyết mọi quyết định kỹ thuật cấp kiến trúc."
-user-invokable: false
+user-invocable: false
 tools:
   [
-    "editFiles",
-    "readFile",
-    "codebase",
-    "filesystem/*",
+    "vscode",
+    "execute",
+    "read",
+    "edit",
+    "search",
+    "web",
+    "agent",
+    "todo",
     "context7/*",
     "sequential-thinking/*",
     "memory/*",

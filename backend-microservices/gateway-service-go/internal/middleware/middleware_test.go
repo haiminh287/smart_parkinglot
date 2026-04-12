@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 
 	"gateway-service/internal/config"
 	"gateway-service/internal/middleware"
@@ -134,8 +135,15 @@ func TestCORSMiddleware_SetHeaders(t *testing.T) {
 // ═══════════════════════════════════════════════════
 
 func TestRateLimitMiddleware_AllowsNormalTraffic(t *testing.T) {
+	cfg := &config.Config{
+		RateLimitEnabled:  true,
+		RateLimitRequests: 100,
+		RateLimitWindow:   60,
+	}
+	// Use a nil client — Redis will fail, middleware should fail-open
+	var rdb *redis.Client
 	r := gin.New()
-	r.Use(middleware.RateLimitMiddleware())
+	r.Use(middleware.RateLimitMiddleware(cfg, rdb))
 	r.GET("/test", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"ok": true})
 	})

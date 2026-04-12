@@ -1,0 +1,14 @@
+{
+    "name": "ParkingSim.UI",
+    "rootNamespace": "ParkingSim.UI",
+    "references": ["ParkingSim.API", "ParkingSim.Core", "Unity.TextMeshPro"],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": ["Newtonsoft.Json.dll"],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

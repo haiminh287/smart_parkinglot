@@ -30,20 +30,18 @@ func Setup(
 	r.Use(gin.Recovery())
 	r.Use(middleware.CORSMiddleware(cfg))
 	r.Use(middleware.LoggingMiddleware())
-	r.Use(middleware.RateLimitMiddleware())
+	r.Use(middleware.RateLimitMiddleware(cfg, store.Client()))
 
 	// Single catch-all route handles health, auth, and proxied requests
 	r.Any("/*path", func(c *gin.Context) {
 		path := c.Param("path")
-		if len(path) > 0 && path[0] == '/' {
-			path = path[1:]
-		}
+		normalizedPath := config.NormalizeServicePath(path)
 
 		// Health check endpoints (bypass auth) — gateway-local and proxied service health
-		isGatewayHealth := path == "health/" || path == "health" || strings.HasPrefix(path, "health/")
-		isServiceHealth := strings.HasSuffix(strings.TrimRight(path, "/"), "health")
+		isGatewayHealth := normalizedPath == "health/" || normalizedPath == "health" || strings.HasPrefix(normalizedPath, "health/")
+		isServiceHealth := strings.HasSuffix(strings.TrimRight(normalizedPath, "/"), "health")
 		if isGatewayHealth {
-			switch path {
+			switch normalizedPath {
 			case "health/ready/", "health/ready":
 				healthHandler.ReadinessCheck(c)
 			case "health/live/", "health/live":
@@ -60,8 +58,13 @@ func Setup(
 			proxyHandler.HandleProxy(c)
 			return
 		} // Auth special endpoints (no JWT required)
-		cleanPath := strings.TrimPrefix(path, "api/")
+		cleanPath := normalizedPath
 		method := c.Request.Method
+		trimmedPath := strings.TrimSuffix(cleanPath, "/")
+		if trimmedPath == "auth/refresh" || trimmedPath == "auth/token/refresh" {
+			authHandler.HandleUnsupportedRefresh(c)
+			return
+		}
 		if method == http.MethodPost {
 			if cleanPath == "auth/login/" || cleanPath == "auth/login" {
 				authHandler.HandleLogin(c)

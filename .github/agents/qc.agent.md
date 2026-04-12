@@ -1,15 +1,19 @@
 ---
 name: qc
 description: "QC Engineer — Quality Gate trước khi deploy. Kiểm tra coverage, performance regression, regression flows, và release checklist. Agnostic với mọi stack."
-user-invokable: false
+user-invocable: false
 tools:
   [
-    "readFile",
-    "runInTerminal",
-    "codebase",
+"vscode",
+    "execute",
+    "read",
+    "edit",
+    "search",
+    "web",
+    "agent",
+    "todo",
     "fetch/*",
     "playwright/*",
-    "filesystem/*",
   ]
 handoffs:
   - label: Báo cáo cho Orchestrator (QC Gate hoàn tất)

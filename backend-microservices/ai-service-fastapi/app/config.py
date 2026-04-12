@@ -1,4 +1,6 @@
 import os
+
+from pydantic import ConfigDict
 from pydantic_settings import BaseSettings
 
 
@@ -16,13 +18,19 @@ class Settings(BaseSettings):
     BOOKING_SERVICE_URL: str = "http://booking-service:8000"
     REALTIME_SERVICE_URL: str = "http://realtime-service-go:8006"
     PLATE_MODEL_PATH: str = "/app/app/models/license-plate-finetune-v1m.pt"
+    YOLO_PARKING_MODEL_PATH: str = "/app/ml/models/yolo11n.pt"
+    YOLO_PARKING_IOU_THRESHOLD: float = 0.15
+    YOLO_PARKING_CONF_THRESHOLD: float = 0.25
+    CAMERA_DROIDCAM_URL: str = "http://192.168.100.130:4747"
+    CAMERA_RTSP_URL: str = "rtsp://user:password@192.168.1.100:554/H.264"
+    CAMERA_HTTP_URL: str = "http://192.168.100.130:80"
+    ESP32_DEVICE_TOKEN: str = ""
 
     @property
     def DATABASE_URL(self) -> str:
         return f"mysql+pymysql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
 
-    class Config:
-        env_file = ".env"
+    model_config = ConfigDict(env_file=".env")
 
 
 settings = Settings()
