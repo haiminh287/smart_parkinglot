@@ -376,7 +376,7 @@ def seed_notifications(conn: pymysql.Connection, user_id: str) -> None:
         for ntype, title, msg, is_read, created in notifs:
             nid = make_uuid()
             cur.execute(
-                """INSERT INTO notification
+                """INSERT INTO notifications_notification
                     (id, user_id, notification_type, title, message,
                      data, is_read, push_sent, email_sent, sms_sent, created_at)
                    VALUES (%s,%s,%s,%s,%s,%s,%s,0,0,0,%s)""",
@@ -412,7 +412,7 @@ def print_summary(conn: pymysql.Connection, user_id: str) -> None:
         cur.execute("SELECT COUNT(*) FROM payments_payment WHERE user_id=%s", (user_id,))
         print(f"  Payments: {cur.fetchone()[0]} records")
 
-        cur.execute("SELECT COUNT(*) FROM notification WHERE user_id=%s", (user_id,))
+        cur.execute("SELECT COUNT(*) FROM notifications_notification WHERE user_id=%s", (user_id,))
         print(f"  Notifications: {cur.fetchone()[0]} records")
     print("=" * 60)
     print(f"\nCredentials:  {USER_EMAIL} / {USER_PASSWORD}")

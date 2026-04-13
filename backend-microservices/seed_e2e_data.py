@@ -358,7 +358,7 @@ def seed_notifications(conn: pymysql.Connection, user_id: str) -> None:
         nid = make_uuid()
         ts = (now - timedelta(hours=i * 2)).strftime("%Y-%m-%d %H:%M:%S.%f")
         cursor.execute(
-            """INSERT INTO notification
+            """INSERT INTO notifications_notification
             (id, user_id, notification_type, title, message, data, is_read, push_sent, email_sent, sms_sent, created_at)
             VALUES (%s, %s, %s, %s, %s, %s, %s, 0, 0, 0, %s)""",
             (nid, user_id, n["type"], n["title"], n["message"], "{}", int(n["is_read"]), ts),
