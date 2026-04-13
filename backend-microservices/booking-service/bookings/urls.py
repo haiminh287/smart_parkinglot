@@ -73,6 +73,10 @@ urlpatterns = [
         'post': 'cancel'
     }), name='booking-cancel'),
     
+    path('<uuid:pk>/extend/', views.BookingViewSet.as_view({
+        'post': 'extend_booking'
+    }), name='booking-extend'),
+    
     path('<uuid:pk>/qr-code/', views.BookingViewSet.as_view({
         'get': 'qr_code'
     }), name='booking-qr-code'),

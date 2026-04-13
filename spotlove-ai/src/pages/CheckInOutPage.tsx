@@ -35,11 +35,14 @@ import {
   Upload,
   ArrowRight,
   AlertTriangle,
+  TimerReset,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useBooking } from "@/hooks";
 import { BookingQRCode } from "@/components/booking/BookingQRCode";
 import { aiApi } from "@/services/api/ai.api";
+import { bookingApi } from "@/services/api/booking.api";
+import { Input } from "@/components/ui/input";
 import type { CheckInResponse, CheckOutResponse } from "@/services/api/ai.api";
 
 type ActiveTab = "check-in" | "check-out";
@@ -74,6 +77,16 @@ export default function CheckInOutPage() {
   } | null>(null);
 
   const qrPollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Extension modal state
+  const [showExtendModal, setShowExtendModal] = useState(false);
+  const [extendHours, setExtendHours] = useState(1);
+  const [isExtending, setIsExtending] = useState(false);
+  const [extendResult, setExtendResult] = useState<{
+    success: boolean;
+    message: string;
+    extensionPrice?: number;
+  } | null>(null);
 
   useEffect(() => {
     loadCurrentParking();
@@ -166,6 +179,32 @@ export default function CheckInOutPage() {
     setPreviewUrl(null);
     setManualResult(null);
   };
+
+  const handleExtendBooking = useCallback(async () => {
+    if (!currentParking || extendHours <= 0) return;
+    setIsExtending(true);
+    setExtendResult(null);
+    try {
+      const response = await bookingApi.extendBooking({
+        bookingId: currentParking.booking.id,
+        additionalHours: extendHours,
+      });
+      setExtendResult({
+        success: true,
+        message: response.message,
+        extensionPrice: response.extension.extensionPrice,
+      });
+      loadCurrentParking();
+    } catch (error) {
+      setExtendResult({
+        success: false,
+        message:
+          error instanceof Error ? error.message : "Không thể gia hạn booking",
+      });
+    } finally {
+      setIsExtending(false);
+    }
+  }, [currentParking, extendHours, loadCurrentParking]);
 
   const startQrScan = () => {
     setIsQrModalOpen(true);
@@ -289,6 +328,19 @@ export default function CheckInOutPage() {
                 <p className="text-xs text-muted-foreground">Chi phí</p>
               </div>
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 border-primary/50 text-primary hover:bg-primary/10"
+              onClick={() => {
+                setShowExtendModal(true);
+                setExtendResult(null);
+                setExtendHours(1);
+              }}
+            >
+              <TimerReset className="h-4 w-4" />
+              Gia hạn
+            </Button>
           </div>
         )}
 
@@ -735,6 +787,97 @@ export default function CheckInOutPage() {
           </div>
         </div>
       )}
+
+      {/* Extend Booking Modal */}
+      <Dialog open={showExtendModal} onOpenChange={setShowExtendModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <TimerReset className="h-5 w-5 text-primary" />
+              Gia hạn đỗ xe
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {extendResult ? (
+              <div className="text-center space-y-3">
+                {extendResult.success ? (
+                  <CheckCircle2 className="h-12 w-12 mx-auto text-success" />
+                ) : (
+                  <XCircle className="h-12 w-12 mx-auto text-destructive" />
+                )}
+                <p className="text-sm text-muted-foreground">
+                  {extendResult.message}
+                </p>
+                {extendResult.extensionPrice != null && (
+                  <p className="text-lg font-bold text-primary">
+                    +
+                    {extendResult.extensionPrice.toLocaleString("vi-VN")}
+                    đ
+                  </p>
+                )}
+                <Button
+                  className="w-full"
+                  onClick={() => setShowExtendModal(false)}
+                >
+                  Đóng
+                </Button>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <label
+                    htmlFor="extend-hours"
+                    className="text-sm font-medium text-foreground"
+                  >
+                    Số giờ gia hạn
+                  </label>
+                  <Input
+                    id="extend-hours"
+                    type="number"
+                    min={1}
+                    max={72}
+                    value={extendHours}
+                    onChange={(e) =>
+                      setExtendHours(Math.max(1, parseInt(e.target.value) || 1))
+                    }
+                  />
+                </div>
+                <div className="rounded-lg bg-muted/50 border border-border p-3 text-sm space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Thời gian thêm</span>
+                    <span className="font-medium">{extendHours} giờ</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Phí gia hạn được tính theo giá giờ, không phụ thu.
+                  </p>
+                </div>
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => setShowExtendModal(false)}
+                    disabled={isExtending}
+                  >
+                    Hủy
+                  </Button>
+                  <Button
+                    className="flex-1 gradient-primary gap-2"
+                    onClick={handleExtendBooking}
+                    disabled={isExtending}
+                  >
+                    {isExtending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <TimerReset className="h-4 w-4" />
+                    )}
+                    {isExtending ? "Đang xử lý..." : "Xác nhận gia hạn"}
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }

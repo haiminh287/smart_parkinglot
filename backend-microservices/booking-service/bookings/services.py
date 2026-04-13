@@ -38,13 +38,28 @@ def get_hourly_price(vehicle_type: str) -> Decimal:
         return Decimal('5000.00')       # 5,000 VND/h
 
 
+def _get_package_duration_hours(package_type: str) -> int | None:
+    """Return the expected duration in hours for a package type, or None for hourly."""
+    return {
+        'daily': 24,
+        'weekly': 168,   # 7 days
+        'monthly': 720,  # 30 days
+    }.get(package_type)
+
+
 def calculate_checkout_price(booking: Booking) -> dict:
     """
     Calculate final price, late fee, and duration at checkout time.
 
+    Logic per package type:
+    - hourly: base = scheduled hours × hourly_price; overtime at 1.5× surcharge
+    - daily/weekly/monthly: base = booking.price (package price, already paid);
+      overtime ONLY if actual parking exceeds the package duration,
+      charged at hourly_rate × 1.5 surcharge factor.
+
     Returns a dict with:
-        total_amount, late_fee, late_fee_applied, total_hours,
-        billable_hours, hourly_price
+        total_amount, base_amount, late_fee, late_fee_applied, total_hours,
+        hourly_price, package_type
     """
     now = timezone.now()
     checked_in_at = booking.checked_in_at or now
@@ -55,12 +70,35 @@ def calculate_checkout_price(booking: Booking) -> dict:
     late_fee = Decimal('0')
     late_fee_applied = False
 
-    if booking.package_type == 'hourly' and booking.hourly_end:
-        overtime_seconds = (now - booking.hourly_end).total_seconds()
+    package_duration_hours = _get_package_duration_hours(booking.package_type)
+
+    if package_duration_hours is not None:
+        # ----- daily / weekly / monthly -----
+        # Base price is the package price set at booking time
+        base_amount = booking.price
+
+        effective_end = booking.extended_until or booking.hourly_end
+        if effective_end:
+            overtime_seconds = (now - effective_end).total_seconds()
+        else:
+            overtime_seconds = (total_hours - package_duration_hours) * 3600
+
+        if overtime_seconds > 0:
+            overtime_hours = math.ceil(overtime_seconds / 3600)
+            late_fee_rate = hourly_price * Decimal('1.5')  # 50% surcharge
+            late_fee = overtime_hours * late_fee_rate
+            late_fee_applied = True
+
+        total_amount = base_amount + late_fee
+
+    elif booking.package_type == 'hourly' and booking.hourly_end:
+        # ----- hourly with scheduled end -----
+        effective_end = booking.extended_until or booking.hourly_end
+        overtime_seconds = (now - effective_end).total_seconds()
         if overtime_seconds > 0:
             overtime_hours = math.ceil(overtime_seconds / 3600)
             scheduled_seconds = (
-                (booking.hourly_end - booking.hourly_start).total_seconds()
+                (effective_end - booking.hourly_start).total_seconds()
                 if booking.hourly_start else 0
             )
             scheduled_hours = math.ceil(scheduled_seconds / 3600)
@@ -72,21 +110,26 @@ def calculate_checkout_price(booking: Booking) -> dict:
             late_fee_applied = True
         else:
             if booking.hourly_start:
-                scheduled_seconds = (booking.hourly_end - booking.hourly_start).total_seconds()
+                scheduled_seconds = (effective_end - booking.hourly_start).total_seconds()
                 scheduled_hours = math.ceil(scheduled_seconds / 3600)
             else:
                 scheduled_hours = math.ceil(total_hours)
-            total_amount = scheduled_hours * hourly_price
+            base_amount = scheduled_hours * hourly_price
+            total_amount = base_amount
     else:
+        # ----- hourly without scheduled end (fallback) -----
         billable_hours = math.ceil(total_hours) if total_hours > 0 else 1
-        total_amount = billable_hours * hourly_price
+        base_amount = billable_hours * hourly_price
+        total_amount = base_amount
 
     return {
         'total_amount': total_amount,
+        'base_amount': base_amount,
         'late_fee': late_fee,
         'late_fee_applied': late_fee_applied,
         'total_hours': total_hours,
         'hourly_price': hourly_price,
+        'package_type': booking.package_type,
     }
 
 
@@ -142,6 +185,61 @@ def validate_cancel(booking: Booking) -> str | None:
     if booking.check_in_status in ['checked_in', 'checked_out']:
         return 'Cannot cancel booking that has already started or completed'
     return None
+
+
+# ---------------------------------------------------------------------------
+# Extend booking
+# ---------------------------------------------------------------------------
+
+def calculate_extension_price(booking: Booking, additional_hours: int) -> dict:
+    """Calculate price for extending a booking.
+
+    Voluntary extensions are charged at the normal hourly rate (no surcharge).
+    Returns dict with: extension_price, hourly_price, additional_hours, new_end_time
+    """
+    hourly_price = get_hourly_price(booking.vehicle_type)
+    extension_price = hourly_price * additional_hours
+
+    # Determine current effective end time
+    current_end = booking.extended_until or booking.hourly_end or booking.end_time
+    if current_end:
+        new_end_time = current_end + timedelta(hours=additional_hours)
+    else:
+        new_end_time = timezone.now() + timedelta(hours=additional_hours)
+
+    return {
+        'extension_price': extension_price,
+        'hourly_price': hourly_price,
+        'additional_hours': additional_hours,
+        'new_end_time': new_end_time,
+    }
+
+
+def perform_extend(booking: Booking, additional_hours: int) -> dict:
+    """Execute booking extension: update times, create payment, return details."""
+    ext = calculate_extension_price(booking, additional_hours)
+
+    booking.extended_until = ext['new_end_time']
+    booking.hourly_end = ext['new_end_time']
+    booking.save(update_fields=['extended_until', 'hourly_end', 'updated_at'])
+
+    # Best-effort: create payment record for the extension fee
+    payment_result = initiate_payment(
+        booking_id=booking.id,
+        user_id=booking.user_id,
+        payment_method=_PAYMENT_METHOD_MAP.get(booking.payment_method, 'cash'),
+        amount=ext['extension_price'],
+    )
+
+    return {
+        'booking_id': str(booking.id),
+        'additional_hours': additional_hours,
+        'extension_price': float(ext['extension_price']),
+        'hourly_price': float(ext['hourly_price']),
+        'new_end_time': ext['new_end_time'].isoformat(),
+        'extended_until': ext['new_end_time'].isoformat(),
+        'payment_created': payment_result is not None and 'error' not in (payment_result or {}),
+    }
 
 
 # ---------------------------------------------------------------------------

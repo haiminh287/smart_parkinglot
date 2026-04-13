@@ -79,6 +79,7 @@ export const ENDPOINTS = {
     CURRENT: "/bookings/current-parking/",
     CHECK_IN: (id: string) => `/bookings/${id}/checkin/`,
     CHECK_OUT: (id: string) => `/bookings/${id}/checkout/`,
+    EXTEND: (id: string) => `/bookings/${id}/extend/`,
     QR_CODE: (id: string) => `/bookings/${id}/qr-code/`,
     STATS: "/bookings/stats/",
     PACKAGE_PRICING: "/bookings/packagepricings/",

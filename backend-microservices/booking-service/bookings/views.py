@@ -228,6 +228,40 @@ class BookingViewSet(viewsets.ModelViewSet):
             else:
                 return Decimal('5000.00')   # 5,000 VND per hour for motorbikes
     
+    @action(detail=True, methods=['post'], url_path='extend')
+    def extend_booking(self, request, pk=None):
+        """Extend an active booking's duration.
+
+        Request body: { "additional_hours": N }
+        Only allowed when booking is checked_in.
+        Extension price = additional_hours × hourly_price (no surcharge).
+        """
+        booking = self.get_object()
+
+        if booking.check_in_status != 'checked_in':
+            return Response(
+                {'error': 'Only checked-in bookings can be extended'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        additional_hours = request.data.get('additional_hours')
+        if not additional_hours or not isinstance(additional_hours, (int, float)) or additional_hours <= 0:
+            return Response(
+                {'error': 'additional_hours must be a positive number'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        additional_hours = int(additional_hours)
+
+        ext_result = services.perform_extend(booking, additional_hours)
+
+        booking.refresh_from_db()
+        serializer = BookingSerializer(booking)
+        return Response({
+            'booking': serializer.data,
+            'extension': ext_result,
+            'message': f'Booking extended by {additional_hours} hour(s)',
+        })
+
     @action(detail=True, methods=['post'])
     def cancel(self, request, pk=None):
         """Cancel a booking."""

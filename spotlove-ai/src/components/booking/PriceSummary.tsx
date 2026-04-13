@@ -31,22 +31,22 @@ interface PriceSummaryProps {
 // Fallback prices used only when API call fails
 const FALLBACK_PRICES = {
   Car: {
-    monthly: 2000000,
-    weekly: 600000,
-    daily: 100000,
-    hourly: 20000,
+    monthly: 1200000,
+    weekly: 400000,
+    daily: 80000,
+    hourly: 15000,
   },
   Motorbike: {
-    monthly: 500000,
-    weekly: 150000,
-    daily: 25000,
+    monthly: 300000,
+    weekly: 100000,
+    daily: 20000,
     hourly: 5000,
   },
 };
 
 const DISCOUNTS = {
-  monthly: 0.2, // 20% off
-  weekly: 0.1, // 10% off
+  monthly: 0,
+  weekly: 0,
   custom: 0,
   hourly: 0,
 };

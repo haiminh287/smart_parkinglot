@@ -71,6 +71,25 @@ export interface PackagePricingResponse {
   description?: string;
 }
 
+export interface ExtendBookingRequest {
+  bookingId: string;
+  additionalHours: number;
+}
+
+export interface ExtendBookingResponse {
+  booking: Booking;
+  extension: {
+    bookingId: string;
+    additionalHours: number;
+    extensionPrice: number;
+    hourlyPrice: number;
+    newEndTime: string;
+    extendedUntil: string;
+    paymentCreated: boolean;
+  };
+  message: string;
+}
+
 // ── Revenue Admin Types ──────────────────────────────────────────────────
 
 export interface RevenueSummary {
@@ -205,6 +224,19 @@ export const bookingApi = {
     const response = await apiClient.post(
       `/bookings/${data.bookingId}/checkout/`,
       data,
+    );
+    return response.data;
+  },
+
+  /**
+   * Extend an active booking's duration
+   */
+  extendBooking: async (
+    data: ExtendBookingRequest,
+  ): Promise<ExtendBookingResponse> => {
+    const response = await apiClient.post<ExtendBookingResponse>(
+      `/bookings/${data.bookingId}/extend/`,
+      { additionalHours: data.additionalHours },
     );
     return response.data;
   },
