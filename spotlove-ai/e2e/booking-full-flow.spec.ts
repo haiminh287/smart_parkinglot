@@ -100,8 +100,8 @@ test.describe("Full Booking Flow — ParkSmart Tower", () => {
       timeout: 10_000,
     });
 
-    // Select "Tầng 1" (has Car zones A and B)
-    const floorButton = page.locator("button").filter({ hasText: /Tầng 1/ });
+    // Select "Tang 1" (has Car zones A and B)
+    const floorButton = page.locator("button").filter({ hasText: /Tang 1/ });
     await expect(floorButton.first()).toBeVisible({ timeout: 10_000 });
     await floorButton.first().click();
 
@@ -243,7 +243,7 @@ test.describe("Full Booking Flow — ParkSmart Tower", () => {
       licensePlate: "51A-999.88",
       vehicleType: "Car",
       parkingLot: "ParkSmart Tower",
-      floor: "Tầng 1",
+      floor: "Tang 1",
       zone: "Zone A",
       slot: slotCode || "unknown",
       packageType: "hourly",

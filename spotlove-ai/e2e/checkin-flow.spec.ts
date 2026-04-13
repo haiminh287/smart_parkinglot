@@ -104,8 +104,8 @@ test.describe("Check-in Flow — Booking + AI Plate Detection", () => {
         timeout: 10_000,
       });
 
-      // Select Tầng 1
-      const floorButton = page.locator("button").filter({ hasText: /Tầng 1/ });
+      // Select Tang 1
+      const floorButton = page.locator("button").filter({ hasText: /Tang 1/ });
       await expect(floorButton.first()).toBeVisible({ timeout: 10_000 });
       await floorButton.first().click();
 
