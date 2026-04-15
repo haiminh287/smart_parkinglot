@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     CAMERA_DROIDCAM_URL: str = "http://192.168.100.130:4747"
     CAMERA_RTSP_URL: str = "rtsp://user:password@192.168.1.100:554/H.264"
     CAMERA_HTTP_URL: str = "http://192.168.100.130:80"
-    ESP32_DEVICE_TOKEN: str = ""
+    ESP32_DEVICE_TOKEN: str  # required — no default
 
     @property
     def DATABASE_URL(self) -> str:

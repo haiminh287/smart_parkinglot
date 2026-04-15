@@ -33,6 +33,9 @@ namespace ParkingSim.API
             Instance = this;
             if (transform.parent == null)
                 DontDestroyOnLoad(gameObject);
+
+            if (config == null)
+                config = Resources.Load<ApiConfig>("ApiConfig");
         }
 
         public IEnumerator Login(string email, string password)
@@ -88,6 +91,8 @@ namespace ParkingSim.API
             if (isAiService)
             {
                 request.SetRequestHeader("X-Gateway-Secret", config.gatewaySecret);
+                if (!string.IsNullOrEmpty(config.esp32DeviceToken))
+                    request.SetRequestHeader("X-Device-Token", config.esp32DeviceToken);
             }
             else if (IsAuthenticated)
             {

@@ -63,8 +63,6 @@ async def verify_device_token(
     x_device_token: str = Header(default=""),
 ) -> None:
     expected = settings.ESP32_DEVICE_TOKEN
-    if not expected:
-        return
     if not x_device_token or not hmac.compare_digest(x_device_token, expected):
         raise HTTPException(status_code=403, detail="Invalid or missing device token.")
 
@@ -332,8 +330,18 @@ def _plates_match(ocr_plate: str, booking_plate: str) -> bool:
     return ratio >= 0.70
 
 
+def _normalize_uuid(raw_id: str) -> str:
+    """Ensure UUID is in dashed format (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)."""
+    clean = raw_id.replace("-", "")
+    try:
+        return str(uuid.UUID(clean))
+    except ValueError:
+        return raw_id
+
+
 async def _get_booking(booking_id: str, user_id: str) -> dict:
     """Fetch booking details from booking-service."""
+    booking_id = _normalize_uuid(booking_id)
     url = f"{BOOKING_SERVICE_URL}/bookings/{booking_id}/"
     headers = {"X-Gateway-Secret": GATEWAY_SECRET, "X-User-ID": user_id}
     async with httpx.AsyncClient(timeout=60.0) as client:
@@ -348,6 +356,7 @@ async def _get_booking(booking_id: str, user_id: str) -> dict:
 
 async def _call_booking_checkin(booking_id: str, user_id: str) -> dict:
     """Call booking-service checkin endpoint."""
+    booking_id = _normalize_uuid(booking_id)
     url = f"{BOOKING_SERVICE_URL}/bookings/{booking_id}/checkin/"
     headers = {
         "X-Gateway-Secret": GATEWAY_SECRET,
@@ -361,6 +370,7 @@ async def _call_booking_checkin(booking_id: str, user_id: str) -> dict:
 
 async def _call_booking_checkout(booking_id: str, user_id: str) -> dict:
     """Call booking-service checkout endpoint."""
+    booking_id = _normalize_uuid(booking_id)
     url = f"{BOOKING_SERVICE_URL}/bookings/{booking_id}/checkout/"
     headers = {
         "X-Gateway-Secret": GATEWAY_SECRET,
@@ -543,7 +553,7 @@ async def _capture_plate_image(
     if camera_url:
         capture = get_camera_capture()
         try:
-            frame_bytes = await capture.capture_frame_bytes(camera_url, retries=2)
+            frame_bytes = await capture.capture_frame_bytes(camera_url, retries=1)
             logger.info("Captured plate image from camera: %s", camera_url)
             return frame_bytes, True
         except CameraCaptureError as exc:
@@ -796,8 +806,8 @@ async def esp32_check_in(
     )
     booking_plate = _normalize_plate(booking_plate_raw)
 
-    # --- Capture plate from virtual gate camera (or fallback) ---
-    _virtual_cam_id = "virtual-gate-in"
+    # --- Capture plate from virtual ANPR camera (or fallback) ---
+    _virtual_cam_id = "virtual-anpr-entry"
     plate_image_bytes: bytes | None = None
     plate_from_real_camera = False
 
@@ -815,7 +825,7 @@ async def esp32_check_in(
         plate_url = payload.plate_camera_url or _get_camera_url("plate")
         try:
             capture = get_camera_capture()
-            frame = await capture.capture_frame(plate_url, retries=2)
+            frame = await capture.capture_frame(plate_url, retries=1)
             _, buf = cv2.imencode(".jpg", frame)
             plate_image_bytes = buf.tobytes()
             plate_from_real_camera = True
@@ -843,7 +853,7 @@ async def esp32_check_in(
 
     if plate_image_bytes:
         pipeline = _plate_pipeline()
-        plate_result = pipeline.process(plate_image_bytes)
+        plate_result = pipeline.process(plate_image_bytes, debug_id=booking_id[:8] if booking_id else "")
 
         if plate_result.decision in [
             PlateReadDecision.NOT_FOUND,
@@ -957,10 +967,14 @@ async def esp32_check_in(
     checkin_data = (
         checkin_resp.get("data", {}) if isinstance(checkin_resp, dict) else {}
     )
-    car_slot_info = checkin_data.get("carSlot") or checkin_data.get("car_slot") or {}
+    booking_data = checkin_data.get("booking", checkin_data)
+    car_slot_info = booking_data.get("carSlot") or booking_data.get("car_slot") or {}
     spawned_slot_code = (
         car_slot_info.get("code") if isinstance(car_slot_info, dict) else None
-    ) or "A-01"
+    )
+    if not spawned_slot_code:
+        _bk_car_slot = booking.get("carSlot") or booking.get("car_slot") or {}
+        spawned_slot_code = (_bk_car_slot.get("code", "") if isinstance(_bk_car_slot, dict) else "") or "A-01"
     vehicle_info = booking.get("vehicle", {})
     spawned_vehicle_type = (
         vehicle_info.get("vehicleType") or vehicle_info.get("vehicle_type") or "Car"
@@ -1101,8 +1115,8 @@ async def esp32_check_out(
     )
     booking_plate = _normalize_plate(booking_plate_raw)
 
-    # --- Capture plate from virtual gate camera (or fallback) ---
-    _virtual_cam_id = "virtual-gate-out"
+    # --- Capture plate from virtual ANPR camera (or fallback) ---
+    _virtual_cam_id = "virtual-anpr-exit"
     plate_image_bytes: bytes | None = None
     plate_from_real_camera = False
 
@@ -1120,7 +1134,7 @@ async def esp32_check_out(
         plate_url = payload.plate_camera_url or _get_camera_url("plate")
         try:
             capture = get_camera_capture()
-            frame = await capture.capture_frame(plate_url, retries=2)
+            frame = await capture.capture_frame(plate_url, retries=1)
             _, buf = cv2.imencode(".jpg", frame)
             plate_image_bytes = buf.tobytes()
             plate_from_real_camera = True
@@ -1146,7 +1160,7 @@ async def esp32_check_out(
 
     if plate_image_bytes:
         pipeline = _plate_pipeline()
-        plate_result = pipeline.process(plate_image_bytes)
+        plate_result = pipeline.process(plate_image_bytes, debug_id=booking_id[:8] if booking_id else "")
 
         if plate_result.decision not in [
             PlateReadDecision.NOT_FOUND,
@@ -1369,8 +1383,9 @@ async def esp32_verify_slot(
         )
 
     # Verify slot match
-    booking_slot = booking.get("slotCode", booking.get("slot_code", ""))
-    booking_zone = booking.get("zoneId", booking.get("zone_id", ""))
+    car_slot = booking.get("carSlot") or booking.get("car_slot") or {}
+    booking_slot = (car_slot.get("code", "") if isinstance(car_slot, dict) else "") or booking.get("slotCode", booking.get("slot_code", ""))
+    booking_zone = (car_slot.get("zoneId", "") if isinstance(car_slot, dict) else "") or booking.get("zoneId", booking.get("zone_id", ""))
 
     slot_match = booking_slot.upper().strip() == slot_code.upper().strip()
     zone_match = str(booking_zone) == str(zone_id)
