@@ -1,7 +1,6 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Provider } from "react-redux";
 import { store } from "@/store";
@@ -12,49 +11,53 @@ import { ContactWidget } from "@/components/support/ContactWidget";
 import { SnowfallEffect } from "@/components/effects/SnowfallEffect";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { DevLogPanel } from "@/components/DevLogPanel";
+import { PageSkeleton } from "@/components/PageSkeleton";
+import { lazy, Suspense } from "react";
+
+// Eager — critical path (first paint)
 import Index from "./pages/Index";
-import BookingPage from "./pages/BookingPage";
-import HistoryPage from "./pages/HistoryPage";
-import CamerasPage from "./pages/CamerasPage";
-import MapPage from "./pages/MapPage";
-import SupportPage from "./pages/SupportPage";
-import SettingsPage from "./pages/SettingsPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import AuthCallbackPage from "./pages/AuthCallbackPage";
-import PaymentPage from "./pages/PaymentPage";
 import NotFound from "./pages/NotFound";
-import PanicButtonPage from "./pages/PanicButtonPage";
-import AdminUsersPage from "./pages/admin/AdminUsersPage";
-import AdminZonesPage from "./pages/admin/AdminZonesPage";
-import AdminSlotsPage from "./pages/admin/AdminSlotsPage";
-import AdminCamerasPage from "./pages/admin/AdminCamerasPage";
-import AdminConfigPage from "./pages/admin/AdminConfigPage";
-import AdminDashboard from "./pages/AdminDashboard";
-import BanknoteDetectionPage from "./pages/BanknoteDetectionPage";
-import KioskPage from "./pages/KioskPage";
-import CheckInOutPage from "./pages/CheckInOutPage";
-import AdminViolationsPage from "./pages/admin/AdminViolationsPage";
-import AdminESP32Page from "./pages/admin/AdminESP32Page";
-import AdminRevenuePage from "./pages/admin/AdminRevenuePage";
-import DetectionHistoryPage from "./pages/DetectionHistoryPage";
 
-const queryClient = new QueryClient();
+// Lazy — user pages
+const BookingPage = lazy(() => import("./pages/BookingPage"));
+const HistoryPage = lazy(() => import("./pages/HistoryPage"));
+const CamerasPage = lazy(() => import("./pages/CamerasPage"));
+const MapPage = lazy(() => import("./pages/MapPage"));
+const SupportPage = lazy(() => import("./pages/SupportPage"));
+const SettingsPage = lazy(() => import("./pages/SettingsPage"));
+const PaymentPage = lazy(() => import("./pages/PaymentPage"));
+const PanicButtonPage = lazy(() => import("./pages/PanicButtonPage"));
+const BanknoteDetectionPage = lazy(() => import("./pages/BanknoteDetectionPage"));
+const KioskPage = lazy(() => import("./pages/KioskPage"));
+const CheckInOutPage = lazy(() => import("./pages/CheckInOutPage"));
+const DetectionHistoryPage = lazy(() => import("./pages/DetectionHistoryPage"));
+
+// Lazy — admin pages
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const AdminUsersPage = lazy(() => import("./pages/admin/AdminUsersPage"));
+const AdminZonesPage = lazy(() => import("./pages/admin/AdminZonesPage"));
+const AdminSlotsPage = lazy(() => import("./pages/admin/AdminSlotsPage"));
+const AdminCamerasPage = lazy(() => import("./pages/admin/AdminCamerasPage"));
+const AdminConfigPage = lazy(() => import("./pages/admin/AdminConfigPage"));
+const AdminViolationsPage = lazy(() => import("./pages/admin/AdminViolationsPage"));
+const AdminESP32Page = lazy(() => import("./pages/admin/AdminESP32Page"));
+const AdminRevenuePage = lazy(() => import("./pages/admin/AdminRevenuePage"));
 
 const App = () => (
   <Provider store={store}>
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <AuthProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            {/* Snowfall effect for dark mode */}
-            <SnowfallEffect />
-            {/* Dev log panel — download full session log while testing */}
-            <DevLogPanel />
-            <BrowserRouter>
-              <ErrorBoundary>
+    <ThemeProvider>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <SnowfallEffect />
+          <DevLogPanel />
+          <BrowserRouter>
+            <ErrorBoundary>
+              <Suspense fallback={<PageSkeleton />}>
                 <Routes>
                   {/* Public Routes */}
                   <Route path="/login" element={<LoginPage />} />
@@ -238,14 +241,13 @@ const App = () => (
 
                   <Route path="*" element={<NotFound />} />
                 </Routes>
-              </ErrorBoundary>
-              {/* Global Contact Widget */}
-              <ContactWidget />
-            </BrowserRouter>
-          </TooltipProvider>
-        </AuthProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
+              </Suspense>
+            </ErrorBoundary>
+            <ContactWidget />
+          </BrowserRouter>
+        </TooltipProvider>
+      </AuthProvider>
+    </ThemeProvider>
   </Provider>
 );
 
