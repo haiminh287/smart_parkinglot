@@ -2,13 +2,20 @@
 Shared test fixtures for parking-service.
 """
 
+import os
 import uuid
 
 import pytest
 from infrastructure.models import Camera, CarSlot, Floor, ParkingLot, Zone
 from rest_framework.test import APIClient
 
-GATEWAY_SECRET = "gateway-internal-secret-key"
+GATEWAY_SECRET = os.environ.get("GATEWAY_SECRET", "test-secret-" + uuid.uuid4().hex[:8])
+
+
+@pytest.fixture(autouse=True)
+def _set_gateway_secret_env(monkeypatch):
+    """Ensure GATEWAY_SECRET is set for every test."""
+    monkeypatch.setenv("GATEWAY_SECRET", GATEWAY_SECRET)
 
 
 @pytest.fixture

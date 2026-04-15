@@ -3,6 +3,7 @@ Comprehensive tests for payment-service-fastapi.
 Tests: Initiate, verify, list, get, get by booking_id.
 """
 
+import os
 import uuid
 import pytest
 from httpx import AsyncClient, ASGITransport
@@ -10,7 +11,7 @@ from httpx import AsyncClient, ASGITransport
 from app.main import app
 
 
-GATEWAY_SECRET = "gateway-internal-secret-key"
+GATEWAY_SECRET = os.environ.get("GATEWAY_SECRET", "test-secret-for-ci")
 TEST_USER_ID = "test-user-uuid-payment"
 
 

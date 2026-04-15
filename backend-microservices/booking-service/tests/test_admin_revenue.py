@@ -2,6 +2,7 @@
 Tests for admin revenue API endpoints.
 """
 
+import os
 import uuid
 from datetime import timedelta
 from decimal import Decimal
@@ -13,7 +14,7 @@ from rest_framework.test import APIClient
 
 from bookings.models import Booking
 
-GATEWAY_SECRET = "gateway-internal-secret-key"
+GATEWAY_SECRET = os.environ.get("GATEWAY_SECRET", "test-secret-for-ci")
 
 
 @pytest.fixture

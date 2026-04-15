@@ -3,6 +3,7 @@ Comprehensive tests for parking-service.
 Tests: ParkingLot, Floor, Zone, CarSlot, Camera models and ViewSet CRUD.
 """
 
+import os
 import uuid
 import pytest
 from django.test import TestCase
@@ -17,7 +18,7 @@ from infrastructure.models import ParkingLot, Floor, Zone, CarSlot, Camera
 
 def gateway_headers():
     return {
-        "HTTP_X_GATEWAY_SECRET": "gateway-internal-secret-key",
+        "HTTP_X_GATEWAY_SECRET": os.environ.get("GATEWAY_SECRET", "test-secret-for-ci"),
         "HTTP_X_USER_ID": "00000000-0000-0000-0000-000000000001",
         "HTTP_X_USER_EMAIL": "admin@parksmart.com",
     }

@@ -40,7 +40,13 @@ BOOKING_URL  = "http://localhost:8004"
 PAYMENT_URL  = "http://localhost:8007"
 AI_URL       = "http://localhost:8009"
 
-GATEWAY_SECRET = "gateway-internal-secret-key"
+GATEWAY_SECRET = os.environ.get("GATEWAY_SECRET")
+if not GATEWAY_SECRET:
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
+    GATEWAY_SECRET = os.environ.get("GATEWAY_SECRET")
+    if not GATEWAY_SECRET:
+        raise RuntimeError("GATEWAY_SECRET env var required. Set it or create .env")
 IMAGES_DIR = os.path.join(os.path.dirname(__file__), "ai-service-fastapi", "app", "images")
 
 # Test data

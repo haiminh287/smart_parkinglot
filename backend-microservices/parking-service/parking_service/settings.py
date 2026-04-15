@@ -3,6 +3,7 @@ Django settings for parking_service project.
 """
 
 from pathlib import Path
+
 from decouple import config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -111,14 +112,15 @@ REST_FRAMEWORK = {
         'rest_framework.parsers.MultiPartParser',
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 20,
+    'PAGE_SIZE': 200,
 }
 
 # Gateway authentication - All requests must come through gateway
-GATEWAY_SECRET = config('GATEWAY_SECRET', default='gateway-internal-secret-key')
+GATEWAY_SECRET = config('GATEWAY_SECRET')  # required, no default — fail-fast if missing
 
 # Redis Cache — DB 3 (parking-service dedicated)
 import os
+
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.redis.RedisCache',
@@ -129,5 +131,7 @@ CACHES = {
 # RabbitMQ — credentials via environment (Bug 31 fix)
 RABBITMQ_URL = 'amqp://{}:{}@rabbitmq:5672/'.format(
     os.getenv('RABBITMQ_USER', 'admin'),
+    os.getenv('RABBITMQ_PASSWORD', 'admin'),
+)
     os.getenv('RABBITMQ_PASSWORD', 'admin'),
 )

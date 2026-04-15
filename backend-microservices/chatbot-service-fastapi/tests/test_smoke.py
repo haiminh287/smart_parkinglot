@@ -3,6 +3,7 @@ Smoke tests for chatbot-service-fastapi.
 Verifies health endpoint, __tablename__ mapping, and route prefixes.
 """
 
+import os
 import pytest
 from httpx import AsyncClient, ASGITransport
 
@@ -24,7 +25,7 @@ from app.models.chatbot import (
 async def client():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        ac.headers["X-Gateway-Secret"] = "gateway-internal-secret-key"
+        ac.headers["X-Gateway-Secret"] = os.environ.get("GATEWAY_SECRET", "test-secret-for-ci")
         ac.headers["X-User-ID"] = "test-user-uuid"
         yield ac
 

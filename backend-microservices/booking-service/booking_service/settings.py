@@ -147,7 +147,7 @@ REST_FRAMEWORK = {
 }
 
 # Gateway authentication - All requests must come through gateway
-GATEWAY_SECRET = config('GATEWAY_SECRET', default='gateway-internal-secret-key')
+GATEWAY_SECRET = config('GATEWAY_SECRET')  # required, no default — fail-fast if missing
 
 # Inter-service URLs
 PAYMENT_SERVICE_URL = os.environ.get('PAYMENT_SERVICE_URL', 'http://payment-service-fastapi:8007')

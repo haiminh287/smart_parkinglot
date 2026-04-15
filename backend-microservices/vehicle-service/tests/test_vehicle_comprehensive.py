@@ -3,6 +3,7 @@ Comprehensive tests for vehicle-service.
 Tests: Vehicle model, CRUD API, set-default, user isolation.
 """
 
+import os
 import uuid
 import pytest
 from django.test import TestCase
@@ -20,7 +21,7 @@ OTHER_USER_ID = "00000000-0000-0000-0000-000000000002"
 
 def gateway_headers(user_id=USER_ID, email="test@parksmart.com"):
     return {
-        "HTTP_X_GATEWAY_SECRET": "gateway-internal-secret-key",
+        "HTTP_X_GATEWAY_SECRET": os.environ.get("GATEWAY_SECRET", "test-secret-for-ci"),
         "HTTP_X_USER_ID": str(user_id),
         "HTTP_X_USER_EMAIL": email,
     }

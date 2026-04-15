@@ -2,12 +2,18 @@
 Shared test fixtures for vehicle-service.
 """
 
+import os
 import uuid
 import pytest
 from rest_framework.test import APIClient
 
-GATEWAY_SECRET = "gateway-internal-secret-key"
+GATEWAY_SECRET = os.environ.get("GATEWAY_SECRET", "test-secret-for-ci")
 TEST_USER_ID = str(uuid.uuid4())
+
+
+@pytest.fixture(autouse=True)
+def _set_gateway_secret_env(monkeypatch):
+    monkeypatch.setenv("GATEWAY_SECRET", GATEWAY_SECRET)
 
 
 @pytest.fixture

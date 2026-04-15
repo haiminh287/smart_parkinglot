@@ -9,6 +9,7 @@ Usage:
 """
 
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -19,8 +20,14 @@ import numpy as np
 
 # ── Config ────────────────────────────────────────────────────────────────── #
 
-BASE_URL = "http://localhost:8009"
-GATEWAY_SECRET = "gateway-internal-secret-key"
+BASE_URL = os.environ.get("AI_SERVICE_URL", "http://localhost:8009")
+GATEWAY_SECRET = os.environ.get("GATEWAY_SECRET")
+if not GATEWAY_SECRET:
+    from dotenv import load_dotenv
+    load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+    GATEWAY_SECRET = os.environ.get("GATEWAY_SECRET")
+    if not GATEWAY_SECRET:
+        raise RuntimeError("GATEWAY_SECRET env var required. Set it or create ../.env")
 AUTH_HEADERS = {"X-Gateway-Secret": GATEWAY_SECRET}
 
 SCRIPT_DIR = Path(__file__).resolve().parent

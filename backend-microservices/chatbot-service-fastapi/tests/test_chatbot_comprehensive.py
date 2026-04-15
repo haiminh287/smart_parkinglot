@@ -4,6 +4,7 @@ Tests: Chat, conversations CRUD, quick-actions, feedback,
        notifications, actions, preferences.
 """
 
+import os
 import uuid
 import pytest
 from httpx import AsyncClient, ASGITransport
@@ -11,7 +12,7 @@ from httpx import AsyncClient, ASGITransport
 from app.main import app
 
 
-GATEWAY_SECRET = "gateway-internal-secret-key"
+GATEWAY_SECRET = os.environ.get("GATEWAY_SECRET", "test-secret-for-ci")
 TEST_USER_ID = "test-user-uuid-chatbot"
 
 

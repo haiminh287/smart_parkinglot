@@ -3,6 +3,7 @@ API endpoint tests for banknote recognition.
 Tests the /ai/detect/banknote/ endpoint via ASGI transport.
 """
 
+import os
 import io
 import pytest
 from httpx import AsyncClient, ASGITransport
@@ -12,7 +13,7 @@ import numpy as np
 from app.main import app
 
 
-GATEWAY_SECRET = "gateway-internal-secret-key"
+GATEWAY_SECRET = os.environ.get("GATEWAY_SECRET", "test-secret-for-ci")
 
 
 @pytest.fixture

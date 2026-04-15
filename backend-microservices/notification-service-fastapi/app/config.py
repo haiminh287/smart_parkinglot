@@ -10,9 +10,9 @@ class Settings(BaseSettings):
     DB_HOST: str = "mysql"
     DB_PORT: int = 3306
     DB_USER: str = "parksmartuser"
-    DB_PASSWORD: str = "parksmartpass"
+    DB_PASSWORD: str  # required, no default
     DB_NAME: str = "parksmartdb"
-    GATEWAY_SECRET: str = "gateway-internal-secret-key"
+    GATEWAY_SECRET: str  # required, no default
     RABBITMQ_URL: str = "amqp://admin:admin@rabbitmq:5672/"
 
     @property

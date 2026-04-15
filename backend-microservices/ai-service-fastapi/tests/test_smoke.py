@@ -3,6 +3,7 @@ Smoke tests for ai-service-fastapi.
 Verifies health endpoint and __tablename__ mapping.
 """
 
+import os
 import sys
 import types
 
@@ -17,7 +18,7 @@ from app.models.ai import CameraFeed, PredictionLog, ModelVersion
 async def client():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        ac.headers["X-Gateway-Secret"] = "gateway-internal-secret-key"
+        ac.headers["X-Gateway-Secret"] = os.environ.get("GATEWAY_SECRET", "test-secret-for-ci")
         ac.headers["X-User-ID"] = "test-user-uuid"
         yield ac
 

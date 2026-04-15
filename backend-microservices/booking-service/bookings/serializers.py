@@ -16,14 +16,19 @@ logger = logging.getLogger(__name__)
 
 PARKING_SERVICE_URL = os.environ.get('PARKING_SERVICE_URL', 'http://parking-service:8000')
 VEHICLE_SERVICE_URL = os.environ.get('VEHICLE_SERVICE_URL', 'http://vehicle-service:8000')
-GATEWAY_SECRET = os.environ.get('GATEWAY_SECRET', 'gateway-internal-secret-key')
+
+
+def _get_gateway_secret():
+    """Lazy-read GATEWAY_SECRET from Django settings (avoid module-level fail)."""
+    from django.conf import settings as django_settings
+    return django_settings.GATEWAY_SECRET
 
 
 def _get_service_headers(user_id=None, user_email=None):
     """Build headers for inter-service calls."""
     headers = {
         'Content-Type': 'application/json',
-        'X-Gateway-Secret': GATEWAY_SECRET,
+        'X-Gateway-Secret': _get_gateway_secret(),
     }
     if user_id:
         headers['X-User-ID'] = str(user_id)

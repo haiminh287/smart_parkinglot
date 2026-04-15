@@ -3,13 +3,14 @@ Comprehensive tests for notification-service-fastapi.
 Tests: CRUD, unread count, mark read, mark all read, preferences.
 """
 
+import os
 import pytest
 from httpx import AsyncClient, ASGITransport
 
 from app.main import app
 
 
-GATEWAY_SECRET = "gateway-internal-secret-key"
+GATEWAY_SECRET = os.environ.get("GATEWAY_SECRET", "test-secret-for-ci")
 TEST_USER_ID = "test-user-uuid-notification"
 
 

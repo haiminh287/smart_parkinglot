@@ -4,6 +4,7 @@ Tests: PackagePricing model, Booking CRUD, check-in/check-out, cancellation,
        payment flow, booking stats, QR code, slot availability.
 """
 
+import os
 import uuid
 from datetime import timedelta
 from decimal import Decimal
@@ -23,7 +24,7 @@ from bookings.models import Booking, PackagePricing
 def gateway_headers(user_id="00000000-0000-0000-0000-000000000001", email="test@parksmart.com"):
     """Return gateway auth headers dict for APIClient credentials."""
     return {
-        "HTTP_X_GATEWAY_SECRET": "gateway-internal-secret-key",
+        "HTTP_X_GATEWAY_SECRET": os.environ.get("GATEWAY_SECRET", "test-secret-for-ci"),
         "HTTP_X_USER_ID": str(user_id),
         "HTTP_X_USER_EMAIL": email,
     }

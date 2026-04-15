@@ -9,9 +9,9 @@ class Settings(BaseSettings):
     DB_PORT: int = 3306
     DB_NAME: str = "parksmartdb"
     DB_USER: str = "root"
-    DB_PASSWORD: str = "rootpassword"
+    DB_PASSWORD: str  # required, no default
     DEBUG: bool = True
-    GATEWAY_SECRET: str = "gateway-internal-secret-key"
+    GATEWAY_SECRET: str  # required, no default
     MEDIA_ROOT: str = "/app/media"
     ML_MODELS_DIR: str = "/app/ml/models"
     PARKING_SERVICE_URL: str = "http://parking-service:8000"

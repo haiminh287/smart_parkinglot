@@ -2,12 +2,19 @@
 Shared test fixtures for auth-service.
 """
 
+import os
 import uuid
 import pytest
 from rest_framework.test import APIClient
 from users.models import User
 
-GATEWAY_SECRET = "gateway-internal-secret-key"
+GATEWAY_SECRET = os.environ.get("GATEWAY_SECRET", "test-secret-" + uuid.uuid4().hex[:8])
+
+
+@pytest.fixture(autouse=True)
+def _set_gateway_secret_env(monkeypatch):
+    """Ensure GATEWAY_SECRET is set for every test."""
+    monkeypatch.setenv("GATEWAY_SECRET", GATEWAY_SECRET)
 
 
 @pytest.fixture

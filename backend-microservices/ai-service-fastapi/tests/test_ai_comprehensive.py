@@ -4,6 +4,7 @@ Tests: Health, detection endpoints, parking endpoints, ESP32 endpoints,
        camera endpoints, metrics, training, engine modules.
 """
 
+import os
 import io
 import pytest
 from unittest.mock import patch, MagicMock, AsyncMock
@@ -16,7 +17,7 @@ from app.main import app
 # FIXTURES
 # ═══════════════════════════════════════════════════
 
-GATEWAY_SECRET = "gateway-internal-secret-key"
+GATEWAY_SECRET = os.environ.get("GATEWAY_SECRET", "test-secret-for-ci")
 TEST_USER_ID = "test-user-uuid"
 
 

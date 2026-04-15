@@ -3,6 +3,7 @@ Smoke tests for booking-service.
 Verifies service startup, DB connectivity, and Redis connectivity.
 """
 
+import os
 import pytest
 from django.test import TestCase
 from rest_framework.test import APIClient
@@ -14,7 +15,7 @@ class TestHealthCheck(TestCase):
 
     def setUp(self):
         self.client = APIClient()
-        self.client.defaults['HTTP_X_GATEWAY_SECRET'] = 'gateway-internal-secret-key'
+        self.client.defaults['HTTP_X_GATEWAY_SECRET'] = os.environ.get("GATEWAY_SECRET", "test-secret-for-ci")
         self.client.defaults['HTTP_X_USER_ID'] = 'test-user-uuid'
         self.client.defaults['HTTP_X_USER_EMAIL'] = 'test@example.com'
 

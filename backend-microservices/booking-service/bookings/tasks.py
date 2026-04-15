@@ -3,6 +3,7 @@ Celery tasks for booking-service.
 """
 from celery import shared_task
 from django.utils import timezone
+from django.conf import settings as django_settings
 from datetime import timedelta
 from .models import Booking
 import requests
@@ -60,7 +61,7 @@ def auto_cancel_unpaid_bookings():
         if booking.slot_id:
             try:
                 PARKING_SERVICE_URL = os.environ.get('PARKING_SERVICE_URL', 'http://parking-service:8000')
-                GATEWAY_SECRET = os.environ.get('GATEWAY_SECRET', 'gateway-internal-secret-key')
+                GATEWAY_SECRET = django_settings.GATEWAY_SECRET
                 requests.patch(
                     f'{PARKING_SERVICE_URL}/parking/slots/{booking.slot_id}/update-status/',
                     json={'status': 'available'},
