@@ -17,7 +17,7 @@ ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost').split(',')
 
 # Application definition
 INSTALLED_APPS = [
-    'django.contrib.admin',
+    # 'django.contrib.admin',  # Disabled — gateway trust model, no admin interface
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',

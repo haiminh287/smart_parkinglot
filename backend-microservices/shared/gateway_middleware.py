@@ -25,8 +25,8 @@ class GatewayAuthMiddleware:
         self.get_response = get_response
     
     def __call__(self, request):
-        # Skip for health checks, test endpoints, and Django admin
-        if request.path.endswith('/health/') or '/_test/' in request.path or request.path.startswith('/admin/'):
+        # Skip for health checks and test endpoints
+        if request.path.endswith('/health/') or '/_test/' in request.path:
             return self.get_response(request)
         
         # Public endpoints that don't need gateway secret
