@@ -1,9 +1,10 @@
 package handler
 
 import (
+	"encoding/json"
 	"fmt"
-	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -17,13 +18,27 @@ import (
 )
 
 // ProxyHandler forwards requests to downstream microservices
+// with a shared transport for connection pooling.
 type ProxyHandler struct {
-	cfg *config.Config
+	cfg       *config.Config
+	transport *http.Transport
 }
 
-// NewProxyHandler creates a new ProxyHandler
+// NewProxyHandler creates a ProxyHandler with shared transport.
 func NewProxyHandler(cfg *config.Config) *ProxyHandler {
-	return &ProxyHandler{cfg: cfg}
+	return &ProxyHandler{
+		cfg: cfg,
+		transport: &http.Transport{
+			MaxIdleConns:        200,
+			MaxIdleConnsPerHost: 50,
+			IdleConnTimeout:     90 * time.Second,
+			DialContext: (&net.Dialer{
+				Timeout:   5 * time.Second,
+				KeepAlive: 30 * time.Second,
+			}).DialContext,
+			ResponseHeaderTimeout: 60 * time.Second,
+		},
+	}
 }
 
 // HandleProxy forwards the request to the appropriate microservice
@@ -53,10 +68,7 @@ func (h *ProxyHandler) HandleProxy(c *gin.Context) {
 	// Create reverse proxy
 	proxy := httputil.NewSingleHostReverseProxy(targetURL)
 
-	// Set custom transport with response header timeout to prevent hung connections
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-	transport.ResponseHeaderTimeout = 60 * time.Second
-	proxy.Transport = transport
+	proxy.Transport = h.transport
 
 	// Customize the Director to set the correct path and headers
 	originalDirector := proxy.Director
@@ -105,9 +117,13 @@ func (h *ProxyHandler) HandleProxy(c *gin.Context) {
 	// Handle errors
 	proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
 		log.Printf("Proxy error for %s -> %s: %v", normalizedPath, route.URL, err)
+		body, _ := json.Marshal(map[string]string{
+			"error":   "Service unavailable",
+			"service": route.Name,
+		})
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadGateway)
-		io.WriteString(w, `{"error":"Service unavailable","service":"`+route.Name+`"}`)
+		w.Write(body)
 	}
 
 	// Modify response to handle cookies and redirect path normalization

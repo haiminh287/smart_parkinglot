@@ -225,3 +225,18 @@ func parseCSVEnv(key string, defaultValue []string) []string {
 
 	return allowed
 }
+
+// ServiceURLs returns a map of all configured upstream service URLs.
+func (c *Config) ServiceURLs() map[string]string {
+	return map[string]string{
+		"auth":         c.AuthServiceURL,
+		"parking":      c.ParkingServiceURL,
+		"vehicle":      c.VehicleServiceURL,
+		"booking":      c.BookingServiceURL,
+		"notification": c.NotificationServiceURL,
+		"realtime":     c.RealtimeServiceURL,
+		"payment":      c.PaymentServiceURL,
+		"ai":           c.AIServiceURL,
+		"chatbot":      c.ChatbotServiceURL,
+	}
+}
