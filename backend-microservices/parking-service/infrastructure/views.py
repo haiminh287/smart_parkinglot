@@ -2,15 +2,18 @@
 Views for parking-service.
 """
 
-from rest_framework import viewsets, status
+import os
+from datetime import datetime
+
+from django.utils import timezone
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django.utils import timezone
-from datetime import datetime
-import os
 from shared.gateway_permissions import IsGatewayAuthenticated
-from .models import ParkingLot, Floor, Zone, CarSlot, Camera
-from .serializers import ParkingLotSerializer, FloorSerializer, ZoneSerializer, CarSlotSerializer, CameraSerializer
+
+from .models import Camera, CarSlot, Floor, ParkingLot, Zone
+from .serializers import (CameraSerializer, CarSlotSerializer, FloorSerializer,
+                          ParkingLotSerializer, ZoneSerializer)
 
 
 class ParkingLotViewSet(viewsets.ModelViewSet):
@@ -31,7 +34,7 @@ class ParkingLotViewSet(viewsets.ModelViewSet):
         
         if lat and lng:
             try:
-                from math import radians, cos, sin, asin, sqrt
+                from math import asin, cos, radians, sin, sqrt
                 
                 lat = float(lat)
                 lng = float(lng)
@@ -85,7 +88,7 @@ class ParkingLotViewSet(viewsets.ModelViewSet):
             )
         
         try:
-            from math import radians, cos, sin, asin, sqrt
+            from math import asin, cos, radians, sin, sqrt
             
             lat = float(lat)
             lng = float(lng)
@@ -265,8 +268,17 @@ class CarSlotViewSet(viewsets.ModelViewSet):
     permission_classes = [IsGatewayAuthenticated]
     
     def get_queryset(self):
-        """Filter slots by zone_id, status, vehicle_type."""
+        """Filter slots by lot_id, zone_id, status, vehicle_type."""
         queryset = super().get_queryset()
+        
+        lot_id = self.request.query_params.get('lot_id')
+        if lot_id:
+            try:
+                import uuid
+                uuid.UUID(lot_id)
+                queryset = queryset.filter(zone__floor__parking_lot_id=lot_id)
+            except (ValueError, TypeError, AttributeError):
+                queryset = queryset.none()
         
         zone_id = self.request.query_params.get('zone_id')
         if zone_id:
@@ -301,9 +313,10 @@ class CarSlotViewSet(viewsets.ModelViewSet):
             )
         
         try:
-            import requests
             from datetime import datetime
-            
+
+            import requests
+
             # Get all slots in zone
             slots = self.queryset.filter(zone_id=zone_id)
             
@@ -473,5 +486,3 @@ class CameraViewSet(viewsets.ModelViewSet):
             'name': camera.name,
             'zone': camera.zone.name if camera.zone else None,
         })
-
-
