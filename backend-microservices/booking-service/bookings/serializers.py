@@ -3,7 +3,7 @@ Serializers for booking-service with nested objects matching frontend expectatio
 """
 
 from rest_framework import serializers
-from django.db import transaction
+from django.db import connection, transaction
 from django.utils import timezone
 import uuid
 import json
@@ -273,60 +273,78 @@ class CreateBookingSerializer(serializers.Serializer):
         })
         
         # ===== Create booking with real data =====
-        with transaction.atomic():
-            if slot_id and end_time and start_time:
-                conflict = Booking.objects.select_for_update().filter(
-                    slot_id=slot_id,
-                    check_in_status__in=['not_checked_in', 'checked_in'],
-                    start_time__lt=end_time,
-                    end_time__gt=start_time,
-                ).exists()
-                if conflict:
+        # Advisory lock prevents double-booking race (S1-CRIT-5)
+        lock_name = f"slot_booking_{slot_id}" if slot_id else None
+        lock_acquired = False
+
+        try:
+            if lock_name:
+                with connection.cursor() as cursor:
+                    cursor.execute("SELECT GET_LOCK(%s, 5)", [lock_name])
+                    lock_acquired = cursor.fetchone()[0] == 1
+                if not lock_acquired:
                     raise serializers.ValidationError({
-                        'slot_id': 'Slot đã được đặt trong khoảng thời gian này. Vui lòng chọn thời gian khác.'
+                        'slot_id': 'Hệ thống đang bận xử lý slot này, vui lòng thử lại.'
                     })
 
-            booking = Booking.objects.create(
-                id=booking_id,
-                user_id=user_id,
-                user_email=user_email,
-                vehicle_id=vehicle_id,
-                vehicle_license_plate=vehicle_license_plate,
-                vehicle_type=vehicle_type,
-                parking_lot_id=parking_lot_id,
-                parking_lot_name=parking_lot_name,
-                floor_id=floor_id,
-                floor_level=floor_level,
-                zone_id=zone_id,
-                zone_name=zone_name,
-                slot_id=slot_id,
-                slot_code=slot_code,
-                package_type=package_type,
-                start_time=start_time,
-                end_time=end_time,
-                hourly_start=start_time if package_type == 'hourly' else None,
-                hourly_end=end_time if package_type == 'hourly' else None,
-                payment_method=validated_data.get('payment_method', 'on_exit'),
-                payment_status='pending',
-                price=price,
-                check_in_status='not_checked_in',
-                qr_code_data=qr_data
-            )
-        
-        # ===== Mark slot as reserved in parking-service =====
-        if slot_id:
-            try:
-                headers = _get_service_headers()
-                http_requests.patch(
-                    f'{PARKING_SERVICE_URL}/parking/slots/{slot_id}/',
-                    json={'status': 'reserved'},
-                    headers=headers,
-                    timeout=3
+            with transaction.atomic():
+                if slot_id and end_time and start_time:
+                    conflict = Booking.objects.filter(
+                        slot_id=slot_id,
+                        check_in_status__in=['not_checked_in', 'checked_in'],
+                        start_time__lt=end_time,
+                        end_time__gt=start_time,
+                    ).exists()
+                    if conflict:
+                        raise serializers.ValidationError({
+                            'slot_id': 'Slot đã được đặt trong khoảng thời gian này. Vui lòng chọn thời gian khác.'
+                        })
+
+                booking = Booking.objects.create(
+                    id=booking_id,
+                    user_id=user_id,
+                    user_email=user_email,
+                    vehicle_id=vehicle_id,
+                    vehicle_license_plate=vehicle_license_plate,
+                    vehicle_type=vehicle_type,
+                    parking_lot_id=parking_lot_id,
+                    parking_lot_name=parking_lot_name,
+                    floor_id=floor_id,
+                    floor_level=floor_level,
+                    zone_id=zone_id,
+                    zone_name=zone_name,
+                    slot_id=slot_id,
+                    slot_code=slot_code,
+                    package_type=package_type,
+                    start_time=start_time,
+                    end_time=end_time,
+                    hourly_start=start_time if package_type == 'hourly' else None,
+                    hourly_end=end_time if package_type == 'hourly' else None,
+                    payment_method=validated_data.get('payment_method', 'on_exit'),
+                    payment_status='pending',
+                    price=price,
+                    check_in_status='not_checked_in',
+                    qr_code_data=qr_data
                 )
-            except Exception as e:
-                logger.warning(f"Failed to reserve slot {slot_id}: {e}")
-        
-        return booking
+
+            # ===== Mark slot as reserved in parking-service =====
+            if slot_id:
+                try:
+                    headers = _get_service_headers()
+                    http_requests.patch(
+                        f'{PARKING_SERVICE_URL}/parking/slots/{slot_id}/',
+                        json={'status': 'reserved'},
+                        headers=headers,
+                        timeout=3
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to reserve slot {slot_id}: {e}")
+
+            return booking
+        finally:
+            if lock_acquired and lock_name:
+                with connection.cursor() as cursor:
+                    cursor.execute("SELECT RELEASE_LOCK(%s)", [lock_name])
 
 
 class BookingSerializer(serializers.ModelSerializer):
