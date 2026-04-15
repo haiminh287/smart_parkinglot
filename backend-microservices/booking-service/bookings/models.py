@@ -128,3 +128,31 @@ class Booking(models.Model):
 
     def __str__(self):
         return f"{self.user_email} - {self.slot_code} ({self.check_in_status})"
+
+
+class OutboxEvent(models.Model):
+    """Transactional outbox — events published to RabbitMQ by Celery worker.
+
+    event_id is UUID unique key for consumer-side dedup (RabbitMQ at-least-once).
+    """
+
+    id = models.AutoField(primary_key=True)
+    event_id = models.UUIDField(default=uuid.uuid4, unique=True, db_index=True)
+    event_type = models.CharField(max_length=64, db_index=True)
+    payload = models.JSONField()
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    published_at = models.DateTimeField(null=True, db_index=True)
+    error_count = models.IntegerField(default=0)
+    last_error = models.TextField(blank=True)
+    dead_lettered_at = models.DateTimeField(null=True, db_index=True)
+
+    class Meta:
+        indexes = [
+            models.Index(
+                fields=['published_at', 'dead_lettered_at', 'created_at'],
+                name='idx_outbox_pending',
+            ),
+        ]
+
+    def __str__(self):
+        return f"OutboxEvent({self.event_type}, {self.event_id})"

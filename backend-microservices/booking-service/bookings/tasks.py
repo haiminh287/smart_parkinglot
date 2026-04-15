@@ -4,11 +4,16 @@ Celery tasks for booking-service.
 from celery import shared_task
 from django.utils import timezone
 from django.conf import settings as django_settings
+from django.db.models import F
 from datetime import timedelta
 from .models import Booking
-import requests
+import json
 import os
+import pika
+import requests
 import logging
+
+from .events import create_slot_event, create_booking_event
 
 logger = logging.getLogger(__name__)
 
@@ -41,38 +46,10 @@ def auto_cancel_unpaid_bookings():
         booking.save(update_fields=['check_in_status', 'updated_at'])
         cancelled_count += 1
         
-        # Broadcast slot release if slot was reserved
+        # Release slot via outbox event
         if booking.slot_id:
-            try:
-                REALTIME_SERVICE_URL = os.environ.get('REALTIME_SERVICE_URL', 'http://realtime-service:8006')
-                requests.post(
-                    f'{REALTIME_SERVICE_URL}/api/broadcast/slot-status/',
-                    json={
-                        'slotId': str(booking.slot_id),
-                        'zoneId': str(booking.zone_id) if booking.zone_id else None,
-                        'status': 'available',
-                        'vehicleType': booking.vehicle_type,
-                    },
-                    timeout=2
-                )
-            except Exception as e:
-                logger.warning("Failed to broadcast slot release: %s", e)
-
-        if booking.slot_id:
-            try:
-                PARKING_SERVICE_URL = os.environ.get('PARKING_SERVICE_URL', 'http://parking-service:8000')
-                GATEWAY_SECRET = django_settings.GATEWAY_SECRET
-                requests.patch(
-                    f'{PARKING_SERVICE_URL}/parking/slots/{booking.slot_id}/update-status/',
-                    json={'status': 'available'},
-                    headers={
-                        'X-Gateway-Secret': GATEWAY_SECRET,
-                        'Content-Type': 'application/json'
-                    },
-                    timeout=3
-                )
-            except Exception as e:
-                logger.warning("Failed to release slot %s in parking-service on auto-cancel: %s", booking.slot_id, e)
+            create_slot_event(booking.slot_id, 'available', booking)
+        create_booking_event('booking.cancelled', booking)
 
         # TODO: Send notification to user
         try:
@@ -158,3 +135,100 @@ def check_no_show_bookings():
     
     logger.info("Sent no-show warnings for %s bookings", warned_count)
     return warned_count
+
+
+# ---------------------------------------------------------------------------
+# Outbox publish tasks
+# ---------------------------------------------------------------------------
+
+DLQ_THRESHOLD = 5
+
+_amqp_connection = None
+_amqp_channel = None
+
+
+def _get_amqp_channel():
+    """Get or create persistent AMQP channel for outbox publishing."""
+    global _amqp_connection, _amqp_channel
+    if _amqp_connection is None or _amqp_connection.is_closed:
+        _amqp_connection = pika.BlockingConnection(
+            pika.URLParameters(os.environ.get('RABBITMQ_URL', 'amqp://guest:guest@rabbitmq:5672/'))
+        )
+        _amqp_channel = _amqp_connection.channel()
+        _amqp_channel.exchange_declare('parksmart.events', exchange_type='topic', durable=True)
+        _amqp_channel.exchange_declare('parksmart.events.dlq', exchange_type='topic', durable=True)
+    return _amqp_channel
+
+
+@shared_task
+def publish_outbox_events():
+    """Poll outbox table and publish pending events to RabbitMQ. Runs every 2s."""
+    from bookings.models import OutboxEvent
+
+    events = OutboxEvent.objects.filter(
+        published_at__isnull=True,
+        dead_lettered_at__isnull=True,
+        error_count__lt=DLQ_THRESHOLD,
+    ).order_by('created_at')[:100]
+
+    if not events.exists():
+        return
+
+    channel = _get_amqp_channel()
+
+    for event in events:
+        try:
+            payload = {**event.payload, 'event_id': str(event.event_id)}
+            channel.basic_publish(
+                exchange='parksmart.events',
+                routing_key=event.event_type,
+                body=json.dumps(payload, default=str),
+                properties=pika.BasicProperties(
+                    delivery_mode=2,
+                    message_id=str(event.event_id),
+                ),
+            )
+            event.published_at = timezone.now()
+            event.save(update_fields=['published_at'])
+        except Exception as exc:
+            logger.warning("Outbox publish failed for %s: %s", event.event_id, exc)
+            OutboxEvent.objects.filter(id=event.id).update(
+                error_count=F('error_count') + 1,
+                last_error=str(exc)[:500],
+            )
+            global _amqp_connection
+            _amqp_connection = None
+
+
+@shared_task
+def process_dead_letter_events():
+    """Move events that failed too many times to DLQ exchange. Runs every 5 min."""
+    from bookings.models import OutboxEvent
+
+    failed = OutboxEvent.objects.filter(
+        published_at__isnull=True,
+        dead_lettered_at__isnull=True,
+        error_count__gte=DLQ_THRESHOLD,
+    )
+
+    if not failed.exists():
+        return
+
+    channel = _get_amqp_channel()
+
+    for event in failed:
+        try:
+            payload = {**event.payload, 'event_id': str(event.event_id), 'dlq_reason': event.last_error}
+            channel.basic_publish(
+                exchange='parksmart.events.dlq',
+                routing_key=event.event_type,
+                body=json.dumps(payload, default=str),
+                properties=pika.BasicProperties(delivery_mode=2),
+            )
+        except Exception as exc:
+            logger.error("DLQ publish failed for %s: %s", event.event_id, exc)
+
+    count = failed.count()
+    failed.update(dead_lettered_at=timezone.now())
+    if count:
+        logger.error("Moved %s events to DLQ", count)

@@ -114,6 +114,7 @@ services:
       - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
       - RABBITMQ_USER=${RABBITMQ_USER}
       - RABBITMQ_PASSWORD=${RABBITMQ_PASS}
+      - REALTIME_SERVICE_URL=http://realtime-service-go:8006
       - GATEWAY_SECRET=${GATEWAY_SECRET:?GATEWAY_SECRET must be set in .env}
       - PYTHONPATH=/app:/app/shared
     ports:
@@ -122,6 +123,8 @@ services:
       - ./shared:/app/shared
     depends_on:
       mysql:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     networks:
       - parksmart-network

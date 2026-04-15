@@ -27,6 +27,14 @@ app.conf.beat_schedule = {
         'task': 'bookings.tasks.check_no_show_bookings',
         'schedule': 300.0,  # Every 5 minutes
     },
+    'publish-outbox-events': {
+        'task': 'bookings.tasks.publish_outbox_events',
+        'schedule': 2.0,
+    },
+    'process-dead-letter-events': {
+        'task': 'bookings.tasks.process_dead_letter_events',
+        'schedule': 300.0,
+    },
 }
 
 app.conf.timezone = 'Asia/Ho_Chi_Minh'

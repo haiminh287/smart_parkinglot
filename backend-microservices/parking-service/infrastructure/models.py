@@ -122,6 +122,16 @@ class CarSlot(models.Model):
         return f"{self.code} ({self.zone.name})"
 
 
+class ProcessedEvent(models.Model):
+    """Track consumed events for idempotent processing (dedup)."""
+    event_id = models.UUIDField(primary_key=True)
+    event_type = models.CharField(max_length=64)
+    processed_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        db_table = 'processed_events'
+
+
 class Camera(models.Model):
     """Camera model - Belongs to Zone."""
 
