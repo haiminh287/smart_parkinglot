@@ -100,14 +100,14 @@ services:
   # gateway-service-go có validation fail-fast cho ENV=production
   gateway-service-go:
     environment:
-      - ENV=development
+      - ENV=production
       - DEBUG=False
       - ALLOWED_HOSTS=api.ghepdoicaulong.shop,localhost
       # FE origins: app subdomain + parksmart subdomain
       - CORS_ALLOWED_ORIGINS=https://app.ghepdoicaulong.shop,https://parksmart.ghepdoicaulong.shop
-      # Cookie: no domain/secure restriction for local testing (ENV=development)
-      - SESSION_COOKIE_DOMAIN=
-      - SESSION_COOKIE_SECURE=false
-      - SESSION_COOKIE_SAMESITE=Lax
+      # Cookie: production hardening (cross-subdomain)
+      - SESSION_COOKIE_DOMAIN=.ghepdoicaulong.shop
+      - SESSION_COOKIE_SECURE=true
+      - SESSION_COOKIE_SAMESITE=None
       # OAuth callback redirect về app subdomain
       - FE_AUTH_CALLBACK_URL=https://app.ghepdoicaulong.shop/auth/callback
