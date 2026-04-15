@@ -42,7 +42,7 @@ Find and verify `ApiConfig` (or similar ScriptableObject/MonoBehaviour) settings
 | -------------- | -------------------------------------------------- |
 | API Base URL   | `http://localhost:8000/api`                        |
 | WebSocket URL  | `ws://localhost:8006/ws`                           |
-| Gateway Secret | `gw-prod-wnMbXWEHc49KXVjhae4IGU7TZfoj4HHEDTOtzYvE` |
+| Gateway Secret | `<from .env — see .env.example>` |
 
 ### Cloudflare Domain (Production)
 

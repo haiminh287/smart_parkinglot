@@ -6,6 +6,11 @@
  */
 
 import { test, expect } from "@playwright/test";
+import * as dotenv from "dotenv";
+
+dotenv.config({ path: ".env.test" });
+
+const GATEWAY_SECRET = process.env.E2E_GATEWAY_SECRET || "";
 
 // ── CAMERAS PAGE ──
 
@@ -100,7 +105,7 @@ test.describe("Payment Page", () => {
         Cookie: (await page.context().cookies())
           .map((c) => `${c.name}=${c.value}`)
           .join("; "),
-        "X-Gateway-Secret": "gateway-internal-secret-key",
+        "X-Gateway-Secret": GATEWAY_SECRET,
       },
     });
     let bookingId = "test-booking-id";

@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 
 from httpx import ASGITransport, AsyncClient
 
@@ -15,7 +16,7 @@ async def main() -> None:
     results = {}
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        client.headers["X-Gateway-Secret"] = "gateway-internal-secret-key"
+        client.headers["X-Gateway-Secret"] = os.environ.get("GATEWAY_SECRET", "test-secret-for-ci")
         client.headers["X-User-ID"] = "qa-user"
         client.headers["X-User-Email"] = "qa@example.com"
 

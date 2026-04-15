@@ -7,9 +7,15 @@
  */
 
 import { test, expect } from "@playwright/test";
+import * as dotenv from "dotenv";
 
-const GATEWAY_URL = "http://localhost:8000";
-const SECRET = "gateway-internal-secret-key";
+dotenv.config({ path: ".env.test" });
+
+const GATEWAY_URL = process.env.E2E_GATEWAY_URL || "http://localhost:8000";
+const SECRET = process.env.E2E_GATEWAY_SECRET;
+if (!SECRET) {
+  throw new Error("E2E_GATEWAY_SECRET must be set in .env.test or environment");
+}
 
 function authHeaders(cookies: { name: string; value: string }[]) {
   return {

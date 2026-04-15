@@ -10,8 +10,12 @@
  */
 
 import { test, expect } from "@playwright/test";
+import * as dotenv from "dotenv";
 
-const GATEWAY_URL = "http://localhost:8000";
+dotenv.config({ path: ".env.test" });
+
+const GATEWAY_URL = process.env.E2E_GATEWAY_URL || "http://localhost:8000";
+const GATEWAY_SECRET = process.env.E2E_GATEWAY_SECRET || "";
 
 // ─── FULL BOOKING LIFECYCLE ─────────────────────────────────────────────────
 
@@ -48,7 +52,7 @@ test.describe("Full Booking Lifecycle", () => {
         Cookie: (await page.context().cookies())
           .map((c) => `${c.name}=${c.value}`)
           .join("; "),
-        "X-Gateway-Secret": "gateway-internal-secret-key",
+        "X-Gateway-Secret": GATEWAY_SECRET,
       },
     });
 
@@ -207,7 +211,7 @@ test.describe("Notifications", () => {
         Cookie: (await page.context().cookies())
           .map((c) => `${c.name}=${c.value}`)
           .join("; "),
-        "X-Gateway-Secret": "gateway-internal-secret-key",
+        "X-Gateway-Secret": GATEWAY_SECRET,
       },
     });
     expect(res.status()).toBeLessThan(500);
@@ -302,7 +306,7 @@ test.describe("Vehicle Management via API", () => {
         Cookie: (await page.context().cookies())
           .map((c) => `${c.name}=${c.value}`)
           .join("; "),
-        "X-Gateway-Secret": "gateway-internal-secret-key",
+        "X-Gateway-Secret": GATEWAY_SECRET,
       },
     });
 

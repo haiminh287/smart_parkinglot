@@ -6,6 +6,7 @@
 .env
 .env.*
 !.env.example
+!.env.test.example
 *.local
 
 # === Python ===
@@ -136,3 +137,4 @@ backend-microservices/test_e2e_results.json
 
 # === Vitest timestamp files ===
 vitest.config.ts.timestamp-*
+.gitnexus
