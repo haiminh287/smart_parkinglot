@@ -349,8 +349,8 @@ class CreateBookingSerializer(serializers.Serializer):
 
 class BookingSerializer(serializers.ModelSerializer):
     """
-    Serializer for Booking model with nested objects.
-    Builds Vehicle, ParkingLot, Floor, Zone, CarSlot objects from denormalized data.
+    Read-only serializer for Booking model.
+    Uses denormalized model fields directly — ZERO HTTP calls, ZERO side-effects.
     """
 
     vehicle = serializers.SerializerMethodField()
@@ -370,13 +370,12 @@ class BookingSerializer(serializers.ModelSerializer):
     checkedOutAt = serializers.DateTimeField(source='checked_out_at')
     qrCodeData = serializers.CharField(source='qr_code_data')
     createdAt = serializers.DateTimeField(source='created_at')
-    
-    # Add hourly booking fields
+
     hourlyStart = serializers.DateTimeField(source='hourly_start', allow_null=True, required=False)
     hourlyEnd = serializers.DateTimeField(source='hourly_end', allow_null=True, required=False)
     extendedUntil = serializers.DateTimeField(source='extended_until', allow_null=True, required=False)
     lateFeeApplied = serializers.BooleanField(source='late_fee_applied', required=False)
-    
+
     class Meta:
         model = Booking
         fields = [
@@ -386,152 +385,66 @@ class BookingSerializer(serializers.ModelSerializer):
             'checkedInAt', 'checkedOutAt', 'qrCodeData', 'createdAt',
             'hourlyStart', 'hourlyEnd', 'extendedUntil', 'lateFeeApplied'
         ]
-    
+
     def get_vehicle(self, obj):
-        """Build Vehicle object - fetch real data if license plate is empty."""
-        vehicle_type = obj.vehicle_type
-        if vehicle_type:
-            vt = vehicle_type.lower()
-            if vt == 'car':
-                vehicle_type = 'Car'
-            elif vt in ['motorbike', 'motorcycle', 'bike']:
-                vehicle_type = 'Motorbike'
-        
-        license_plate = obj.vehicle_license_plate
-        if not license_plate or license_plate == 'PLACEHOLDER':
-            vehicle_info = _fetch_vehicle_info(obj.vehicle_id, obj.user_id)
-            if vehicle_info:
-                license_plate = vehicle_info['license_plate']
-                vehicle_type = vehicle_info['vehicle_type']
-                # Update denormalized data
-                Booking.objects.filter(id=obj.id).update(
-                    vehicle_license_plate=license_plate,
-                    vehicle_type=vehicle_type
-                )
-        
+        """Build Vehicle object from denormalized fields. No HTTP calls."""
+        vehicle_type = obj.vehicle_type or 'Car'
+        vt = vehicle_type.lower()
+        if vt == 'car':
+            vehicle_type = 'Car'
+        elif vt in ('motorbike', 'motorcycle', 'bike'):
+            vehicle_type = 'Motorbike'
+
         return {
             'id': str(obj.vehicle_id),
             'userId': str(obj.user_id),
-            'licensePlate': license_plate or '',
-            'vehicleType': vehicle_type or 'Car',
-            'name': license_plate or ''
+            'licensePlate': obj.vehicle_license_plate or '',
+            'vehicleType': vehicle_type,
+            'name': obj.vehicle_license_plate or '',
         }
-    
+
     def get_parking_lot(self, obj):
-        """Build ParkingLot object - fetch real data if name is empty."""
-        name = obj.parking_lot_name
-        if not name:
-            lot_info = _fetch_parking_lot_info(obj.parking_lot_id)
-            if lot_info:
-                name = lot_info['name']
-                # Update denormalized data for future reads
-                Booking.objects.filter(id=obj.id).update(parking_lot_name=name)
+        """Build ParkingLot object from denormalized fields. No HTTP calls."""
         return {
             'id': str(obj.parking_lot_id),
-            'name': name or ''
+            'name': obj.parking_lot_name or '',
         }
-    
+
     def get_floor(self, obj):
-        """Build Floor object - fetch real data if floor_id missing."""
-        floor_id = obj.floor_id
-        floor_level = obj.floor_level
-        
-        # Try to resolve floor from zone if missing
-        if not floor_id and obj.zone_id:
-            zone_info = _fetch_zone_info(obj.zone_id)
-            if zone_info and zone_info.get('floor_id'):
-                try:
-                    floor_id = uuid.UUID(str(zone_info['floor_id']))
-                    floor_info = _fetch_floor_info(floor_id)
-                    if floor_info:
-                        floor_level = floor_info.get('level')
-                    # Update denormalized data
-                    Booking.objects.filter(id=obj.id).update(
-                        floor_id=floor_id, floor_level=floor_level
-                    )
-                except (ValueError, TypeError):
-                    pass
-        
-        if not floor_id:
+        """Build Floor object from denormalized fields. No HTTP calls."""
+        if not obj.floor_id:
             return None
         return {
-            'id': str(floor_id),
+            'id': str(obj.floor_id),
             'parkingLotId': str(obj.parking_lot_id),
-            'level': floor_level,
-            'zones': []
+            'level': obj.floor_level,
+            'zones': [],
         }
-    
+
     def get_zone(self, obj):
-        """Build Zone object - fetch real data for capacity/slots."""
-        vehicle_type = obj.vehicle_type
-        if vehicle_type:
-            vt = vehicle_type.lower()
-            if vt == 'car':
-                vehicle_type = 'Car'
-            elif vt in ['motorbike', 'motorcycle', 'bike']:
-                vehicle_type = 'Motorbike'
-        
-        zone_name = obj.zone_name
-        floor_id = obj.floor_id
-        capacity = 0
-        available_slots = 0
-        
-        # Fetch real zone info if name is empty or to get real capacity
-        if not zone_name or zone_name == 'PLACEHOLDER':
-            zone_info = _fetch_zone_info(obj.zone_id)
-            if zone_info:
-                zone_name = zone_info['name']
-                capacity = zone_info.get('capacity', 0)
-                available_slots = zone_info.get('available_slots', 0)
-                if zone_info.get('floor_id') and not floor_id:
-                    try:
-                        floor_id = uuid.UUID(str(zone_info['floor_id']))
-                    except (ValueError, TypeError):
-                        pass
-                # Update denormalized data
-                updates = {'zone_name': zone_name}
-                if floor_id:
-                    updates['floor_id'] = floor_id
-                Booking.objects.filter(id=obj.id).update(**updates)
-        else:
-            # Still fetch capacity for display
-            zone_info = _fetch_zone_info(obj.zone_id)
-            if zone_info:
-                capacity = zone_info.get('capacity', 0)
-                available_slots = zone_info.get('available_slots', 0)
-                if zone_info.get('floor_id') and not floor_id:
-                    try:
-                        floor_id = uuid.UUID(str(zone_info['floor_id']))
-                        Booking.objects.filter(id=obj.id).update(floor_id=floor_id)
-                    except (ValueError, TypeError):
-                        pass
-        
+        """Build Zone object from denormalized fields. No HTTP calls."""
+        vehicle_type = obj.vehicle_type or 'Car'
+        vt = vehicle_type.lower()
+        if vt == 'car':
+            vehicle_type = 'Car'
+        elif vt in ('motorbike', 'motorcycle', 'bike'):
+            vehicle_type = 'Motorbike'
+
         return {
             'id': str(obj.zone_id),
-            'floorId': str(floor_id) if floor_id else None,
-            'name': zone_name or '',
+            'floorId': str(obj.floor_id) if obj.floor_id else None,
+            'name': obj.zone_name or '',
             'vehicleType': vehicle_type,
-            'capacity': capacity,
-            'availableSlots': available_slots
         }
-    
+
     def get_car_slot(self, obj):
-        """Build CarSlot object - fetch real data if code is empty."""
+        """Build CarSlot object from denormalized fields. No HTTP calls."""
         if not obj.slot_id:
             return None
-        
-        slot_code = obj.slot_code
-        if not slot_code or slot_code == 'PLACEHOLDER':
-            slot_info = _fetch_slot_info(obj.slot_id)
-            if slot_info:
-                slot_code = slot_info['code']
-                Booking.objects.filter(id=obj.id).update(slot_code=slot_code)
-        
         return {
             'id': str(obj.slot_id),
             'zoneId': str(obj.zone_id),
-            'code': slot_code or '',
-            'isAvailable': False
+            'code': obj.slot_code or '',
         }
 
 
