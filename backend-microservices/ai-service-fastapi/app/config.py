@@ -25,10 +25,17 @@ class Settings(BaseSettings):
     CAMERA_RTSP_URL: str = "rtsp://user:password@192.168.1.100:554/H.264"
     CAMERA_HTTP_URL: str = "http://192.168.100.130:80"
     ESP32_DEVICE_TOKEN: str  # required — no default
+    CORS_ALLOWED_ORIGINS: str = ""
 
     @property
     def DATABASE_URL(self) -> str:
         return f"mysql+pymysql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        if not self.CORS_ALLOWED_ORIGINS:
+            return ["http://localhost:5173", "http://localhost:3000", "http://localhost:8080"]
+        return [o.strip() for o in self.CORS_ALLOWED_ORIGINS.split(",") if o.strip()]
 
     model_config = ConfigDict(env_file=".env")
 
