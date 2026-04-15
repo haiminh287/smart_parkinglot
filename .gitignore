@@ -138,3 +138,7 @@ backend-microservices/test_e2e_results.json
 # === Vitest timestamp files ===
 vitest.config.ts.timestamp-*
 .gitnexus
+
+# Cookie/session test artifacts
+cookies_test.txt
+cookies*.txt
