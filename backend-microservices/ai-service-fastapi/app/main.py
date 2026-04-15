@@ -10,7 +10,7 @@ from app.config import settings
 from app.engine.camera_monitor import start_camera_monitor, stop_camera_monitor
 from app.middleware.gateway_auth import GatewayAuthMiddleware
 from app.routers import camera, detection, esp32, metrics, parking, training
-from app.routers.esp32 import seed_default_devices
+from app.engine.esp32_device_store import seed_default_devices
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
