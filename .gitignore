@@ -134,6 +134,7 @@ booking_qr_*.svg
 
 # === Test result files ===
 backend-microservices/test_e2e_results.json
+test_e2e_results.json
 
 # === Vitest timestamp files ===
 vitest.config.ts.timestamp-*
@@ -142,3 +143,17 @@ vitest.config.ts.timestamp-*
 # Cookie/session test artifacts
 cookies_test.txt
 cookies*.txt
+
+# === Sprint 3 S3-DEAD cleanup additions ===
+# Unity integration test artifacts
+booking_for_unity*.json
+# Backend logs (S3-DEAD-D8)
+backend-microservices/logs/*.txt
+backend-microservices/logs/*.log
+# Dev artifacts (S3-DEAD-D21)
+test-logs/
+# Cloudflare tunnel config (S3-DEAD-D17) — use config.example.yml
+infra/cloudflare/cloudflared/config.yml
+# AI service dev launcher (auto-generated)
+backend-microservices/ai-service-fastapi/run_local.bat
+.claude/

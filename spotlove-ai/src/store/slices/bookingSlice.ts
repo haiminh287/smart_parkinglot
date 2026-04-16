@@ -4,7 +4,7 @@
  */
 
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
-import { bookingApi } from "@/services/api/booking.api";
+import { bookingService } from "@/services/business";
 
 export type BookingStatus =
   | "pending" // Chờ thanh toán

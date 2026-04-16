@@ -4,7 +4,7 @@
  */
 
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
-import { parkingApi } from "@/services/api/parking.api";
+import { parkingService } from "@/services/business";
 import { ParkingLot } from "@/types/parking";
 
 export interface ParkingSlot {
@@ -86,7 +86,7 @@ export const fetchParkingLots = createAsyncThunk(
     { rejectWithValue },
   ) => {
     try {
-      const response = await parkingApi.getLots(params);
+      const response = await parkingService.getLots(params);
       return response.results;
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } } };
@@ -101,7 +101,7 @@ export const fetchZones = createAsyncThunk(
   "parking/fetchZones",
   async (lotId: string, { rejectWithValue }) => {
     try {
-      const response = await parkingApi.getZones({ lot_id: lotId });
+      const response = await parkingService.getZones({ lotId });
       // Map floorLevel to floor for backward compat
       return response.results.map((zone) => ({
         ...zone,
@@ -121,7 +121,7 @@ export const fetchSlots = createAsyncThunk(
   "parking/fetchSlots",
   async (zoneId: string, { rejectWithValue, getState }) => {
     try {
-      const response = await parkingApi.getSlots({ zone_id: zoneId });
+      const response = await parkingService.getSlots({ zoneId });
       // Enrich slots with zone info from state
       const state = getState() as { parking: ParkingState };
       const zone = state.parking.zones.find((z) => z.id === zoneId);

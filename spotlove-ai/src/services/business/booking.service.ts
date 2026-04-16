@@ -371,4 +371,60 @@ export const bookingService = {
   async getHourlyRevenue(date?: string): Promise<HourlyRevenueItem[]> {
     return bookingApi.getHourlyRevenue(date);
   },
+
+  // =====================
+  // Raw API Wrappers (for Store Thunks)
+  // These methods just call API without Redux side effects,
+  // allowing thunks to handle state updates via extraReducers.
+  // =====================
+
+  /**
+   * Get bookings (raw API call)
+   * For use by Redux async thunks
+   */
+  async getBookingsRaw(params?: {
+    page?: number;
+    status?: string;
+    paymentStatus?: string;
+    vehicleType?: "Car" | "Motorbike";
+    startDate?: string;
+    endDate?: string;
+  }): Promise<DjangoPaginatedResponse<Booking>> {
+    return bookingApi.getBookings({
+      page: params?.page,
+      status: params?.status,
+      payment_status: params?.paymentStatus,
+      vehicle_type: params?.vehicleType,
+      start_date: params?.startDate,
+      end_date: params?.endDate,
+    });
+  },
+
+  /**
+   * Get current parking (raw API call)
+   * For use by Redux async thunks
+   */
+  async getCurrentParkingRaw(): Promise<{
+    booking: Booking;
+    duration: number;
+    currentCost: number;
+  } | null> {
+    return bookingApi.getCurrentParking();
+  },
+
+  /**
+   * Create booking (raw API call)
+   * For use by Redux async thunks
+   */
+  async createBookingRaw(data: CreateBookingRequest): Promise<CreateBookingResponse> {
+    return bookingApi.createBooking(data);
+  },
+
+  /**
+   * Cancel booking (raw API call)
+   * For use by Redux async thunks
+   */
+  async cancelBookingRaw(bookingId: string, reason?: string): Promise<void> {
+    return bookingApi.cancelBooking(bookingId, reason);
+  },
 };
