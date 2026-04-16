@@ -185,9 +185,10 @@ Là **installable package** (`setup.py`, `parksmart_shared.egg-info`). Được 
   - `services/business/*.service.ts` — orchestration + mapping, **FE code chỉ được import từ tầng này**, không import trực tiếp `api/`.
   - `store/slices/*Slice.ts` — Redux Toolkit slices (auth, booking, parking, notification, websocket).
   - `services/websocket.service.ts` — kết nối `VITE_WS_URL` (`wss://.../ws/*` production, `ws://localhost:8006` dev qua proxy).
-- Router: React Router v6, pages ở `src/pages/` (user pages root + `src/pages/admin/`).
+- Router: React Router v6, pages ở `src/pages/` (user pages root + `src/pages/admin/`). **React.lazy code splitting** được áp dụng cho tất cả page routes (S2-IMP-8).
 - UI: shadcn/ui + Radix primitives trong `src/components/ui/` — khi thêm component mới ưu tiên compose các primitive này.
 - Dev proxy: `/api` → gateway, `/ws` → realtime, `/ai/cameras` → ai service trực tiếp (camera streams bypass gateway auth vì `<img>` tags không gửi header).
+- **FE layering enforced (S2-IMP-9):** pages/components/store chỉ được import từ `services/business/*` — KHÔNG import trực tiếp `services/api/*`. ESLint `no-restricted-imports` rule enforce convention này.
 
 ### 6. AI service pipeline
 
@@ -248,15 +249,16 @@ chatbot-service-fastapi/app/
 
 Intent có đúng 16 mapping values trong `domain/value_objects/intent.py` (lines 45-61). Khi thêm intent mới, update cả `Intent.mapping` + downstream `ResponseService` branches.
 
-**God classes vượt 300-line limit — KHÔNG được grow thêm, phải extract nếu cần sửa:**
+**God classes — Refactored in Sprint 2 (trước đó vượt 300-line limit):**
 
-| File | Class | Dòng | Ghi chú |
-|---|---|---|---|
-| `booking-service/bookings/views.py` | `BookingViewSet` | 58–715 (~658) | Cân nhắc tách action methods sang service/ domain trước khi thêm action mới |
-| `chatbot-service-fastapi/app/engine/orchestrator.py` | `ChatbotOrchestrator` | 36–651 (~615) | Entry point của toàn bộ 7-stage pipeline; sửa đây luôn phải chạy `pytest chatbot-service-fastapi/tests/` đầy đủ |
-| `chatbot-service-fastapi/app/application/services/response_service.py` | `ResponseService` | 14–608 (~595) | Response formatter — thêm case mới thì extract sub-formatter, đừng chèn `elif` |
+| File | Class | Trước | Sau | Ghi chú |
+|---|---|---|---|---|
+| `booking-service/bookings/views.py` | `BookingViewSet` | ~655 | ~60 | Refactored in S2-IMP-4: tách action methods sang `services/booking_actions.py` |
+| `ai-service-fastapi/app/routers/esp32.py` | (router) | ~1623 | ~138 | Refactored in S2-IMP-5: tách sang `services/esp32_service.py` + `services/barrier_service.py` |
+| `chatbot-service-fastapi/app/engine/orchestrator.py` | `ChatbotOrchestrator` | ~567 | ~300 | Refactored in S2-IMP-7: extract stage methods sang `engine/stages/` |
+| `chatbot-service-fastapi/app/application/services/response_service.py` | `ResponseService` | ~517 | ~221 | Refactored in S2-IMP-7: extract sub-formatters sang `services/formatters/` |
 
-Các file này đã vi phạm convention "file ≤ 300 lines" ở `.github/copilot-instructions.md` mục 5 — reviewer sẽ block nếu thêm code mới mà không kèm refactor. Trước khi đụng, chạy `gitnexus_context({name: "<ClassName>"})` để nắm blast radius.
+Các file này đã được refactor về dưới hoặc gần 300-line limit. Nếu cần thêm logic mới, tiếp tục extract — không grow ngược lại. Trước khi đụng, chạy `gitnexus_context({name: "<ClassName>"})` để nắm blast radius.
 
 **Key route files (`ai-service-fastapi`):**
 
@@ -268,7 +270,7 @@ Các file này đã vi phạm convention "file ≤ 300 lines" ở `.github/copil
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **Project_Main** (5614 symbols, 12561 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **Project_Main** (6306 symbols, 13327 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

@@ -24,8 +24,9 @@ Authentication and authorization microservice.
 
 ## Auth Contract Note
 
-- Runtime hiện tại dùng gateway session cookie và không expose token refresh endpoint.
-- Các request dạng `/auth/refresh/` hoặc `/auth/token/refresh/` không thuộc contract được support.
+- **Session cookie-based auth (NO JWT refresh token endpoint).** Gateway quản lý session cookie; không có `/auth/refresh/` hay `/auth/token/refresh/` endpoint.
+- Các request dạng `/auth/refresh/` hoặc `/auth/token/refresh/` bị gateway reject cố ý (`HandleUnsupportedRefresh`).
+- Biến `DATABASE_URL`, `JWT_SECRET_KEY`, `JWT_ACCESS_TOKEN_LIFETIME`, `JWT_REFRESH_TOKEN_LIFETIME` từ các phiên bản cũ đã được loại bỏ khỏi contract.
 
 ## Setup
 
@@ -64,5 +65,4 @@ FACEBOOK_APP_SECRET=<facebook-app-secret>
 **Lưu ý:** Runtime hiện tại dùng **MySQL** (không phải PostgreSQL) và
 xác thực dựa trên **session cookie** quản lý bởi Gateway Service
 (không có JWT refresh token). Các biến `DATABASE_URL`, `JWT_SECRET_KEY`,
-`JWT_ACCESS_TOKEN_LIFETIME`, `JWT_REFRESH_TOKEN_LIFETIME` từ các phiên
-bản cũ đã được loại bỏ khỏi contract.
+`JWT_ACCESS_TOKEN_LIFETIME`, `JWT_REFRESH_TOKEN_LIFETIME` đã bị loại bỏ.
