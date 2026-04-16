@@ -16,53 +16,53 @@
 
 ### 2.1 All Services & Ports
 
-| Service | Tech | Internal Port | External Port | Container Name |
-|---|---|---|---|---|
-| **MySQL** | MySQL 8.0 | 3306 | 3307 | parksmartdb_mysql |
-| **Redis** | Redis 7 Alpine | 6379 | 6379 | parksmartdb_redis |
-| **RabbitMQ** | 3-management-alpine | 5672/15672 | 5672/15672 | parksmartdb_rabbitmq |
-| **Auth Service** | Django | 8000 | 8001 | auth-service |
-| **Booking Service** | Django + Celery | 8000 | 8002 | booking-service |
-| **Parking Service** | Django | 8000 | 8003 | parking-service |
-| **Vehicle Service** | Django | 8000 | (expose only) | vehicle-service |
-| **Notification Service** | FastAPI | 8005 | (expose only) | notification-service-fastapi |
-| **Realtime Service** | Go (WebSocket) | 8006 | 8006 | realtime-service-go |
-| **Payment Service** | FastAPI (SQLAlchemy) | 8007 | (expose only) | payment-service-fastapi |
-| **Chatbot Service** | FastAPI | 8008 | (expose only) | chatbot-service-fastapi |
-| **AI Service** | FastAPI (PyTorch) | 8009 | 8009 | ai-service-fastapi |
-| **Gateway** | Go (Gin) | 8000 | 8000 | gateway-service-go |
-| **Booking Celery Worker** | Celery | — | — | booking-celery-worker |
-| **Booking Celery Beat** | Celery Beat | — | — | booking-celery-beat |
+| Service                   | Tech                 | Internal Port | External Port | Container Name               |
+| ------------------------- | -------------------- | ------------- | ------------- | ---------------------------- |
+| **MySQL**                 | MySQL 8.0            | 3306          | 3307          | parksmartdb_mysql            |
+| **Redis**                 | Redis 7 Alpine       | 6379          | 6379          | parksmartdb_redis            |
+| **RabbitMQ**              | 3-management-alpine  | 5672/15672    | 5672/15672    | parksmartdb_rabbitmq         |
+| **Auth Service**          | Django               | 8000          | 8001          | auth-service                 |
+| **Booking Service**       | Django + Celery      | 8000          | 8002          | booking-service              |
+| **Parking Service**       | Django               | 8000          | 8003          | parking-service              |
+| **Vehicle Service**       | Django               | 8000          | (expose only) | vehicle-service              |
+| **Notification Service**  | FastAPI              | 8005          | (expose only) | notification-service-fastapi |
+| **Realtime Service**      | Go (WebSocket)       | 8006          | 8006          | realtime-service-go          |
+| **Payment Service**       | FastAPI (SQLAlchemy) | 8007          | (expose only) | payment-service-fastapi      |
+| **Chatbot Service**       | FastAPI              | 8008          | (expose only) | chatbot-service-fastapi      |
+| **AI Service**            | FastAPI (PyTorch)    | 8009          | 8009          | ai-service-fastapi           |
+| **Gateway**               | Go (Gin)             | 8000          | 8000          | gateway-service-go           |
+| **Booking Celery Worker** | Celery               | —             | —             | booking-celery-worker        |
+| **Booking Celery Beat**   | Celery Beat          | —             | —             | booking-celery-beat          |
 
 ### 2.2 Redis DB Allocation
 
-| DB | Service |
-|---|---|
-| 0 | Celery broker + result backend |
-| 1 | Auth service + Gateway |
-| 2 | Booking service |
-| 3 | Parking service |
-| 4 | Vehicle service |
-| 5 | Realtime service |
-| 6 | Chatbot service |
+| DB  | Service                        |
+| --- | ------------------------------ |
+| 0   | Celery broker + result backend |
+| 1   | Auth service + Gateway         |
+| 2   | Booking service                |
+| 3   | Parking service                |
+| 4   | Vehicle service                |
+| 5   | Realtime service               |
+| 6   | Chatbot service                |
 
 ### 2.3 Gateway Routing (Go — catch-all proxy)
 
 Gateway at `:8000` removes `/api/` prefix, then routes by path prefix:
 
-| Path Prefix | Service | Auth Required |
-|---|---|---|
-| `auth/login`, `auth/logout` | auth-service | No (handled directly) |
-| `auth/` (others) | auth-service | Varies (admin=yes, register=no) |
-| `parking/` | parking-service | Yes |
-| `vehicles/` | vehicle-service | Yes |
-| `bookings/` | booking-service | Yes |
-| `incidents/` | booking-service | Yes |
-| `notifications/` | notification-service | Yes |
-| `realtime/` | realtime-service | Yes |
-| `payments/` | payment-service | Yes |
-| `ai/` | ai-service | Yes |
-| `chatbot/` | chatbot-service | Yes |
+| Path Prefix                 | Service              | Auth Required                   |
+| --------------------------- | -------------------- | ------------------------------- |
+| `auth/login`, `auth/logout` | auth-service         | No (handled directly)           |
+| `auth/` (others)            | auth-service         | Varies (admin=yes, register=no) |
+| `parking/`                  | parking-service      | Yes                             |
+| `vehicles/`                 | vehicle-service      | Yes                             |
+| `bookings/`                 | booking-service      | Yes                             |
+| `incidents/`                | booking-service      | Yes                             |
+| `notifications/`            | notification-service | Yes                             |
+| `realtime/`                 | realtime-service     | Yes                             |
+| `payments/`                 | payment-service      | Yes                             |
+| `ai/`                       | ai-service           | Yes                             |
+| `chatbot/`                  | chatbot-service      | Yes                             |
 
 Auth: JWT token in cookie (session-based via Go gateway) → decoded → `X-User-ID`, `X-User-Email`, `X-Gateway-Secret` headers injected into proxied requests.
 
@@ -73,6 +73,7 @@ Auth: JWT token in cookie (session-based via Go gateway) → decoded → `X-User
 ### 3.1 Online Booking Creation
 
 **Frontend:** `BookingPage.tsx` — 5-step wizard:
+
 1. **Step 1**: Select parking lot → loads floors
 2. **Step 2**: Select vehicle (from saved vehicles or enter plate) + vehicle type (Car/Motorbike)
 3. **Step 3**: Select floor → zone → slot (car must pick slot, motorbike only needs zone)
@@ -95,6 +96,7 @@ Auth: JWT token in cookie (session-based via Go gateway) → decoded → `X-User
 ```
 
 **Backend Processing (CreateBookingSerializer.create):**
+
 1. Fetch vehicle info from vehicle-service (or auto-register if license plate provided)
 2. Fetch parking lot name from parking-service
 3. Fetch zone info (name, floor_id, vehicle_type, capacity)
@@ -125,11 +127,13 @@ not_checked_in ──────┬──→ checked_in ──→ checked_out
 ### 3.3 Check-in
 
 **Sources:**
+
 - Web UI: `CheckInOutPage.tsx` — upload plate image or show QR
 - ESP32 gate: `POST /ai/parking/esp32/check-in/` — QR scan + plate OCR
 - Web API: `POST /ai/parking/check-in/` — QR data + plate image
 
 **Process:**
+
 1. ESP32/web sends QR data (booking_id + user_id) + plate image
 2. AI service: OCR plate → compare with booking.vehicle_license_plate
 3. Validate time: allow 30 min early (booking-service) or 15 min early (ESP32)
@@ -142,6 +146,7 @@ not_checked_in ──────┬──→ checked_in ──→ checked_out
 ### 3.4 Check-out
 
 **Process:**
+
 1. ESP32/web sends QR data + plate image
 2. AI service: OCR plate → verify match
 3. Call `POST /bookings/{id}/checkout/` on booking-service
@@ -158,15 +163,15 @@ not_checked_in ──────┬──→ checked_in ──→ checked_out
 ### 4.1 Package Pricing Table (seed_pricing.py)
 
 | Package Type | Vehicle Type | Price (VND) | Duration |
-|---|---|---|---|
-| **Hourly** | Car | 15,000 | per hour |
-| **Hourly** | Motorbike | 5,000 | per hour |
-| **Daily** | Car | 80,000 | 1 day |
-| **Daily** | Motorbike | 20,000 | 1 day |
-| **Weekly** | Car | 400,000 | 7 days |
-| **Weekly** | Motorbike | 100,000 | 7 days |
-| **Monthly** | Car | 1,200,000 | 30 days |
-| **Monthly** | Motorbike | 300,000 | 30 days |
+| ------------ | ------------ | ----------- | -------- |
+| **Hourly**   | Car          | 15,000      | per hour |
+| **Hourly**   | Motorbike    | 5,000       | per hour |
+| **Daily**    | Car          | 80,000      | 1 day    |
+| **Daily**    | Motorbike    | 20,000      | 1 day    |
+| **Weekly**   | Car          | 400,000     | 7 days   |
+| **Weekly**   | Motorbike    | 100,000     | 7 days   |
+| **Monthly**  | Car          | 1,200,000   | 30 days  |
+| **Monthly**  | Motorbike    | 300,000     | 30 days  |
 
 DB table: `package_pricing` (unique constraint on `package_type + vehicle_type`)
 
@@ -190,6 +195,7 @@ else:
 **Source:** `services.calculate_checkout_price()` in `services.py:42-83`
 
 **Hourly with scheduled end time (`hourly_end` set):**
+
 ```
 If now > hourly_end (overtime):
   overtime_hours = ceil((now - hourly_end) in hours)
@@ -205,6 +211,7 @@ If now <= hourly_end (on time):
 ```
 
 **Non-hourly or no scheduled end:**
+
 ```
 billable_hours = ceil(actual_hours) or 1 minimum
 total = billable_hours × hourly_price
@@ -223,6 +230,7 @@ Motorbike:  5,000 VND/hour
 ### 4.5 Frontend Pricing (PriceSummary.tsx)
 
 **Fallback prices (different from backend!):**
+
 ```typescript
 const FALLBACK_PRICES = {
   Car: { monthly: 2000000, weekly: 600000, daily: 100000, hourly: 20000 },
@@ -231,10 +239,11 @@ const FALLBACK_PRICES = {
 ```
 
 **Discounts applied on frontend only:**
+
 ```typescript
 const DISCOUNTS = {
-  monthly: 0.2,  // 20% off
-  weekly: 0.1,   // 10% off
+  monthly: 0.2, // 20% off
+  weekly: 0.1, // 10% off
   custom: 0,
   hourly: 0,
 };
@@ -248,11 +257,11 @@ const DISCOUNTS = {
 
 ### 5.1 Payment Methods
 
-| Method | Code | Behavior |
-|---|---|---|
-| Cash | `cash` | Auto-completed immediately |
-| Momo | `momo` | Status = "processing", mock URL generated |
-| VNPay | `vnpay` | Status = "processing", mock URL generated |
+| Method  | Code      | Behavior                                  |
+| ------- | --------- | ----------------------------------------- |
+| Cash    | `cash`    | Auto-completed immediately                |
+| Momo    | `momo`    | Status = "processing", mock URL generated |
+| VNPay   | `vnpay`   | Status = "processing", mock URL generated |
 | ZaloPay | `zalopay` | Status = "processing", mock URL generated |
 
 **Note:** Momo/VNPay/ZaloPay are currently **MOCKED** — no real gateway integration. They generate fake payment URLs like `https://payment-gateway.example.com/pay/...`
@@ -286,9 +295,11 @@ const DISCOUNTS = {
 ### 5.6 VietQR (PaymentPage.tsx)
 
 Frontend generates VietQR code for bank transfer:
+
 ```
 https://img.vietqr.io/image/{bankCode}-{accountNumber}-compact.png?amount={amount}&addInfo={bookingId}
 ```
+
 Bank info configurable via env vars (`VITE_BANK_CODE`, etc.) with Vietcombank defaults.
 
 ---
@@ -300,6 +311,7 @@ Bank info configurable via env vars (`VITE_BANK_CODE`, etc.) with Vietcombank de
 **Pipeline:** YOLOv8 finetune (license-plate-finetune-v1m.pt) → crop → TrOCR OCR
 
 **Endpoints:**
+
 - `POST /ai/detect/license-plate/` — standalone detection
 - `POST /ai/parking/scan-plate/` — scan only (preview)
 - `POST /ai/parking/check-in/` — QR + plate for web check-in
@@ -314,6 +326,7 @@ Bank info configurable via env vars (`VITE_BANK_CODE`, etc.) with Vietcombank de
 **Location:** `ai-service-fastapi/app/images/` (local) or `/app/app/images/` (Docker)
 
 **File naming:**
+
 - Plate images: `plate_{action}_{booking_id_short}_{timestamp}.jpg`
 - Annotated images: `annotated_{action}_{id_short}_{timestamp}.jpg`
 - Debug images: `app/images/debug/debug_{action}_{decision}_{timestamp}.jpg`
@@ -323,6 +336,7 @@ Bank info configurable via env vars (`VITE_BANK_CODE`, etc.) with Vietcombank de
 ### 6.3 Slot Detection
 
 **Endpoint:** `POST /ai/parking/detect-occupancy/`
+
 - Input: camera image + slot bounding boxes (JSON)
 - Engine: YOLO11n (yolo11n.pt) — detects vehicles in defined bounding box regions
 - Output: per-slot occupancy status (occupied/available)
@@ -331,6 +345,7 @@ Bank info configurable via env vars (`VITE_BANK_CODE`, etc.) with Vietcombank de
 ### 6.4 ESP32 Cash Payment
 
 **Endpoint:** `POST /ai/parking/esp32/cash-payment/`
+
 - Input: booking_id + image (base64 or camera URL)
 - AI detects banknote denomination via Hybrid pipeline (HSV + MobileNetV3)
 - Accumulates cash amount for booking
@@ -340,23 +355,24 @@ Bank info configurable via env vars (`VITE_BANK_CODE`, etc.) with Vietcombank de
 
 ## 7. Frontend Pages
 
-| Page | File | Purpose |
-|---|---|---|
-| **Booking** | `BookingPage.tsx` | 5-step booking wizard (lot → vehicle → slot → time → pay) |
-| **Payment** | `PaymentPage.tsx` | VietQR display + 15min countdown + payment polling |
-| **Check-in/out** | `CheckInOutPage.tsx` | Show QR, upload plate image, manual check-in/out |
-| **Cameras** | `CamerasPage.tsx` | Live camera feeds, slot monitoring |
-| **History** | `HistoryPage.tsx` | Past bookings |
-| **Dashboard** | `UserDashboard.tsx` | User overview |
-| **Admin Dashboard** | `AdminDashboard.tsx` | Admin panel |
-| **Kiosk** | `KioskPage.tsx` | Kiosk mode for gate |
-| **Map** | `MapPage.tsx` | Parking lot map |
-| **Detection History** | `DetectionHistoryPage.tsx` | AI detection logs |
-| **Banknote Detection** | `BanknoteDetectionPage.tsx` | Cash recognition test |
-| **Settings** | `SettingsPage.tsx` | User settings |
-| **Panic Button** | `PanicButtonPage.tsx` | Emergency/incident reporting |
+| Page                   | File                        | Purpose                                                   |
+| ---------------------- | --------------------------- | --------------------------------------------------------- |
+| **Booking**            | `BookingPage.tsx`           | 5-step booking wizard (lot → vehicle → slot → time → pay) |
+| **Payment**            | `PaymentPage.tsx`           | VietQR display + 15min countdown + payment polling        |
+| **Check-in/out**       | `CheckInOutPage.tsx`        | Show QR, upload plate image, manual check-in/out          |
+| **Cameras**            | `CamerasPage.tsx`           | Live camera feeds, slot monitoring                        |
+| **History**            | `HistoryPage.tsx`           | Past bookings                                             |
+| **Dashboard**          | `UserDashboard.tsx`         | User overview                                             |
+| **Admin Dashboard**    | `AdminDashboard.tsx`        | Admin panel                                               |
+| **Kiosk**              | `KioskPage.tsx`             | Kiosk mode for gate                                       |
+| **Map**                | `MapPage.tsx`               | Parking lot map                                           |
+| **Detection History**  | `DetectionHistoryPage.tsx`  | AI detection logs                                         |
+| **Banknote Detection** | `BanknoteDetectionPage.tsx` | Cash recognition test                                     |
+| **Settings**           | `SettingsPage.tsx`          | User settings                                             |
+| **Panic Button**       | `PanicButtonPage.tsx`       | Emergency/incident reporting                              |
 
 **Booking modes (3 tabs):**
+
 1. **Standard** — manual step-by-step booking
 2. **Auto Guarantee** — automatic slot assignment ("Đi đâu cũng có chỗ")
 3. **Calendar Auto-Hold** — calendar integration for recurring bookings
@@ -394,32 +410,32 @@ Bank info configurable via env vars (`VITE_BANK_CODE`, etc.) with Vietcombank de
 
 ### Frontend (`spotlove-ai/e2e/`)
 
-| Test File | Description |
-|---|---|
+| Test File                   | Description           |
+| --------------------------- | --------------------- |
 | `booking-full-flow.spec.ts` | Full booking flow E2E |
-| `booking.spec.ts` | Basic booking tests |
-| `checkin-flow.spec.ts` | Check-in flow |
-| `full-flows.spec.ts` | Combined flow tests |
-| `admin.management.spec.ts` | Admin management |
-| `admin.pages.spec.ts` | Admin pages |
-| `api-endpoints.spec.ts` | API endpoint tests |
-| `dashboard.spec.ts` | Dashboard tests |
-| `history.spec.ts` | History page tests |
-| `public-pages.spec.ts` | Public page tests |
-| `user-pages.spec.ts` | User page tests |
-| `global-setup.ts` | Auth setup |
+| `booking.spec.ts`           | Basic booking tests   |
+| `checkin-flow.spec.ts`      | Check-in flow         |
+| `full-flows.spec.ts`        | Combined flow tests   |
+| `admin.management.spec.ts`  | Admin management      |
+| `admin.pages.spec.ts`       | Admin pages           |
+| `api-endpoints.spec.ts`     | API endpoint tests    |
+| `dashboard.spec.ts`         | Dashboard tests       |
+| `history.spec.ts`           | History page tests    |
+| `public-pages.spec.ts`      | Public page tests     |
+| `user-pages.spec.ts`        | User page tests       |
+| `global-setup.ts`           | Auth setup            |
 
 ### Backend Tests
 
-| Test File | Location |
-|---|---|
-| `test_e2e_parksmart.py` | `backend-microservices/` |
-| `test_e2e_full_flow.py` | `backend-microservices/` |
+| Test File                         | Location                 |
+| --------------------------------- | ------------------------ |
+| `test_e2e_parksmart.py`           | `backend-microservices/` |
+| `test_e2e_full_flow.py`           | `backend-microservices/` |
 | `test_booking_plate_scenarios.py` | `backend-microservices/` |
-| `test_ai_full.py` | `backend-microservices/` |
-| `test_chatbot_e2e.py` | `backend-microservices/` |
-| `test_chatbot_lifecycle.py` | `backend-microservices/` |
-| `test_booking_comprehensive.py` | `booking-service/tests/` |
+| `test_ai_full.py`                 | `backend-microservices/` |
+| `test_chatbot_e2e.py`             | `backend-microservices/` |
+| `test_chatbot_lifecycle.py`       | `backend-microservices/` |
+| `test_booking_comprehensive.py`   | `booking-service/tests/` |
 
 ---
 
@@ -428,6 +444,7 @@ Bank info configurable via env vars (`VITE_BANK_CODE`, etc.) with Vietcombank de
 ### 10.1 [WARNING] Frontend-Backend Pricing Mismatch
 
 **Frontend fallback prices ≠ Backend seed prices:**
+
 - FE car hourly: **20,000** VND vs DB seed: **15,000** VND
 - FE car daily: **100,000** VND vs DB seed: **80,000** VND
 - FE car monthly: **2,000,000** VND vs DB seed: **1,200,000** VND
@@ -446,6 +463,7 @@ Frontend applies 20% monthly discount and 10% weekly discount. Backend charges f
 ### 10.3 [WARNING] Checkout Price Recalculation Ignores Package Type
 
 `calculate_checkout_price()` for non-hourly packages falls back to hourly billing:
+
 ```python
 else:
     billable_hours = math.ceil(total_hours) if total_hours > 0 else 1
@@ -481,80 +499,87 @@ Nginx routes `/ai/*` directly to `ai-service:8009`, bypassing the Go gateway. Th
 ## 11. Key File Paths
 
 ### Booking Service
-| File | Purpose |
-|---|---|
-| `backend-microservices/booking-service/bookings/models.py` | Booking + PackagePricing models |
-| `backend-microservices/booking-service/bookings/serializers.py` | CreateBookingSerializer + BookingSerializer |
-| `backend-microservices/booking-service/bookings/views.py` | All booking endpoints (CRUD, checkin, checkout, cancel, payment, stats) |
-| `backend-microservices/booking-service/bookings/services.py` | Business logic: pricing, checkout calc, payment integration |
-| `backend-microservices/booking-service/bookings/tasks.py` | Celery tasks: auto-cancel, no-show detection |
-| `backend-microservices/booking-service/bookings/urls.py` | URL routing |
-| `backend-microservices/booking-service/bookings/management/commands/seed_pricing.py` | Seed pricing data |
+
+| File                                                                                 | Purpose                                                                 |
+| ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
+| `backend-microservices/booking-service/bookings/models.py`                           | Booking + PackagePricing models                                         |
+| `backend-microservices/booking-service/bookings/serializers.py`                      | CreateBookingSerializer + BookingSerializer                             |
+| `backend-microservices/booking-service/bookings/views.py`                            | All booking endpoints (CRUD, checkin, checkout, cancel, payment, stats) |
+| `backend-microservices/booking-service/bookings/services.py`                         | Business logic: pricing, checkout calc, payment integration             |
+| `backend-microservices/booking-service/bookings/tasks.py`                            | Celery tasks: auto-cancel, no-show detection                            |
+| `backend-microservices/booking-service/bookings/urls.py`                             | URL routing                                                             |
+| `backend-microservices/booking-service/bookings/management/commands/seed_pricing.py` | Seed pricing data                                                       |
 
 ### Payment Service
-| File | Purpose |
-|---|---|
-| `backend-microservices/payment-service-fastapi/app/models/payment.py` | Payment SQLAlchemy model |
+
+| File                                                                   | Purpose                                    |
+| ---------------------------------------------------------------------- | ------------------------------------------ |
+| `backend-microservices/payment-service-fastapi/app/models/payment.py`  | Payment SQLAlchemy model                   |
 | `backend-microservices/payment-service-fastapi/app/routers/payment.py` | Payment endpoints (initiate, verify, list) |
-| `backend-microservices/payment-service-fastapi/app/schemas/payment.py` | Pydantic schemas |
+| `backend-microservices/payment-service-fastapi/app/schemas/payment.py` | Pydantic schemas                           |
 
 ### Parking Service
-| File | Purpose |
-|---|---|
-| `backend-microservices/parking-service/infrastructure/models.py` | ParkingLot, Floor, Zone, CarSlot, Camera models |
-| `backend-microservices/parking-service/infrastructure/views.py` | Parking CRUD, availability, nearest, update-status |
-| `backend-microservices/parking-service/infrastructure/serializers.py` | Parking serializers |
-| `backend-microservices/parking-service/infrastructure/urls.py` | DefaultRouter URLs |
+
+| File                                                                  | Purpose                                            |
+| --------------------------------------------------------------------- | -------------------------------------------------- |
+| `backend-microservices/parking-service/infrastructure/models.py`      | ParkingLot, Floor, Zone, CarSlot, Camera models    |
+| `backend-microservices/parking-service/infrastructure/views.py`       | Parking CRUD, availability, nearest, update-status |
+| `backend-microservices/parking-service/infrastructure/serializers.py` | Parking serializers                                |
+| `backend-microservices/parking-service/infrastructure/urls.py`        | DefaultRouter URLs                                 |
 
 ### AI Service
-| File | Purpose |
-|---|---|
-| `backend-microservices/ai-service-fastapi/app/routers/esp32.py` | ESP32 check-in/out/cash-payment endpoints |
-| `backend-microservices/ai-service-fastapi/app/routers/parking.py` | Web check-in/out, scan-plate, detect-occupancy |
-| `backend-microservices/ai-service-fastapi/app/routers/detection.py` | License plate + banknote detection |
-| `backend-microservices/ai-service-fastapi/app/utils/image_utils.py` | Plate image saving utilities |
-| `backend-microservices/ai-service-fastapi/app/config.py` | Settings (MEDIA_ROOT, model paths, service URLs) |
+
+| File                                                                | Purpose                                          |
+| ------------------------------------------------------------------- | ------------------------------------------------ |
+| `backend-microservices/ai-service-fastapi/app/routers/esp32.py`     | ESP32 check-in/out/cash-payment endpoints        |
+| `backend-microservices/ai-service-fastapi/app/routers/parking.py`   | Web check-in/out, scan-plate, detect-occupancy   |
+| `backend-microservices/ai-service-fastapi/app/routers/detection.py` | License plate + banknote detection               |
+| `backend-microservices/ai-service-fastapi/app/utils/image_utils.py` | Plate image saving utilities                     |
+| `backend-microservices/ai-service-fastapi/app/config.py`            | Settings (MEDIA_ROOT, model paths, service URLs) |
 
 ### Gateway
-| File | Purpose |
-|---|---|
-| `backend-microservices/gateway-service-go/internal/router/routes.go` | Route setup + auth middleware |
+
+| File                                                                 | Purpose                             |
+| -------------------------------------------------------------------- | ----------------------------------- |
+| `backend-microservices/gateway-service-go/internal/router/routes.go` | Route setup + auth middleware       |
 | `backend-microservices/gateway-service-go/internal/config/config.go` | Service routing table + CORS config |
 
 ### Frontend
-| File | Purpose |
-|---|---|
-| `spotlove-ai/src/pages/BookingPage.tsx` | 5-step booking wizard |
-| `spotlove-ai/src/pages/PaymentPage.tsx` | Payment QR + countdown |
-| `spotlove-ai/src/pages/CheckInOutPage.tsx` | User check-in/out |
-| `spotlove-ai/src/pages/CamerasPage.tsx` | Camera monitoring |
+
+| File                                                  | Purpose                     |
+| ----------------------------------------------------- | --------------------------- |
+| `spotlove-ai/src/pages/BookingPage.tsx`               | 5-step booking wizard       |
+| `spotlove-ai/src/pages/PaymentPage.tsx`               | Payment QR + countdown      |
+| `spotlove-ai/src/pages/CheckInOutPage.tsx`            | User check-in/out           |
+| `spotlove-ai/src/pages/CamerasPage.tsx`               | Camera monitoring           |
 | `spotlove-ai/src/components/booking/PriceSummary.tsx` | Price calculation + display |
-| `spotlove-ai/src/services/api/booking.api.ts` | Booking API client |
-| `spotlove-ai/src/services/api/ai.api.ts` | AI Service API client |
-| `spotlove-ai/src/services/api/endpoints.ts` | All API endpoint constants |
+| `spotlove-ai/src/services/api/booking.api.ts`         | Booking API client          |
+| `spotlove-ai/src/services/api/ai.api.ts`              | AI Service API client       |
+| `spotlove-ai/src/services/api/endpoints.ts`           | All API endpoint constants  |
 
 ### Infrastructure
-| File | Purpose |
-|---|---|
-| `backend-microservices/docker-compose.yml` | All services topology |
-| `infra/cloudflare/cloudflared/config.yml` | Main Cloudflare tunnel config |
-| `infra/cloudflare/cloudflared/config-parksmart.yml` | ParkSmart-specific tunnel |
-| `infra/nginx/nginx.conf` | Nginx reverse proxy (API + WS + AI + SPA) |
-| `infra/cloudflare/reverse-proxy/api.conf.example` | Simple API proxy example |
+
+| File                                                | Purpose                                   |
+| --------------------------------------------------- | ----------------------------------------- |
+| `backend-microservices/docker-compose.yml`          | All services topology                     |
+| `infra/cloudflare/cloudflared/config.yml`           | Main Cloudflare tunnel config             |
+| `infra/cloudflare/cloudflared/config-parksmart.yml` | ParkSmart-specific tunnel                 |
+| `infra/nginx/nginx.conf`                            | Nginx reverse proxy (API + WS + AI + SPA) |
+| `infra/cloudflare/reverse-proxy/api.conf.example`   | Simple API proxy example                  |
 
 ---
 
 ## 12. Nguồn
 
-| # | File | Mô tả |
-|---|---|---|
-| 1 | `booking-service/bookings/models.py` | Booking + PackagePricing model definitions |
-| 2 | `booking-service/bookings/services.py` | Complete pricing calculation logic |
-| 3 | `booking-service/bookings/serializers.py` | Booking creation + serialization |
-| 4 | `booking-service/bookings/views.py` | All booking endpoints |
-| 5 | `payment-service-fastapi/app/routers/payment.py` | Payment initiation + verification |
-| 6 | `docker-compose.yml` | Service topology |
-| 7 | `spotlove-ai/src/components/booking/PriceSummary.tsx` | Frontend pricing |
-| 8 | `ai-service-fastapi/app/routers/esp32.py` | ESP32 check-in/out flow |
-| 9 | `gateway-service-go/internal/config/config.go` | Gateway routing table |
-| 10 | `infra/nginx/nginx.conf` | Production nginx config |
+| #   | File                                                  | Mô tả                                      |
+| --- | ----------------------------------------------------- | ------------------------------------------ |
+| 1   | `booking-service/bookings/models.py`                  | Booking + PackagePricing model definitions |
+| 2   | `booking-service/bookings/services.py`                | Complete pricing calculation logic         |
+| 3   | `booking-service/bookings/serializers.py`             | Booking creation + serialization           |
+| 4   | `booking-service/bookings/views.py`                   | All booking endpoints                      |
+| 5   | `payment-service-fastapi/app/routers/payment.py`      | Payment initiation + verification          |
+| 6   | `docker-compose.yml`                                  | Service topology                           |
+| 7   | `spotlove-ai/src/components/booking/PriceSummary.tsx` | Frontend pricing                           |
+| 8   | `ai-service-fastapi/app/routers/esp32.py`             | ESP32 check-in/out flow                    |
+| 9   | `gateway-service-go/internal/config/config.go`        | Gateway routing table                      |
+| 10  | `infra/nginx/nginx.conf`                              | Production nginx config                    |

@@ -67,32 +67,34 @@
 
 ## B. All Inter-Service HTTP Calls in views.py
 
-| Line | Method | Target Service | Endpoint | When | Blocking? |
-|------|--------|----------------|----------|------|-----------|
-| 37 | POST | realtime-service:8006 | `/api/broadcast/slot-status/` | `broadcast_slot_status()` helper | Yes (timeout=2s) |
-| 92 | — | (via helper above) | — | `create` action | Yes |
-| 147 | — | (via helper above) | — | `checkin` action | Yes |
-| 155-166 | PATCH | parking-service:8000 | `/parking/slots/{id}/update-status/` | `checkin` action | Yes (timeout=3s) |
-| 215-226 | PATCH | parking-service:8000 | `/parking/slots/{id}/update-status/` | `checkout` action | Yes (timeout=3s) |
-| 229 | — | (via helper above) | — | `checkout` action | Yes |
+| Line    | Method | Target Service        | Endpoint                             | When                             | Blocking?        |
+| ------- | ------ | --------------------- | ------------------------------------ | -------------------------------- | ---------------- |
+| 37      | POST   | realtime-service:8006 | `/api/broadcast/slot-status/`        | `broadcast_slot_status()` helper | Yes (timeout=2s) |
+| 92      | —      | (via helper above)    | —                                    | `create` action                  | Yes              |
+| 147     | —      | (via helper above)    | —                                    | `checkin` action                 | Yes              |
+| 155-166 | PATCH  | parking-service:8000  | `/parking/slots/{id}/update-status/` | `checkin` action                 | Yes (timeout=3s) |
+| 215-226 | PATCH  | parking-service:8000  | `/parking/slots/{id}/update-status/` | `checkout` action                | Yes (timeout=3s) |
+| 229     | —      | (via helper above)    | —                                    | `checkout` action                | Yes              |
 
 **Also in `services.py`** (called from views):
+
 - `create_payment_for_booking()` → payment-service
 - `initiate_payment()` → payment-service
 - `get_booking_payments()` → payment-service
 
 **Also in `serializers.py`** (called during create):
+
 - Lines 65, 84, 107, 128, 335 → parking-service GET calls to validate lot/zone/floor/slot
 
 **Also in `tasks.py`** (Celery async, NOT in request path):
 
-| Line | Method | Target Service | Endpoint | Task |
-|------|--------|----------------|----------|------|
-| 49 | POST | realtime-service | `/api/broadcast/slot-status/` | auto_cancel_unpaid_bookings |
-| 66 | PATCH | parking-service | `/parking/slots/{id}/update-status/` | auto_cancel_unpaid_bookings |
-| 79-87 | POST | notification-service | `/notifications/` | auto_cancel_unpaid_bookings |
-| 118 | POST | auth-service | `/users/{id}/increment-no-show/` | check_no_show_bookings |
-| 126-136 | POST | notification-service | `/notifications/` | check_no_show_bookings |
+| Line    | Method | Target Service       | Endpoint                             | Task                        |
+| ------- | ------ | -------------------- | ------------------------------------ | --------------------------- |
+| 49      | POST   | realtime-service     | `/api/broadcast/slot-status/`        | auto_cancel_unpaid_bookings |
+| 66      | PATCH  | parking-service      | `/parking/slots/{id}/update-status/` | auto_cancel_unpaid_bookings |
+| 79-87   | POST   | notification-service | `/notifications/`                    | auto_cancel_unpaid_bookings |
+| 118     | POST   | auth-service         | `/users/{id}/increment-no-show/`     | check_no_show_bookings      |
+| 126-136 | POST   | notification-service | `/notifications/`                    | check_no_show_bookings      |
 
 ---
 
@@ -122,10 +124,10 @@ beat_schedule = {
 
 ### Existing Tasks (`bookings/tasks.py`)
 
-| Task | Schedule | What it does |
-|------|----------|--------------|
-| `auto_cancel_unpaid_bookings` | Every 60s | Cancel online-payment bookings still pending after 15min. Releases slot (parking+realtime), sends notification |
-| `check_no_show_bookings` | Every 5min | Mark hourly bookings as no_show if 30min past start with no checkin. Increments user no_show_count, sends notification |
+| Task                          | Schedule   | What it does                                                                                                           |
+| ----------------------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `auto_cancel_unpaid_bookings` | Every 60s  | Cancel online-payment bookings still pending after 15min. Releases slot (parking+realtime), sends notification         |
+| `check_no_show_bookings`      | Every 5min | Mark hourly bookings as no_show if 30min past start with no checkin. Increments user no_show_count, sends notification |
 
 ---
 
@@ -156,11 +158,11 @@ booking-service `depends_on: rabbitmq: condition: service_healthy` ✅
 
 ### Pika/AMQP Library: ❌ NOT in booking-service
 
-| File | Has pika/amqp? |
-|------|----------------|
-| `booking-service/requirements.txt` | ❌ No |
-| `chatbot-service-fastapi/requirements.txt` | ✅ `aio-pika==9.4.0` |
-| `backend-microservices/requirements.txt` (root) | ✅ `pika==1.3.2` |
+| File                                            | Has pika/amqp?       |
+| ----------------------------------------------- | -------------------- |
+| `booking-service/requirements.txt`              | ❌ No                |
+| `chatbot-service-fastapi/requirements.txt`      | ✅ `aio-pika==9.4.0` |
+| `backend-microservices/requirements.txt` (root) | ✅ `pika==1.3.2`     |
 
 **Verdict:** RabbitMQ infrastructure is running, env vars are injected, but **booking-service has no client library and no publish/consume code**.
 
@@ -193,15 +195,15 @@ WebSocket clients (browser/Unity)
 
 ### Available Broadcast Endpoints (all require X-Gateway-Secret)
 
-| Endpoint | Group | Message Type | Used By |
-|----------|-------|-------------|---------|
-| `POST /api/broadcast/slot-status/` | `parking_updates` | `slot.status_update` | booking-service, ai-service |
-| `POST /api/broadcast/zone-availability/` | `parking_updates` | `zone.availability_update` | parking-service |
-| `POST /api/broadcast/lot-availability/` | `parking_updates` | `lot.availability_update` | parking-service |
-| `POST /api/broadcast/booking/` | `user_{userId}` | `booking.status_update` | (available but unused) |
-| `POST /api/broadcast/notification/` | `user_{userId}` | `notification` | notification-service |
-| `POST /api/broadcast/camera-status/` | `parking_updates` | `camera.slot_detection` | ai-service |
-| `POST /api/broadcast/unity-command/` | `parking_updates` | `unity.command` | ai-service |
+| Endpoint                                 | Group             | Message Type               | Used By                     |
+| ---------------------------------------- | ----------------- | -------------------------- | --------------------------- |
+| `POST /api/broadcast/slot-status/`       | `parking_updates` | `slot.status_update`       | booking-service, ai-service |
+| `POST /api/broadcast/zone-availability/` | `parking_updates` | `zone.availability_update` | parking-service             |
+| `POST /api/broadcast/lot-availability/`  | `parking_updates` | `lot.availability_update`  | parking-service             |
+| `POST /api/broadcast/booking/`           | `user_{userId}`   | `booking.status_update`    | (available but unused)      |
+| `POST /api/broadcast/notification/`      | `user_{userId}`   | `notification`             | notification-service        |
+| `POST /api/broadcast/camera-status/`     | `parking_updates` | `camera.slot_detection`    | ai-service                  |
+| `POST /api/broadcast/unity-command/`     | `parking_updates` | `unity.command`            | ai-service                  |
 
 ### WebSocket Groups
 
@@ -218,12 +220,12 @@ WebSocket clients (browser/Unity)
 
 ### Gaps Identified
 
-| # | Gap | Impact | Priority |
-|---|-----|--------|----------|
-| 1 | `cancel` action doesn't release slot (parking-service) or broadcast (realtime) | Slot stays "reserved" after cancel, UI shows stale data | **HIGH** |
-| 2 | No booking-level event broadcast to user | User's app doesn't update in real-time when booking status changes | **MEDIUM** |
-| 3 | All inter-service calls are sync HTTP in request path | If realtime-service or parking-service is slow/down, checkin/checkout latency increases or fails | **MEDIUM** |
-| 4 | RabbitMQ infra exists but unused by booking-service | Wasted infrastructure, missed async opportunity | **LOW** (infra ready) |
+| #   | Gap                                                                            | Impact                                                                                           | Priority              |
+| --- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ | --------------------- |
+| 1   | `cancel` action doesn't release slot (parking-service) or broadcast (realtime) | Slot stays "reserved" after cancel, UI shows stale data                                          | **HIGH**              |
+| 2   | No booking-level event broadcast to user                                       | User's app doesn't update in real-time when booking status changes                               | **MEDIUM**            |
+| 3   | All inter-service calls are sync HTTP in request path                          | If realtime-service or parking-service is slow/down, checkin/checkout latency increases or fails | **MEDIUM**            |
+| 4   | RabbitMQ infra exists but unused by booking-service                            | Wasted infrastructure, missed async opportunity                                                  | **LOW** (infra ready) |
 
 ### Phương án chuyển sang Event-Driven (facts cho Architect)
 
@@ -260,16 +262,16 @@ Chatbot-service đã dùng `aio-pika` — xem `chatbot-service-fastapi/requireme
 
 ## 8. Nguồn
 
-| # | File | Mô tả |
-|---|------|-------|
-| 1 | `booking-service/bookings/views.py` (L1-716) | BookingViewSet — all lifecycle actions |
-| 2 | `booking-service/bookings/tasks.py` (L1-140) | Celery tasks — auto-cancel + no-show |
-| 3 | `booking-service/booking_service/celery.py` (L1-38) | Celery config + beat schedule |
-| 4 | `booking-service/bookings/services.py` (L1-100) | Business logic layer |
-| 5 | `booking-service/requirements.txt` | Dependencies — no pika |
-| 6 | `realtime-service-go/internal/handler/broadcast.go` | REST broadcast handlers |
-| 7 | `realtime-service-go/internal/hub/hub.go` | WebSocket hub — group-based broadcast |
-| 8 | `realtime-service-go/internal/handler/ws_handler.go` | WS connection handlers |
-| 9 | `realtime-service-go/cmd/server/main.go` | Server setup — routes, no RabbitMQ |
-| 10 | `realtime-service-go/go.mod` | Dependencies — no AMQP |
-| 11 | `docker-compose.yml` (L50-68, 154-192, 276-295) | RabbitMQ + booking-service + realtime-service config |
+| #   | File                                                 | Mô tả                                                |
+| --- | ---------------------------------------------------- | ---------------------------------------------------- |
+| 1   | `booking-service/bookings/views.py` (L1-716)         | BookingViewSet — all lifecycle actions               |
+| 2   | `booking-service/bookings/tasks.py` (L1-140)         | Celery tasks — auto-cancel + no-show                 |
+| 3   | `booking-service/booking_service/celery.py` (L1-38)  | Celery config + beat schedule                        |
+| 4   | `booking-service/bookings/services.py` (L1-100)      | Business logic layer                                 |
+| 5   | `booking-service/requirements.txt`                   | Dependencies — no pika                               |
+| 6   | `realtime-service-go/internal/handler/broadcast.go`  | REST broadcast handlers                              |
+| 7   | `realtime-service-go/internal/hub/hub.go`            | WebSocket hub — group-based broadcast                |
+| 8   | `realtime-service-go/internal/handler/ws_handler.go` | WS connection handlers                               |
+| 9   | `realtime-service-go/cmd/server/main.go`             | Server setup — routes, no RabbitMQ                   |
+| 10  | `realtime-service-go/go.mod`                         | Dependencies — no AMQP                               |
+| 11  | `docker-compose.yml` (L50-68, 154-192, 276-295)      | RabbitMQ + booking-service + realtime-service config |
