@@ -23,7 +23,10 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { aiApi, type DetectionRecord } from "@/services/api/ai.api";
+import {
+  aiService,
+  type DetectionRecord,
+} from "@/services/business";
 
 const AI_BASE_URL =
   import.meta.env.VITE_AI_SERVICE_URL || "http://localhost:8009";
@@ -101,16 +104,14 @@ export default function DetectionHistoryPage() {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const params: Record<string, string | number> = {
+      const response = await aiService.getDetectionHistory({
         page,
-        page_size: pageSize,
-      };
-      if (plateSearch.trim()) params.plate_text = plateSearch.trim();
-      if (actionFilter) params.action = actionFilter;
-      if (dateFrom) params.date_from = dateFrom;
-      if (dateTo) params.date_to = dateTo;
-
-      const response = await aiApi.getDetectionHistory(params);
+        pageSize,
+        plateText: plateSearch.trim() || undefined,
+        action: actionFilter || undefined,
+        dateFrom: dateFrom || undefined,
+        dateTo: dateTo || undefined,
+      });
       setData(response.results);
       setTotal(response.total);
     } catch {

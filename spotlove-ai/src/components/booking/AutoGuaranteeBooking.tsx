@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { parkingApi } from '@/services/api/parking.api';
+import { parkingService } from "@/services/business/parking.service";
 import { 
   MapPin, 
   Clock, 
@@ -76,7 +76,7 @@ export function AutoGuaranteeBooking({ onComplete }: AutoGuaranteeBookingProps) 
     setShowAlmostFullWarning(false);
 
     try {
-      const response = await parkingApi.getLots({
+      const response = await parkingService.getLots({
         vehicle_type: vehicleType,
         is_open: true,
         pageSize: 10,

@@ -13,9 +13,9 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
-  bookingApi,
-  type PackagePricingResponse,
-} from "@/services/api/booking.api";
+  bookingService,
+  type PackagePricing as PackagePricingResponse,
+} from "@/services/business";
 
 interface PriceSummaryProps {
   vehicleType: "Car" | "Motorbike";
@@ -69,7 +69,7 @@ export function PriceSummary({
     const fetchPricing = async () => {
       try {
         setPricingLoading(true);
-        const data = await bookingApi.getPackagePricing();
+        const data = await bookingService.getPackagePricing();
         setPricingData(data);
       } catch (error) {
         console.warn("Failed to fetch pricing, using fallback:", error);

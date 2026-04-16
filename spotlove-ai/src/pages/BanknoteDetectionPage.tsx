@@ -23,14 +23,14 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
-  aiApi,
+  aiService,
   DENOMINATION_LABELS,
   DENOMINATION_COLORS,
-} from "@/services/api/ai.api";
+} from "@/services/business/ai.service";
 import type {
   BanknoteRecognitionResponse,
   DetectionMode,
-} from "@/services/api/ai.api";
+} from "@/services/business/ai.service";
 
 // ── Decision Display Config ──────────────────────
 
@@ -151,7 +151,7 @@ export default function BanknoteDetectionPage() {
     setLoading(true);
     setResult(null);
     try {
-      const response = await aiApi.detectBanknote(selectedFile, mode);
+      const response = await aiService.detectBanknote(selectedFile, mode);
       setResult(response);
       if (response.decision === "accept") {
         const label = response.denomination

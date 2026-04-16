@@ -36,10 +36,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  adminApi,
+  adminService,
   type User,
   type CreateUserData,
-} from "@/services/api/admin.api";
+} from "@/services/business";
 import { useToast } from "@/hooks/use-toast";
 
 type ViewMode = "grid" | "list";
@@ -103,7 +103,7 @@ export default function AdminUsersPage() {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await adminApi.getUsers({
+      const response = await adminService.getUsers({
         page: 1,
         pageSize: 100,
       });
@@ -141,13 +141,13 @@ export default function AdminUsersPage() {
   const handleToggleBan = async (userId: string, currentStatus: string) => {
     try {
       if (currentStatus === "banned") {
-        await adminApi.activateUser(userId);
+        await adminService.activateUser(userId);
         toast({
           title: "Thành công",
           description: "Đã bỏ cấm người dùng",
         });
       } else {
-        await adminApi.deactivateUser(userId);
+        await adminService.deactivateUser(userId);
         toast({
           title: "Thành công",
           description: "Đã cấm người dùng",
@@ -168,7 +168,7 @@ export default function AdminUsersPage() {
   // Reset no-show count
   const handleResetNoShow = async (userId: string) => {
     try {
-      await adminApi.resetNoShowCount(userId);
+      await adminService.resetNoShowCount(userId);
       toast({
         title: "Thành công",
         description: "Đã reset vi phạm",
@@ -210,7 +210,7 @@ export default function AdminUsersPage() {
         return;
       }
 
-      await adminApi.updateUser(selectedUser.id, updateData);
+      await adminService.updateUser(selectedUser.id, updateData);
       toast({
         title: "Thành công",
         description: "Đã cập nhật thông tin người dùng",
@@ -267,7 +267,7 @@ export default function AdminUsersPage() {
       };
       if (addForm.phone) createData.phone = addForm.phone;
 
-      await adminApi.createUser(createData);
+      await adminService.createUser(createData);
       toast({
         title: "Thành công",
         description: "Đã tạo người dùng mới",

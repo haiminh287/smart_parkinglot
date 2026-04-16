@@ -21,8 +21,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { parkingApi } from "@/services/api/parking.api";
-import { adminApi } from "@/services/api/admin.api";
+import { parkingService, adminService } from "@/services/business";
 import { useToast } from "@/hooks/use-toast";
 
 interface Slot {
@@ -75,9 +74,9 @@ export default function AdminSlotsPage() {
   useEffect(() => {
     const fetchZonesData = async () => {
       try {
-        const lotsResponse = await parkingApi.getLots();
+        const lotsResponse = await parkingService.getLots();
         if (lotsResponse.results.length > 0) {
-          const zonesResponse = await parkingApi.getZones({
+          const zonesResponse = await parkingService.getZones({
             lot_id: lotsResponse.results[0].id,
           });
           const zoneOptions = zonesResponse.results.map((z) => ({
@@ -102,7 +101,7 @@ export default function AdminSlotsPage() {
 
       const zoneId = filterZone !== "all" ? filterZone : undefined;
 
-      const response = await parkingApi.getSlots({
+      const response = await parkingService.getSlots({
         ...(zoneId ? { zone_id: zoneId } : {}),
         page: currentPage,
         pageSize: pageSize,
@@ -156,7 +155,7 @@ export default function AdminSlotsPage() {
     }
     try {
       setIsSubmitting(true);
-      await adminApi.createSlot({
+      await adminService.createSlot({
         zone: addForm.zoneId,
         code: addForm.code,
         status: addForm.status,
@@ -182,7 +181,7 @@ export default function AdminSlotsPage() {
     if (!selectedSlot) return;
     try {
       setIsSubmitting(true);
-      await adminApi.updateSlot(selectedSlot.id, {
+      await adminService.updateSlot(selectedSlot.id, {
         code: editForm.code,
         zone: editForm.zoneId,
         status: editForm.status,
@@ -207,7 +206,7 @@ export default function AdminSlotsPage() {
     if (!selectedSlot) return;
     try {
       setIsSubmitting(true);
-      await adminApi.deleteSlot(selectedSlot.id);
+      await adminService.deleteSlot(selectedSlot.id);
       toast({ title: "Thành công", description: "Đã xóa slot" });
       await fetchSlots();
       setShowDeleteDialog(false);

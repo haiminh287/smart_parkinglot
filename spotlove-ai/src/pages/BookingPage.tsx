@@ -42,7 +42,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useParking, useBooking } from "@/hooks";
 import { useWebSocketConnection } from "@/hooks/useWebSocketConnection";
 import type { ParkingLot, VehicleType, CarSlot } from "@/types/parking";
-import type { Floor } from "@/services/api/parking.api";
+import type { Floor } from "@/services/business";
 import type { Booking } from "@/store/slices/bookingSlice";
 
 type Step = 1 | 2 | 3 | 4 | 5;

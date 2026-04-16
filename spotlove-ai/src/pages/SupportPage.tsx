@@ -25,7 +25,7 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { chatbotApi, type ChatResponse } from "@/services/api/chatbot.api";
+import { chatbotService, type ChatResponse } from "@/services/business";
 import { toast } from "sonner";
 
 interface Message {
@@ -125,7 +125,7 @@ export default function SupportPage() {
   useEffect(() => {
     const loadChatHistory = async () => {
       try {
-        const history = await chatbotApi.getChatHistory();
+        const history = await chatbotService.getChatHistory();
         if (history.messages && history.messages.length > 0) {
           setMessages([
             welcomeMessage,
@@ -199,7 +199,7 @@ export default function SupportPage() {
 
     try {
       // Call the chatbot API
-      const response: ChatResponse = await chatbotApi.sendMessage(
+      const response: ChatResponse = await chatbotService.sendMessage(
         messageContent,
         conversationId || undefined,
       );
@@ -269,7 +269,7 @@ export default function SupportPage() {
     if (!conversationId || feedbackRating === 0) return;
 
     try {
-      await chatbotApi.submitFeedback({
+      await chatbotService.submitFeedback({
         conversationId,
         rating: feedbackRating,
         comment: feedbackComment || undefined,

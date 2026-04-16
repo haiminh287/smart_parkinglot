@@ -9,8 +9,10 @@ import {
 } from "@/components/ui/dialog";
 import { Car, Bike, Loader2, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { vehicleApi } from "@/services";
-import type { CreateVehicleRequest } from "@/services/api/vehicle.api";
+import {
+  vehicleService,
+  type CreateVehicleData as CreateVehicleRequest,
+} from "@/services/business";
 import { useToast } from "@/hooks/use-toast";
 
 interface AddVehicleDialogProps {
@@ -66,11 +68,21 @@ export function AddVehicleDialog({
 
     setIsSubmitting(true);
     try {
-      const vehicle = await vehicleApi.createVehicle({
+      const result = await vehicleService.create({
         ...formData,
         licensePlate: formData.licensePlate.trim().toUpperCase(),
       });
 
+      if (!result.success || !result.vehicle) {
+        toast({
+          variant: "destructive",
+          title: "Lỗi",
+          description: result.message || "Không thể thêm xe",
+        });
+        return;
+      }
+
+      const vehicle = result.vehicle;
       onVehicleAdded({
         id: vehicle.id,
         licensePlate: vehicle.licensePlate,

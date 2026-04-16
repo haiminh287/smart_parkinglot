@@ -40,10 +40,13 @@ import {
 import { cn } from "@/lib/utils";
 import { useBooking } from "@/hooks";
 import { BookingQRCode } from "@/components/booking/BookingQRCode";
-import { aiApi } from "@/services/api/ai.api";
-import { bookingApi } from "@/services/api/booking.api";
+import {
+  aiService,
+  bookingService,
+  type CheckInResponse,
+  type CheckOutResponse,
+} from "@/services/business";
 import { Input } from "@/components/ui/input";
-import type { CheckInResponse, CheckOutResponse } from "@/services/api/ai.api";
 
 type ActiveTab = "check-in" | "check-out";
 
@@ -119,7 +122,7 @@ export default function CheckInOutPage() {
     setIsProcessing(true);
     setManualResult(null);
     try {
-      const response: CheckInResponse = await aiApi.checkIn(selectedFile, {
+      const response: CheckInResponse = await aiService.checkIn(selectedFile, {
         bookingId: currentParking.booking.id,
         userId: currentParking.booking.userId,
       });
@@ -149,7 +152,7 @@ export default function CheckInOutPage() {
     setIsProcessing(true);
     setManualResult(null);
     try {
-      const response: CheckOutResponse = await aiApi.checkOut(selectedFile, {
+      const response: CheckOutResponse = await aiService.checkOut(selectedFile, {
         bookingId: currentParking.booking.id,
         userId: currentParking.booking.userId,
       });
@@ -185,10 +188,10 @@ export default function CheckInOutPage() {
     setIsExtending(true);
     setExtendResult(null);
     try {
-      const response = await bookingApi.extendBooking({
-        bookingId: currentParking.booking.id,
-        additionalHours: extendHours,
-      });
+      const response = await bookingService.extendBooking(
+        currentParking.booking.id,
+        extendHours,
+      );
       setExtendResult({
         success: true,
         message: response.message,

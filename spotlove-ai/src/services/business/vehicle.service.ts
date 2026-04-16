@@ -18,6 +18,12 @@ import type {
 } from "@/services/api/axios.client";
 
 // =====================
+// Re-export Types for consumers
+// =====================
+
+export type CreateVehicleData = CreateVehicleRequest;
+
+// =====================
 // Types
 // =====================
 

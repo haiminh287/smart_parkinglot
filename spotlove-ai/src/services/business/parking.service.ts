@@ -7,6 +7,7 @@
  */
 
 import { parkingApi } from "@/services/api/parking.api";
+import type { Floor as ApiFloor } from "@/services/api/parking.api";
 import { websocketService, WSMessageType } from "@/services/websocket.service";
 import { store } from "@/store";
 import {
@@ -43,11 +44,106 @@ export interface SlotAvailabilityCheck {
   endTime?: string;
 }
 
+// Re-export Floor type for consumers
+export type Floor = ApiFloor;
+
 // =====================
 // Parking Business Service
 // =====================
 
 export const parkingService = {
+  /**
+   * Get parking lots with optional filters
+   */
+  async getLots(params?: {
+    lat?: number;
+    lng?: number;
+    radius?: number;
+    vehicleType?: "Car" | "Motorbike";
+    isOpen?: boolean;
+    page?: number;
+    pageSize?: number;
+  }): Promise<DjangoPaginatedResponse<ParkingLot>> {
+    return parkingApi.getLots({
+      lat: params?.lat,
+      lng: params?.lng,
+      radius: params?.radius,
+      vehicle_type: params?.vehicleType,
+      is_open: params?.isOpen,
+      page: params?.page,
+      pageSize: params?.pageSize,
+    });
+  },
+
+  /**
+   * Get single parking lot details
+   */
+  async getLot(lotId: string): Promise<ParkingLot> {
+    return parkingApi.getLot(lotId);
+  },
+
+  /**
+   * Get nearest parking lots based on user location
+   */
+  async getNearestLots(params: {
+    lat: number;
+    lng: number;
+    vehicleType?: "Car" | "Motorbike";
+    limit?: number;
+  }): Promise<DjangoPaginatedResponse<ParkingLot & { distance?: number; availableSlots?: number }>> {
+    return parkingApi.getNearestLots(params);
+  },
+
+  /**
+   * Get floors for a parking lot
+   */
+  async getFloors(
+    lotId: string,
+    params?: { page?: number; pageSize?: number },
+  ): Promise<DjangoPaginatedResponse<Floor>> {
+    return parkingApi.getFloors({
+      lot_id: lotId,
+      page: params?.page,
+      pageSize: params?.pageSize,
+    });
+  },
+
+  /**
+   * Get zones with filters
+   */
+  async getZones(params: {
+    lotId: string;
+    floor?: number;
+    vehicleType?: "Car" | "Motorbike";
+    page?: number;
+    pageSize?: number;
+  }): Promise<DjangoPaginatedResponse<ParkingZone>> {
+    return parkingApi.getZones({
+      lot_id: params.lotId,
+      floor: params.floor,
+      vehicle_type: params.vehicleType,
+      page: params.page,
+      pageSize: params.pageSize,
+    }) as Promise<DjangoPaginatedResponse<ParkingZone>>;
+  },
+
+  /**
+   * Get slots with filters
+   */
+  async getSlots(params?: {
+    zoneId?: string;
+    status?: "available" | "occupied" | "reserved" | "maintenance";
+    page?: number;
+    pageSize?: number;
+  }): Promise<DjangoPaginatedResponse<ParkingSlot>> {
+    return parkingApi.getSlots({
+      zone_id: params?.zoneId,
+      status: params?.status,
+      page: params?.page,
+      pageSize: params?.pageSize,
+    }) as Promise<DjangoPaginatedResponse<ParkingSlot>>;
+  },
+
   /**
    * Search parking lots near location
    * - Calls API

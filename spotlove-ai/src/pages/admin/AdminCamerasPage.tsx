@@ -22,8 +22,7 @@ import {
   MapPin,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { adminApi } from "@/services/api/admin.api";
-import { parkingApi } from "@/services/api/parking.api";
+import { adminService, parkingService } from "@/services/business";
 import { useToast } from "@/hooks/use-toast";
 
 interface CameraDevice {
@@ -105,9 +104,9 @@ export default function AdminCamerasPage() {
   useEffect(() => {
     const fetchZones = async () => {
       try {
-        const lotsResponse = await parkingApi.getLots();
+        const lotsResponse = await parkingService.getLots();
         if (lotsResponse.results.length > 0) {
-          const zonesResponse = await parkingApi.getZones({
+          const zonesResponse = await parkingService.getZones({
             lot_id: lotsResponse.results[0].id,
           });
           setZones(
@@ -126,7 +125,7 @@ export default function AdminCamerasPage() {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await adminApi.getCameras();
+      const response = await adminService.getCameras();
 
       const mappedCameras: CameraDevice[] = response.results.map((cam) => ({
         id: cam.id,
@@ -173,7 +172,7 @@ export default function AdminCamerasPage() {
     }
     try {
       setIsSubmitting(true);
-      await adminApi.createCamera({
+      await adminService.createCamera({
         name: addForm.name,
         ipAddress: addForm.ipAddress,
         port: addForm.port,
@@ -201,7 +200,7 @@ export default function AdminCamerasPage() {
     if (!selectedCamera) return;
     try {
       setIsSubmitting(true);
-      await adminApi.updateCamera(selectedCamera.id, {
+      await adminService.updateCamera(selectedCamera.id, {
         name: editForm.name,
         ipAddress: editForm.ipAddress,
         port: editForm.port,
@@ -228,7 +227,7 @@ export default function AdminCamerasPage() {
     if (!selectedCamera) return;
     try {
       setIsSubmitting(true);
-      await adminApi.deleteCamera(selectedCamera.id);
+      await adminService.deleteCamera(selectedCamera.id);
       toast({ title: "Thành công", description: "Đã xóa camera" });
       await fetchCameras();
       setShowDeleteDialog(false);
