@@ -206,12 +206,7 @@ export const updateProfile = createAsyncThunk(
   async (data: Partial<User>, { rejectWithValue }) => {
     try {
       // FE-BUG 14 FIX: Use real API call instead of mock
-      const response = await authService.getCurrentUserRaw();
-      // For now use auth/me endpoint for profile update until dedicated endpoint exists
-      const { default: apiClient } =
-        await import("@/services/api/axios.client");
-      const updateResponse = await apiClient.patch("/auth/me/", data);
-      const updatedUser = updateResponse.data;
+      const updatedUser = await authService.updateProfileRaw(data);
       // Update cookie with non-sensitive data only
       Cookies.set(
         "user_info",

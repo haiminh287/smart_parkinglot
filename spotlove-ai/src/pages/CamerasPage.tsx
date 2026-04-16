@@ -33,7 +33,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/use-auth";
-import { adminApi, bookingApi, parkingApi } from "@/services";
+import { adminService, bookingService, parkingService } from "@/services/business";
 import { useToast } from "@/hooks/use-toast";
 import { mapBookingResponse } from "@/store/slices/bookingSlice";
 
@@ -211,7 +211,7 @@ export default function CamerasPage() {
           // Admin: Fetch all cameras from backend + merge monitoring cameras
           let backendCameras: CameraFeed[] = [];
           try {
-            const response = await adminApi.getCameras();
+            const response = await adminService.getCameras();
             backendCameras = response.results.map((cam) => ({
               id: cam.id,
               name: cam.name,
@@ -240,7 +240,7 @@ export default function CamerasPage() {
           let vehicles: UserVehicle[] = [];
 
           try {
-            const parking = await bookingApi.getCurrentParking();
+            const parking = await bookingService.getCurrentParkingRaw();
             if (parking && parking.booking) {
               const mapped = mapBookingResponse(parking.booking as never);
               const slotId = mapped.slotId;
@@ -256,7 +256,7 @@ export default function CamerasPage() {
 
               if (slotId) {
                 try {
-                  const slotData = await parkingApi.getSlot(slotId);
+                  const slotData = await parkingService.getSlot(slotId);
                   if (slotData.cameraId) {
                     cameraId = slotData.cameraId;
                     cameraName = `Camera Slot ${slotCode}`;

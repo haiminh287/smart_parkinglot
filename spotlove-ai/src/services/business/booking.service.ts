@@ -113,6 +113,13 @@ export const bookingService = {
   },
 
   /**
+   * Get single booking by ID
+   */
+  async getById(bookingId: string): Promise<Booking> {
+    return bookingApi.getBooking(bookingId);
+  },
+
+  /**
    * Create new booking
    * - Validates user's no-show status
    * - Creates booking

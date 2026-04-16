@@ -145,6 +145,13 @@ export const parkingService = {
   },
 
   /**
+   * Get single slot by ID
+   */
+  async getSlot(slotId: string): Promise<ParkingSlot> {
+    return parkingApi.getSlot(slotId) as Promise<ParkingSlot>;
+  },
+
+  /**
    * Search parking lots near location
    * - Calls API
    * - Returns results (Redux update via hook/thunk)

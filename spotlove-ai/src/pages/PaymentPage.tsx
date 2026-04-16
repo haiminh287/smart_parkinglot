@@ -20,7 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { QRCodeSVG } from "qrcode.react";
-import { bookingApi } from "@/services";
+import { bookingService } from "@/services/business";
 import {
   mapBookingResponse,
   type Booking as MappedBooking,
@@ -72,7 +72,7 @@ export default function PaymentPage() {
 
       try {
         setLoading(true);
-        const data = await bookingApi.getBooking(bookingId);
+        const data = await bookingService.getById(bookingId);
         // Map API response (which may have nested objects) to flat MappedBooking
         const mapped = mapBookingResponse(data);
         setBooking(mapped);
@@ -151,7 +151,7 @@ export default function PaymentPage() {
 
     const pollInterval = setInterval(async () => {
       try {
-        const result = await bookingApi.pollPaymentStatus(bookingId);
+        const result = await bookingService.pollPaymentStatus(bookingId);
         if (result.paymentStatus === "completed") {
           clearInterval(pollInterval);
           setPaymentConfirmed(true);

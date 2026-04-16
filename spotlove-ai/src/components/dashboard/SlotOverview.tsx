@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Car, Bike, ParkingCircle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { parkingApi } from "@/services";
+import { parkingService } from "@/services/business";
 
 interface ZoneData {
   id: string;
@@ -20,11 +20,11 @@ export function SlotOverview() {
     const fetchZones = async () => {
       try {
         // Get lots first, then zones for the first lot
-        const lotsResponse = await parkingApi.getLots();
+        const lotsResponse = await parkingService.getLots();
         const lots = lotsResponse.results || [];
         if (lots.length > 0) {
-          const zonesResponse = await parkingApi.getZones({
-            lot_id: lots[0].id,
+          const zonesResponse = await parkingService.getZones({
+            lotId: lots[0].id,
           });
           const zonesData: ZoneData[] = (zonesResponse.results || []).map(
             (z: {

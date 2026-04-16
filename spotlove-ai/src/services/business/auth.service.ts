@@ -183,4 +183,70 @@ export const authService = {
   clearError(): void {
     store.dispatch(clearAuthError());
   },
+
+  // =====================
+  // Raw API Wrappers (for Store Thunks)
+  // These methods just call API without Redux side effects,
+  // allowing thunks to handle state updates via extraReducers.
+  // =====================
+
+  /**
+   * Login (raw API call)
+   * For use by Redux async thunks
+   */
+  async loginRaw(credentials: LoginCredentials) {
+    return authApi.login(credentials);
+  },
+
+  /**
+   * Register (raw API call)
+   * For use by Redux async thunks
+   */
+  async registerRaw(data: RegisterData) {
+    return authApi.register(data);
+  },
+
+  /**
+   * Logout (raw API call)
+   * For use by Redux async thunks
+   */
+  async logoutRaw() {
+    return authApi.logout();
+  },
+
+  /**
+   * Get current user (raw API call)
+   * For use by Redux async thunks
+   */
+  async getCurrentUserRaw() {
+    return authApi.getCurrentUser();
+  },
+
+  /**
+   * Get Google OAuth URL (raw API call)
+   * For use by Redux async thunks
+   */
+  async getGoogleAuthUrlRaw() {
+    return authApi.getGoogleAuthUrl();
+  },
+
+  /**
+   * Get Facebook OAuth URL (raw API call)
+   * For use by Redux async thunks
+   */
+  async getFacebookAuthUrlRaw() {
+    return authApi.getFacebookAuthUrl();
+  },
+
+  /**
+   * Update user profile (raw API call)
+   * For use by Redux async thunks
+   * Note: Uses auth/me endpoint directly since no dedicated profile endpoint exists
+   */
+  async updateProfileRaw(data: { username?: string; phone?: string; address?: string }) {
+    // Import apiClient dynamically to avoid circular deps
+    const { default: apiClient } = await import("@/services/api/axios.client");
+    const response = await apiClient.patch("/auth/me/", data);
+    return response.data;
+  },
 };

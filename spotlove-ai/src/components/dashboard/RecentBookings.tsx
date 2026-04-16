@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { bookingApi } from "@/services";
+import { bookingService } from "@/services/business";
 import { mapBookingResponse, type Booking } from "@/store/slices/bookingSlice";
 
 const statusConfig: Record<
@@ -67,7 +67,7 @@ export function RecentBookings() {
   useEffect(() => {
     const fetchRecentBookings = async () => {
       try {
-        const response = await bookingApi.getBookings({ page: 1, pageSize: 5 });
+        const response = await bookingService.getHistory({ page: 1, pageSize: 5 });
         const mapped = (response.results || []).map((item) =>
           mapBookingResponse(item),
         );

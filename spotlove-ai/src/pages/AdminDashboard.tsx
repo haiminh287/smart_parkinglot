@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { SlotOverview } from "@/components/dashboard/SlotOverview";
 import { RecentBookings } from "@/components/dashboard/RecentBookings";
-import { adminApi } from "@/services";
+import { adminService } from "@/services/business";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 
@@ -55,8 +55,8 @@ export default function AdminDashboard() {
       try {
         setLoading(true);
         const [statsData, activitiesData] = await Promise.all([
-          adminApi.getDashboardStats(),
-          adminApi.getRecentActivities(8),
+          adminService.getDashboardStats(),
+          adminService.getRecentActivities(8),
         ]);
         setStats(statsData as unknown as DashboardData);
         setActivities(activitiesData);

@@ -128,8 +128,8 @@ export default function BookingPage() {
     const loadVehicles = async () => {
       setLoadingVehicles(true);
       try {
-        const { vehicleApi } = await import("@/services");
-        const response = await vehicleApi.getVehicles();
+        const { vehicleService } = await import("@/services/business");
+        const response = await vehicleService.getAll();
         const vehicles: SavedVehicle[] = response.results.map((v) => ({
           id: v.id,
           licensePlate: v.licensePlate,
@@ -160,10 +160,8 @@ export default function BookingPage() {
       const loadFloorsData = async () => {
         setLoadingFloors(true);
         try {
-          const { parkingApi } = await import("@/services");
-          const response = await parkingApi.getFloors({
-            lot_id: selectedParkingLot.id,
-          });
+          const { parkingService } = await import("@/services/business");
+          const response = await parkingService.getFloors(selectedParkingLot.id);
           setFloors(response.results);
         } catch {
           return;
