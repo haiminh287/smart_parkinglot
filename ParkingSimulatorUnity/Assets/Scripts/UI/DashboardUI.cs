@@ -51,20 +51,20 @@ namespace ParkingSim.UI
 
             if (parkingManager != null)
             {
-                parkingManager.OnStatusMessage += msg => eventLogPanel.AddEvent(msg, EventType.Info);
-                parkingManager.OnInitComplete += () => eventLogPanel.AddEvent("Parking system initialized", EventType.Success);
+                parkingManager.OnStatusMessage += msg => eventLogPanel.AddEvent(msg, Dashboard.EventType.Info);
+                parkingManager.OnInitComplete += () => eventLogPanel.AddEvent("Parking system initialized", Dashboard.EventType.Success);
             }
 
             if (apiService != null)
             {
-                apiService.OnWsConnected += () => eventLogPanel.AddEvent("WebSocket connected", EventType.Connection);
-                apiService.OnWsDisconnected += () => eventLogPanel.AddEvent("WebSocket disconnected", EventType.Warning);
-                apiService.OnWsError += err => eventLogPanel.AddEvent($"WS error: {err}", EventType.Error);
+                apiService.OnWsConnected += () => eventLogPanel.AddEvent("WebSocket connected", Dashboard.EventType.Connection);
+                apiService.OnWsDisconnected += () => eventLogPanel.AddEvent("WebSocket disconnected", Dashboard.EventType.Warning);
+                apiService.OnWsError += err => eventLogPanel.AddEvent($"WS error: {err}", Dashboard.EventType.Error);
                 apiService.OnSlotStatusUpdate += update =>
-                    eventLogPanel.AddEvent($"Slot {update.SlotId} → {update.Status}", EventType.Info);
+                    eventLogPanel.AddEvent($"Slot {update.SlotId} → {update.Status}", Dashboard.EventType.Info);
             }
 
-            eventLogPanel.AddEvent("Dashboard started", EventType.Success);
+            eventLogPanel.AddEvent("Dashboard started", Dashboard.EventType.Success);
         }
 
         private void Update()
