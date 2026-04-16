@@ -4,6 +4,7 @@ Shared test fixtures for vehicle-service.
 
 import os
 import uuid
+
 import pytest
 from rest_framework.test import APIClient
 
@@ -35,4 +36,5 @@ def gateway_headers():
 @pytest.fixture
 def auth_client(api_client, gateway_headers):
     api_client.credentials(**gateway_headers)
+    return api_client
     return api_client

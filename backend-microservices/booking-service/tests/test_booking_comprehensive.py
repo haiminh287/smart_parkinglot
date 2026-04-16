@@ -10,18 +10,20 @@ from datetime import timedelta
 from decimal import Decimal
 
 import pytest
+from bookings.models import Booking, PackagePricing
 from django.test import TestCase
 from django.utils import timezone
-from rest_framework.test import APIClient
 from rest_framework import status
-from bookings.models import Booking, PackagePricing
-
+from rest_framework.test import APIClient
 
 # ═══════════════════════════════════════════════════
 # FIXTURE HELPERS
 # ═══════════════════════════════════════════════════
 
-def gateway_headers(user_id="00000000-0000-0000-0000-000000000001", email="test@parksmart.com"):
+
+def gateway_headers(
+    user_id="00000000-0000-0000-0000-000000000001", email="test@parksmart.com"
+):
     """Return gateway auth headers dict for APIClient credentials."""
     return {
         "HTTP_X_GATEWAY_SECRET": os.environ.get("GATEWAY_SECRET", "test-secret-for-ci"),
@@ -70,6 +72,7 @@ def create_booking(user_id=None, **kwargs):
 # PACKAGE PRICING MODEL TESTS
 # ═══════════════════════════════════════════════════
 
+
 class TestPackagePricingModel(TestCase):
     """Test PackagePricing model."""
 
@@ -93,6 +96,7 @@ class TestPackagePricingModel(TestCase):
 # BOOKING MODEL TESTS
 # ═══════════════════════════════════════════════════
 
+
 class TestBookingModel(TestCase):
     """Test Booking model fields and defaults."""
 
@@ -109,7 +113,13 @@ class TestBookingModel(TestCase):
 
     def test_booking_check_in_status_choices(self):
         """Verify valid check_in_status values."""
-        valid_statuses = ["not_checked_in", "checked_in", "checked_out", "no_show", "cancelled"]
+        valid_statuses = [
+            "not_checked_in",
+            "checked_in",
+            "checked_out",
+            "no_show",
+            "cancelled",
+        ]
         for s in valid_statuses:
             booking = create_booking(check_in_status=s)
             assert booking.check_in_status == s
@@ -136,6 +146,7 @@ class TestBookingModel(TestCase):
 # BOOKING CRUD API TESTS
 # ═══════════════════════════════════════════════════
 
+
 class TestBookingCRUD(TestCase):
     """Test booking list, create, retrieve, update, delete endpoints."""
 
@@ -160,16 +171,20 @@ class TestBookingCRUD(TestCase):
         assert str(our_booking.id) in booking_ids or len(results) >= 0
 
     def test_create_booking(self):
-        response = self.client.post("/bookings/", {
-            "vehicle_id": str(uuid.uuid4()),
-            "parking_lot_id": str(uuid.uuid4()),
-            "zone_id": str(uuid.uuid4()),
-            "slot_id": str(uuid.uuid4()),
-            "package_type": "hourly",
-            "start_time": timezone.now().isoformat(),
-            "end_time": (timezone.now() + timedelta(hours=2)).isoformat(),
-            "payment_method": "online",
-        }, format="json")
+        response = self.client.post(
+            "/bookings/",
+            {
+                "vehicle_id": str(uuid.uuid4()),
+                "parking_lot_id": str(uuid.uuid4()),
+                "zone_id": str(uuid.uuid4()),
+                "slot_id": str(uuid.uuid4()),
+                "package_type": "hourly",
+                "start_time": timezone.now().isoformat(),
+                "end_time": (timezone.now() + timedelta(hours=2)).isoformat(),
+                "payment_method": "online",
+            },
+            format="json",
+        )
         assert response.status_code in [201, 200]
 
     def test_retrieve_booking(self):
@@ -187,6 +202,7 @@ class TestBookingCRUD(TestCase):
 # ═══════════════════════════════════════════════════
 # CHECK-IN TESTS
 # ═══════════════════════════════════════════════════
+
 
 class TestCheckIn(TestCase):
     """Test booking check-in endpoint."""
@@ -230,6 +246,7 @@ class TestCheckIn(TestCase):
 # CHECK-OUT TESTS
 # ═══════════════════════════════════════════════════
 
+
 class TestCheckOut(TestCase):
     """Test booking check-out endpoint."""
 
@@ -263,6 +280,7 @@ class TestCheckOut(TestCase):
 # CANCELLATION TESTS
 # ═══════════════════════════════════════════════════
 
+
 class TestCancellation(TestCase):
     """Test booking cancellation."""
 
@@ -294,6 +312,7 @@ class TestCancellation(TestCase):
 # ═══════════════════════════════════════════════════
 # CUSTOM ENDPOINT TESTS
 # ═══════════════════════════════════════════════════
+
 
 class TestCustomEndpoints(TestCase):
     """Test current-parking, upcoming, stats, QR, check-slot-bookings."""
@@ -336,16 +355,21 @@ class TestCustomEndpoints(TestCase):
 
     def test_check_slot_bookings(self):
         slot_id = str(uuid.uuid4())
-        response = self.client.post("/bookings/check-slot-bookings/", {
-            "slot_ids": [slot_id],
-            "start_time": timezone.now().isoformat(),
-        }, format="json")
+        response = self.client.post(
+            "/bookings/check-slot-bookings/",
+            {
+                "slot_ids": [slot_id],
+                "start_time": timezone.now().isoformat(),
+            },
+            format="json",
+        )
         assert response.status_code in [200, 400]
 
 
 # ═══════════════════════════════════════════════════
 # PACKAGE PRICING API TESTS
 # ═══════════════════════════════════════════════════
+
 
 class TestPackagePricingAPI(TestCase):
     """Test package pricing CRUD API."""
@@ -361,9 +385,13 @@ class TestPackagePricingAPI(TestCase):
         assert response.status_code == 200
 
     def test_create_package_pricing(self):
-        response = self.client.post("/bookings/packagepricings/", {
-            "vehicle_type": "Car",
-            "package_type": "weekly",
-            "price": "150000.00",
-        }, format="json")
+        response = self.client.post(
+            "/bookings/packagepricings/",
+            {
+                "vehicle_type": "Car",
+                "package_type": "weekly",
+                "price": "150000.00",
+            },
+            format="json",
+        )
         assert response.status_code in [201, 200]

@@ -491,9 +491,7 @@ def check_overlapping_bookings(
         query &= Q(end_time__gt=start_dt)
 
     overlapping = Booking.objects.filter(query)
-    booked_slot_ids = list(
-        overlapping.values_list("slot_id", flat=True).distinct()
-    )
+    booked_slot_ids = list(overlapping.values_list("slot_id", flat=True).distinct())
 
     return {
         "booked_slot_ids": [str(sid) for sid in booked_slot_ids],

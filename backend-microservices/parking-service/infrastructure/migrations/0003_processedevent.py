@@ -1,4 +1,5 @@
 import uuid
+
 from django.db import migrations, models
 
 
@@ -20,4 +21,5 @@ class Migration(migrations.Migration):
                 'db_table': 'processed_events',
             },
         ),
+    ]
     ]

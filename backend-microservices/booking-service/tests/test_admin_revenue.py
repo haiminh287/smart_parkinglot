@@ -8,11 +8,10 @@ from datetime import timedelta
 from decimal import Decimal
 
 import pytest
+from bookings.models import Booking
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient
-
-from bookings.models import Booking
 
 GATEWAY_SECRET = os.environ.get("GATEWAY_SECRET", "test-secret-for-ci")
 
@@ -114,9 +113,21 @@ class TestRevenueSummary:
         assert data["average_booking_value"] == 150000.0
 
     def test_booking_status_counts(self, admin_client):
-        _make_booking(check_in_status="cancelled", payment_status="refunded", price=Decimal("10000"))
-        _make_booking(check_in_status="checked_in", payment_status="completed", price=Decimal("20000"))
-        _make_booking(check_in_status="checked_out", payment_status="completed", price=Decimal("30000"))
+        _make_booking(
+            check_in_status="cancelled",
+            payment_status="refunded",
+            price=Decimal("10000"),
+        )
+        _make_booking(
+            check_in_status="checked_in",
+            payment_status="completed",
+            price=Decimal("20000"),
+        )
+        _make_booking(
+            check_in_status="checked_out",
+            payment_status="completed",
+            price=Decimal("30000"),
+        )
 
         resp = admin_client.get(self.URL)
         data = resp.json()

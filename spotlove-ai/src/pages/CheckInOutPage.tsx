@@ -810,9 +810,7 @@ export default function CheckInOutPage() {
                 </p>
                 {extendResult.extensionPrice != null && (
                   <p className="text-lg font-bold text-primary">
-                    +
-                    {extendResult.extensionPrice.toLocaleString("vi-VN")}
-                    đ
+                    +{extendResult.extensionPrice.toLocaleString("vi-VN")}đ
                   </p>
                 )}
                 <Button
@@ -844,7 +842,9 @@ export default function CheckInOutPage() {
                 </div>
                 <div className="rounded-lg bg-muted/50 border border-border p-3 text-sm space-y-1">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Thời gian thêm</span>
+                    <span className="text-muted-foreground">
+                      Thời gian thêm
+                    </span>
                     <span className="font-medium">{extendHours} giờ</span>
                   </div>
                   <p className="text-xs text-muted-foreground">

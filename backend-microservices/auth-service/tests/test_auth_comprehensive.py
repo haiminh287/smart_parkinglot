@@ -5,11 +5,12 @@ Tests: User model, registration, login, logout, profile, password management, ad
 
 import os
 import uuid
+
 import pytest
 from django.test import TestCase, override_settings
-from rest_framework.test import APIClient
 from rest_framework import status
-from users.models import User, OAuthAccount, PasswordReset
+from rest_framework.test import APIClient
+from users.models import OAuthAccount, PasswordReset, User
 
 GATEWAY_SECRET = os.environ.get("GATEWAY_SECRET", "test-secret-for-ci")
 
@@ -113,6 +114,7 @@ class TestPasswordResetModel(TestCase):
 
     def test_create_password_reset_token(self):
         from datetime import timedelta
+
         from django.utils import timezone
         reset = PasswordReset.objects.create(
             user=self.user,
@@ -124,6 +126,7 @@ class TestPasswordResetModel(TestCase):
 
     def test_reset_token_is_uuid(self):
         from datetime import timedelta
+
         from django.utils import timezone
         token_val = str(uuid.uuid4())
         reset = PasswordReset.objects.create(
@@ -366,6 +369,7 @@ class TestForgotResetPassword(TestCase):
 
     def test_reset_password_with_valid_token(self):
         from datetime import timedelta
+
         from django.utils import timezone
         token_val = str(uuid.uuid4())
         reset = PasswordReset.objects.create(
@@ -444,6 +448,10 @@ class TestAdminEndpoints(TestCase):
         client.credentials(
             HTTP_X_GATEWAY_SECRET=GATEWAY_SECRET,
             HTTP_X_USER_ID=str(self.regular_user.id),
+            HTTP_X_USER_EMAIL=self.regular_user.email,
+        )
+        response = client.get("/auth/admin/dashboard/stats/")
+        assert response.status_code in [403, 404]
             HTTP_X_USER_EMAIL=self.regular_user.email,
         )
         response = client.get("/auth/admin/dashboard/stats/")

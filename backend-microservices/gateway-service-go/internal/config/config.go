@@ -142,7 +142,7 @@ func (c *Config) GetServiceRoute(path string) *ServiceRoute {
 		route  ServiceRoute
 	}{
 		{"auth/admin/", ServiceRoute{"auth", c.AuthServiceURL, false}}, // admin endpoints require authentication
-		{"auth/me", ServiceRoute{"auth", c.AuthServiceURL, false}},      // /auth/me requires authentication
+		{"auth/me", ServiceRoute{"auth", c.AuthServiceURL, false}},     // /auth/me requires authentication
 		{"auth/change-password/", ServiceRoute{"auth", c.AuthServiceURL, false}},
 		{"auth/", ServiceRoute{"auth", c.AuthServiceURL, true}},
 		{"parking/", ServiceRoute{"parking", c.ParkingServiceURL, false}},

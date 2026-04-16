@@ -47,7 +47,10 @@ namespace ParkingSim.IoT
 
         private void Start()
         {
-            if (apiService == null) apiService = ApiService.Instance;
+            if (config == null)
+                config = Resources.Load<ApiConfig>("ApiConfig");
+            if (apiService == null)
+                apiService = ApiService.Instance ?? FindObjectOfType<ApiService>();
         }
 
         private void Update()

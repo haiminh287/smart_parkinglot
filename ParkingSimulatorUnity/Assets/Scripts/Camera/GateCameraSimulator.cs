@@ -29,7 +29,8 @@ namespace ParkingSim.Camera
 
         private void Start()
         {
-            if (apiService == null) apiService = ApiService.Instance;
+            if (apiService == null)
+                apiService = ApiService.Instance ?? FindObjectOfType<ApiService>();
             audioSource = gameObject.AddComponent<AudioSource>();
             audioSource.playOnAwake = false;
         }

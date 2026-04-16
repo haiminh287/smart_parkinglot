@@ -60,6 +60,13 @@ namespace ParkingSim.UI
 
         private void Start()
         {
+            if (config == null)
+                config = Resources.Load<ApiConfig>("ApiConfig");
+            if (apiService == null)
+                apiService = ApiService.Instance ?? FindObjectOfType<ApiService>();
+            if (authManager == null)
+                authManager = AuthManager.Instance ?? FindObjectOfType<AuthManager>();
+
             float w = 700f, h = 350f;
             windowRect = new Rect((Screen.width - w) / 2f, Screen.height - h - 10f, w, h);
 

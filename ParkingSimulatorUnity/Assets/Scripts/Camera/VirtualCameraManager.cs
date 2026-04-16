@@ -21,6 +21,9 @@ namespace ParkingSim.Camera
         {
             if (Instance != null && Instance != this) { Destroy(gameObject); return; }
             Instance = this;
+
+            if (config == null)
+                config = Resources.Load<ApiConfig>("ApiConfig");
         }
 
         public VirtualCameraConfig[] GetCameraConfigs()

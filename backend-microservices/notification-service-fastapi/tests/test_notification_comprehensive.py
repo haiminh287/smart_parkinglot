@@ -4,11 +4,10 @@ Tests: CRUD, unread count, mark read, mark all read, preferences.
 """
 
 import os
+
 import pytest
-from httpx import AsyncClient, ASGITransport
-
 from app.main import app
-
+from httpx import ASGITransport, AsyncClient
 
 GATEWAY_SECRET = os.environ.get("GATEWAY_SECRET", "test-secret-for-ci")
 TEST_USER_ID = "test-user-uuid-notification"
@@ -34,6 +33,7 @@ async def anon_client():
 # HEALTH
 # ═══════════════════════════════════════════════════
 
+
 @pytest.mark.anyio
 async def test_health(client: AsyncClient):
     response = await client.get("/health/")
@@ -45,6 +45,7 @@ async def test_health(client: AsyncClient):
 # ═══════════════════════════════════════════════════
 # LIST NOTIFICATIONS
 # ═══════════════════════════════════════════════════
+
 
 @pytest.mark.anyio
 async def test_list_notifications(client: AsyncClient):
@@ -62,14 +63,18 @@ async def test_list_notifications_paginated(client: AsyncClient):
 # CREATE NOTIFICATION
 # ═══════════════════════════════════════════════════
 
+
 @pytest.mark.anyio
 async def test_create_notification(client: AsyncClient):
-    response = await client.post("/notifications/", json={
-        "userId": "1",
-        "title": "Test Notification",
-        "message": "This is a test notification",
-        "notificationType": "system",
-    })
+    response = await client.post(
+        "/notifications/",
+        json={
+            "userId": "1",
+            "title": "Test Notification",
+            "message": "This is a test notification",
+            "notificationType": "system",
+        },
+    )
     assert response.status_code in [201, 200, 500]  # 500 if DB unavailable
 
 
@@ -83,6 +88,7 @@ async def test_create_notification_missing_fields(client: AsyncClient):
 # UNREAD COUNT
 # ═══════════════════════════════════════════════════
 
+
 @pytest.mark.anyio
 async def test_unread_count(client: AsyncClient):
     response = await client.get("/notifications/unread-count/")
@@ -94,6 +100,7 @@ async def test_unread_count(client: AsyncClient):
 # ═══════════════════════════════════════════════════
 # MARK READ
 # ═══════════════════════════════════════════════════
+
 
 @pytest.mark.anyio
 async def test_mark_read_no_ids(client: AsyncClient):
@@ -111,6 +118,7 @@ async def test_mark_all_read(client: AsyncClient):
 # PREFERENCES
 # ═══════════════════════════════════════════════════
 
+
 @pytest.mark.anyio
 async def test_get_preferences(client: AsyncClient):
     response = await client.get("/notifications/preferences/")
@@ -119,16 +127,20 @@ async def test_get_preferences(client: AsyncClient):
 
 @pytest.mark.anyio
 async def test_update_preferences(client: AsyncClient):
-    response = await client.put("/notifications/preferences/", json={
-        "email_enabled": True,
-        "push_enabled": False,
-    })
+    response = await client.put(
+        "/notifications/preferences/",
+        json={
+            "email_enabled": True,
+            "push_enabled": False,
+        },
+    )
     assert response.status_code in [200, 422]
 
 
 # ═══════════════════════════════════════════════════
 # AUTH ENFORCEMENT
 # ═══════════════════════════════════════════════════
+
 
 @pytest.mark.anyio
 async def test_protected_without_auth(anon_client: AsyncClient):

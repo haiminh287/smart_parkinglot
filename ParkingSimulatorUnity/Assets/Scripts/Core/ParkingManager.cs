@@ -44,6 +44,23 @@ namespace ParkingSim.Core
             Instance = this;
             if (transform.parent == null)
                 DontDestroyOnLoad(gameObject);
+
+            if (config == null)
+                config = Resources.Load<ApiConfig>("ApiConfig");
+            if (apiService == null)
+                apiService = ApiService.Instance ?? FindObjectOfType<ApiService>();
+            if (authManager == null)
+                authManager = AuthManager.Instance ?? FindObjectOfType<AuthManager>();
+            if (generator == null)
+                generator = FindObjectOfType<ParkingLotGenerator>();
+            if (waypointGraph == null)
+                waypointGraph = FindObjectOfType<WaypointGraph>();
+            if (vehicleQueue == null)
+                vehicleQueue = FindObjectOfType<VehicleQueue>();
+            if (virtualCameraManager == null)
+                virtualCameraManager = VirtualCameraManager.Instance ?? FindObjectOfType<VirtualCameraManager>();
+            if (slotOccupancyDetector == null)
+                slotOccupancyDetector = FindObjectOfType<SlotOccupancyDetector>();
         }
 
         private IEnumerator Start()
@@ -201,7 +218,9 @@ namespace ParkingSim.Core
             // Place at slot centre at floor level (slot.y is 0.12 above the floor slab top ~0.10)
             Vector3 slotPos = slot.transform.position;
             float floorY = slotPos.y - 0.12f + 0.1f; // floor surface
-            var go = Instantiate(prefab, new Vector3(slotPos.x, floorY, slotPos.z), Quaternion.identity);
+            Vector3 slotFwd = slot.transform.forward;
+            Quaternion parkRot = slotFwd.sqrMagnitude > 0.01f ? Quaternion.LookRotation(-slotFwd) : Quaternion.identity;
+            var go = Instantiate(prefab, new Vector3(slotPos.x, floorY, slotPos.z), parkRot);
             go.name = $"StaticVehicle_{slot.slotCode}";
 
             // Ensure URP materials are fixed at runtime

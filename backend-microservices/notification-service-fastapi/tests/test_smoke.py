@@ -4,23 +4,26 @@ Verifies health endpoint and __tablename__ mapping.
 """
 
 import os
-import pytest
-from httpx import AsyncClient, ASGITransport
 
+import pytest
 from app.main import app
 from app.models.notification import Notification, NotificationPreference
+from httpx import ASGITransport, AsyncClient
 
 
 @pytest.fixture
 async def client():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        ac.headers["X-Gateway-Secret"] = os.environ.get("GATEWAY_SECRET", "test-secret-for-ci")
+        ac.headers["X-Gateway-Secret"] = os.environ.get(
+            "GATEWAY_SECRET", "test-secret-for-ci"
+        )
         ac.headers["X-User-ID"] = "test-user-uuid"
         yield ac
 
 
 # ─── Health Check ─────────────────────────────────
+
 
 @pytest.mark.anyio
 async def test_health_returns_200(client: AsyncClient):
@@ -34,26 +37,29 @@ async def test_health_returns_200(client: AsyncClient):
 
 # ─── Data Integrity: __tablename__ Mapping ────────
 
+
 def test_notification_tablename():
     """Notification model must map to Django table name."""
-    assert Notification.__tablename__ == "notifications_notification", (
-        f"Expected 'notifications_notification', got '{Notification.__tablename__}'"
-    )
+    assert (
+        Notification.__tablename__ == "notifications_notification"
+    ), f"Expected 'notifications_notification', got '{Notification.__tablename__}'"
 
 
 def test_notification_preference_tablename():
     """NotificationPreference model must map to Django table name."""
-    assert NotificationPreference.__tablename__ == "notifications_notificationpreference", (
-        f"Expected 'notifications_notificationpreference', got '{NotificationPreference.__tablename__}'"
-    )
+    assert (
+        NotificationPreference.__tablename__ == "notifications_notificationpreference"
+    ), f"Expected 'notifications_notificationpreference', got '{NotificationPreference.__tablename__}'"
 
 
 # ─── CamelCase Output ────────────────────────────
 
+
 def test_notification_schema_camelcase():
     """NotificationResponse should output camelCase keys."""
-    from app.schemas.notification import NotificationResponse
     from datetime import datetime
+
+    from app.schemas.notification import NotificationResponse
 
     n = NotificationResponse(
         id="test-id",
@@ -69,7 +75,10 @@ def test_notification_schema_camelcase():
         created_at=datetime.utcnow(),
     )
     output = n.model_dump(by_alias=True)
-    assert "userId" in output, f"Expected camelCase 'userId', got keys: {list(output.keys())}"
+    assert (
+        "userId" in output
+    ), f"Expected camelCase 'userId', got keys: {list(output.keys())}"
     assert "notificationType" in output
     assert "isRead" in output
+    assert "pushSent" in output
     assert "pushSent" in output

@@ -120,9 +120,15 @@ def seed_users(conn: pymysql.Connection) -> dict[str, str]:
                  no_show_count, force_online_payment)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 1, %s, 0, 0)""",
                 (
-                    user_id, acct["email"], acct["username"],
-                    acct["first_name"], acct["last_name"], current_hash,
-                    acct["role"], int(acct["is_staff"]), int(acct["is_superuser"]),
+                    user_id,
+                    acct["email"],
+                    acct["username"],
+                    acct["first_name"],
+                    acct["last_name"],
+                    current_hash,
+                    acct["role"],
+                    int(acct["is_staff"]),
+                    int(acct["is_superuser"]),
                     now,
                 ),
             )
@@ -138,8 +144,22 @@ def seed_vehicles(conn: pymysql.Connection, user_id: str) -> list[str]:
     """Seed vehicles for user. Returns list of vehicle IDs."""
     cursor = conn.cursor()
     vehicles_data = [
-        {"plate": "51A-999.88", "type": "car", "brand": "Toyota", "model": "Camry", "color": "White", "default": True},
-        {"plate": "59C-123.45", "type": "motorbike", "brand": "Honda", "model": "SH150i", "color": "Black", "default": False},
+        {
+            "plate": "51A-999.88",
+            "type": "car",
+            "brand": "Toyota",
+            "model": "Camry",
+            "color": "White",
+            "default": True,
+        },
+        {
+            "plate": "59C-123.45",
+            "type": "motorbike",
+            "brand": "Honda",
+            "model": "SH150i",
+            "color": "Black",
+            "default": False,
+        },
     ]
 
     vehicle_ids: list[str] = []
@@ -158,8 +178,18 @@ def seed_vehicles(conn: pymysql.Connection, user_id: str) -> list[str]:
             """INSERT INTO vehicle
             (id, user_id, license_plate, vehicle_type, brand, model, color, is_default, created_at, updated_at)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
-            (vid, user_id, v["plate"], v["type"], v["brand"], v["model"],
-             v["color"], int(v["default"]), now, now),
+            (
+                vid,
+                user_id,
+                v["plate"],
+                v["type"],
+                v["brand"],
+                v["model"],
+                v["color"],
+                int(v["default"]),
+                now,
+                now,
+            ),
         )
         vehicle_ids.append(vid)
         print(f"  ✅ Created vehicle {v['plate']} (id={vid})")
@@ -178,7 +208,10 @@ def get_parking_context(conn: pymysql.Connection) -> dict:
         print("  ❌ No parking lots found! Seed parking data first.")
         return {}
 
-    cursor.execute("SELECT id, name, level FROM floor WHERE parking_lot_id = %s LIMIT 1", (lot["id"],))
+    cursor.execute(
+        "SELECT id, name, level FROM floor WHERE parking_lot_id = %s LIMIT 1",
+        (lot["id"],),
+    )
     floor = cursor.fetchone()
 
     cursor.execute(
@@ -283,18 +316,42 @@ def seed_bookings(
                     %s, %s, %s,
                     %s, %s, %s, 0)""",
             (
-                bid, user_id, user_email, vehicle_id, vehicle_plate, "car",
-                lot["id"], lot["name"],
-                floor["id"] if floor else None, floor["level"] if floor else None,
-                zone["id"], zone["name"], slot["id"], slot["code"],
+                bid,
+                user_id,
+                user_email,
+                vehicle_id,
+                vehicle_plate,
+                "car",
+                lot["id"],
+                lot["name"],
+                floor["id"] if floor else None,
+                floor["level"] if floor else None,
+                zone["id"],
+                zone["name"],
+                slot["id"],
+                slot["code"],
                 "hourly",
                 bdata["start_time"].strftime(ts_fmt),
-                bdata.get("end_time", bdata["start_time"] + timedelta(hours=2)).strftime(ts_fmt),
-                "cash", bdata["payment_status"], bdata["price"],
+                bdata.get(
+                    "end_time", bdata["start_time"] + timedelta(hours=2)
+                ).strftime(ts_fmt),
+                "cash",
+                bdata["payment_status"],
+                bdata["price"],
                 bdata["status"],
-                bdata.get("checked_in_at", "").strftime(ts_fmt) if bdata.get("checked_in_at") else None,
-                bdata.get("checked_out_at", "").strftime(ts_fmt) if bdata.get("checked_out_at") else None,
-                bid, now_str, now_str,
+                (
+                    bdata.get("checked_in_at", "").strftime(ts_fmt)
+                    if bdata.get("checked_in_at")
+                    else None
+                ),
+                (
+                    bdata.get("checked_out_at", "").strftime(ts_fmt)
+                    if bdata.get("checked_out_at")
+                    else None
+                ),
+                bid,
+                now_str,
+                now_str,
             ),
         )
         booking_ids.append(bid)
@@ -304,7 +361,9 @@ def seed_bookings(
     return booking_ids
 
 
-def seed_payments(conn: pymysql.Connection, user_id: str, booking_ids: list[str]) -> None:
+def seed_payments(
+    conn: pymysql.Connection, user_id: str, booking_ids: list[str]
+) -> None:
     """Seed payment records for completed bookings."""
     cursor = conn.cursor()
 
@@ -361,7 +420,16 @@ def seed_notifications(conn: pymysql.Connection, user_id: str) -> None:
             """INSERT INTO notifications_notification
             (id, user_id, notification_type, title, message, data, is_read, push_sent, email_sent, sms_sent, created_at)
             VALUES (%s, %s, %s, %s, %s, %s, %s, 0, 0, 0, %s)""",
-            (nid, user_id, n["type"], n["title"], n["message"], "{}", int(n["is_read"]), ts),
+            (
+                nid,
+                user_id,
+                n["type"],
+                n["title"],
+                n["message"],
+                "{}",
+                int(n["is_read"]),
+                ts,
+            ),
         )
 
     conn.commit()
@@ -425,9 +493,17 @@ def seed_cameras(conn: pymysql.Connection, ctx: dict) -> None:
                 """UPDATE infrastructure_camera
                 SET name = %s, stream_url = %s, zone_id = %s, is_active = %s
                 WHERE id = %s""",
-                (cam["name"], cam["stream_url"], cam["zone_id"], int(cam["is_active"]), row[0]),
+                (
+                    cam["name"],
+                    cam["stream_url"],
+                    cam["zone_id"],
+                    int(cam["is_active"]),
+                    row[0],
+                ),
             )
-            print(f"  ✅ Updated camera {cam['name']} (zone={'assigned' if cam['zone_id'] else 'none'})")
+            print(
+                f"  ✅ Updated camera {cam['name']} (zone={'assigned' if cam['zone_id'] else 'none'})"
+            )
         else:
             cam_id = make_uuid()
             now = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
@@ -436,12 +512,20 @@ def seed_cameras(conn: pymysql.Connection, ctx: dict) -> None:
                 (id, name, ip_address, port, stream_url, zone_id, is_active, created_at, updated_at)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
                 (
-                    cam_id, cam["name"], cam["ip_address"], cam["port"],
-                    cam["stream_url"], cam["zone_id"], int(cam["is_active"]),
-                    now, now,
+                    cam_id,
+                    cam["name"],
+                    cam["ip_address"],
+                    cam["port"],
+                    cam["stream_url"],
+                    cam["zone_id"],
+                    int(cam["is_active"]),
+                    now,
+                    now,
                 ),
             )
-            print(f"  ✅ Created camera {cam['name']} (zone={'assigned' if cam['zone_id'] else 'none'})")
+            print(
+                f"  ✅ Created camera {cam['name']} (zone={'assigned' if cam['zone_id'] else 'none'})"
+            )
         count += 1
 
     conn.commit()
@@ -478,9 +562,12 @@ def main() -> None:
         # 4. Bookings
         print("\n📦 Seeding bookings...")
         booking_ids = seed_bookings(
-            conn, user_id, "e2e_playwright@parksmart.com",
+            conn,
+            user_id,
+            "e2e_playwright@parksmart.com",
             vehicle_ids[0] if vehicle_ids else make_uuid(),
-            "51A-999.88", ctx,
+            "51A-999.88",
+            ctx,
         )
 
         # 5. Payments
@@ -506,6 +593,7 @@ def main() -> None:
     except Exception as e:
         print(f"\n❌ Error: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
     finally:

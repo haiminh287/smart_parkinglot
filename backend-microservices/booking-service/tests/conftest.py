@@ -5,10 +5,11 @@ Shared test fixtures for booking-service.
 import os
 import uuid
 from decimal import Decimal
-from django.utils import timezone
+
 import pytest
+from bookings.models import Booking, PackagePricing
+from django.utils import timezone
 from rest_framework.test import APIClient
-from bookings.models import PackagePricing, Booking
 
 GATEWAY_SECRET = os.environ.get("GATEWAY_SECRET", "test-secret-" + uuid.uuid4().hex[:8])
 TEST_USER_ID = str(uuid.uuid4())
@@ -90,4 +91,5 @@ def booking(db, pricing):
         start_time=now,
         end_time=now + timezone.timedelta(hours=2),
         total_amount=Decimal("20000"),
+    )
     )

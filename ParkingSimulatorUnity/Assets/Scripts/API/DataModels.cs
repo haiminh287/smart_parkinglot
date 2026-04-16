@@ -61,10 +61,10 @@ namespace ParkingSim.API
         [JsonProperty("status")] public string Status;
         [JsonProperty("isAvailable")] public bool IsAvailable;
         [JsonProperty("camera")] public string Camera;
-        [JsonProperty("x1")] public int X1;
-        [JsonProperty("y1")] public int Y1;
-        [JsonProperty("x2")] public int X2;
-        [JsonProperty("y2")] public int Y2;
+        [JsonProperty("x1")] public int? X1;
+        [JsonProperty("y1")] public int? Y1;
+        [JsonProperty("x2")] public int? X2;
+        [JsonProperty("y2")] public int? Y2;
         [JsonProperty("createdAt")] public string CreatedAt;
         [JsonProperty("updatedAt")] public string UpdatedAt;
     }

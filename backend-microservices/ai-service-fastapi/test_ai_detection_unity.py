@@ -24,6 +24,7 @@ BASE_URL = os.environ.get("AI_SERVICE_URL", "http://localhost:8009")
 GATEWAY_SECRET = os.environ.get("GATEWAY_SECRET")
 if not GATEWAY_SECRET:
     from dotenv import load_dotenv
+
     load_dotenv(Path(__file__).resolve().parent.parent / ".env")
     GATEWAY_SECRET = os.environ.get("GATEWAY_SECRET")
     if not GATEWAY_SECRET:

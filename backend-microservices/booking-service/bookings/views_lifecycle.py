@@ -53,9 +53,7 @@ class BookingLifecycleViewSet(viewsets.GenericViewSet):
                 "booking": serializer.data,
                 "message": "Check-in successful",
                 "checkedInAt": (
-                    booking.checked_in_at.isoformat()
-                    if booking.checked_in_at
-                    else None
+                    booking.checked_in_at.isoformat() if booking.checked_in_at else None
                 ),
             }
         )

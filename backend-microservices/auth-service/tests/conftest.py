@@ -4,6 +4,7 @@ Shared test fixtures for auth-service.
 
 import os
 import uuid
+
 import pytest
 from rest_framework.test import APIClient
 from users.models import User
@@ -84,4 +85,5 @@ def admin_user(db):
         password="AdminPass123!",
         role="admin",
         is_staff=True,
+    )
     )

@@ -33,6 +33,11 @@ namespace ParkingSim.API
             Instance = this;
             if (transform.parent == null)
                 DontDestroyOnLoad(gameObject);
+
+            if (config == null)
+                config = Resources.Load<ApiConfig>("ApiConfig");
+            if (authManager == null)
+                authManager = FindObjectOfType<AuthManager>();
         }
 
         private void Update()

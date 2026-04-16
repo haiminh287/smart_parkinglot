@@ -4,14 +4,13 @@ Tests: Health, detection endpoints, parking endpoints, ESP32 endpoints,
        camera endpoints, metrics, training, engine modules.
 """
 
-import os
 import io
+import os
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
-from httpx import AsyncClient, ASGITransport
-
 from app.main import app
-
+from httpx import ASGITransport, AsyncClient
 
 # ═══════════════════════════════════════════════════
 # FIXTURES
@@ -42,6 +41,7 @@ async def anon_client():
 def fake_image_bytes(fmt="JPEG"):
     """Generate a minimal valid image file for upload testing."""
     from PIL import Image
+
     img = Image.new("RGB", (100, 100), color="red")
     buf = io.BytesIO()
     img.save(buf, format=fmt)
@@ -52,6 +52,7 @@ def fake_image_bytes(fmt="JPEG"):
 # ═══════════════════════════════════════════════════
 # HEALTH ENDPOINT
 # ═══════════════════════════════════════════════════
+
 
 @pytest.mark.anyio
 async def test_health_returns_200(client: AsyncClient):
@@ -72,6 +73,7 @@ async def test_health_no_auth_required(anon_client: AsyncClient):
 # ═══════════════════════════════════════════════════
 # DETECTION ENDPOINTS
 # ═══════════════════════════════════════════════════
+
 
 @pytest.mark.anyio
 async def test_detect_license_plate_no_file(client: AsyncClient):
@@ -108,6 +110,7 @@ async def test_detect_banknote_no_file(client: AsyncClient):
 # PARKING ENDPOINTS
 # ═══════════════════════════════════════════════════
 
+
 @pytest.mark.anyio
 async def test_parking_scan_plate_no_file(client: AsyncClient):
     response = await client.post("/ai/parking/scan-plate/")
@@ -129,6 +132,7 @@ async def test_parking_check_out_no_body(client: AsyncClient):
 # ═══════════════════════════════════════════════════
 # ESP32 ENDPOINTS
 # ═══════════════════════════════════════════════════
+
 
 @pytest.mark.anyio
 async def test_esp32_check_in_endpoint_exists(client: AsyncClient):
@@ -166,6 +170,7 @@ async def test_esp32_status(client: AsyncClient):
 # CAMERA ENDPOINTS
 # ═══════════════════════════════════════════════════
 
+
 @pytest.mark.anyio
 async def test_camera_list(client: AsyncClient):
     response = await client.get("/ai/cameras/list")
@@ -182,7 +187,7 @@ async def test_camera_snapshot_no_params(client: AsyncClient):
 
 @pytest.mark.skip(
     reason="StreamingResponse is infinite by design; no physical camera available in CI/test env. "
-           "Tested via unit test for generate() generator only."
+    "Tested via unit test for generate() generator only."
 )
 @pytest.mark.anyio
 async def test_camera_stream_no_params(client: AsyncClient):
@@ -193,6 +198,7 @@ async def test_camera_stream_no_params(client: AsyncClient):
 # ═══════════════════════════════════════════════════
 # METRICS ENDPOINTS
 # ═══════════════════════════════════════════════════
+
 
 @pytest.mark.anyio
 async def test_metrics_endpoint(client: AsyncClient):
@@ -228,6 +234,7 @@ async def test_versions_endpoint(client: AsyncClient):
 # TRAINING ENDPOINTS
 # ═══════════════════════════════════════════════════
 
+
 @pytest.mark.anyio
 async def test_training_cash_no_file(client: AsyncClient):
     response = await client.post("/ai/train/cash/")
@@ -243,6 +250,7 @@ async def test_training_banknote_no_file(client: AsyncClient):
 # ═══════════════════════════════════════════════════
 # GATEWAY AUTH TESTS
 # ═══════════════════════════════════════════════════
+
 
 @pytest.mark.anyio
 async def test_protected_endpoint_without_gateway_secret(anon_client: AsyncClient):
@@ -262,12 +270,14 @@ async def test_camera_endpoint_exempt_from_auth(anon_client: AsyncClient):
 # ENGINE UNIT TESTS
 # ═══════════════════════════════════════════════════
 
+
 class TestCameraCapture:
     """Test CameraCapture utility (mocked)."""
 
     @patch("cv2.VideoCapture")
     def test_capture_initializes_rtsp(self, mock_cv2):
         from app.engine.camera_capture import CameraCapture
+
         mock_cap = MagicMock()
         mock_cap.isOpened.return_value = True
         mock_cv2.return_value = mock_cap
@@ -281,6 +291,7 @@ class TestQRReader:
 
     def test_import_qr_reader(self):
         from app.engine.qr_reader import QRReader
+
         assert QRReader is not None
 
 
@@ -289,6 +300,7 @@ class TestCashSession:
 
     def test_import_cash_session(self):
         from app.engine.cash_session import CashPaymentSession
+
         assert CashPaymentSession is not None
 
 
@@ -296,9 +308,11 @@ class TestCashSession:
 # SCHEMA TESTS
 # ═══════════════════════════════════════════════════
 
+
 def test_detection_result_camel_case():
     """DetectionResult should output camelCase keys."""
     from app.schemas.ai import DetectionResult
+
     d = DetectionResult(
         plate_text="51F-123.45",
         confidence=0.95,
@@ -310,7 +324,8 @@ def test_detection_result_camel_case():
 
 def test_esp32_response_schema():
     """ESP32Response schema should be importable and valid."""
-    from app.routers.esp32 import ESP32Response, BarrierAction, GateEvent
+    from app.schemas.esp32 import BarrierAction, ESP32Response, GateEvent
+
     r = ESP32Response(
         success=True,
         message="OK",

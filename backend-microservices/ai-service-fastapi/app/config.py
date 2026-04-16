@@ -34,7 +34,11 @@ class Settings(BaseSettings):
     @property
     def cors_origins_list(self) -> list[str]:
         if not self.CORS_ALLOWED_ORIGINS:
-            return ["http://localhost:5173", "http://localhost:3000", "http://localhost:8080"]
+            return [
+                "http://localhost:5173",
+                "http://localhost:3000",
+                "http://localhost:8080",
+            ]
         return [o.strip() for o in self.CORS_ALLOWED_ORIGINS.split(",") if o.strip()]
 
     model_config = ConfigDict(env_file=".env")

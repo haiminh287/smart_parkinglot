@@ -46,6 +46,9 @@ namespace ParkingSim.Vehicle
 
         private void Start()
         {
+            if (config == null)
+                config = Resources.Load<ApiConfig>("ApiConfig");
+
             generatorRef = FindObjectOfType<ParkingLotGenerator>();
 
             float w = 260f, h = 170f;
