@@ -1,5 +1,3 @@
-import os
-
 from pydantic import ConfigDict
 from pydantic_settings import BaseSettings
 
@@ -45,6 +43,3 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-
-# Ensure media directory exists
-os.makedirs(settings.MEDIA_ROOT, exist_ok=True)

@@ -14,7 +14,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config("SECRET_KEY")
 DEBUG = config("DEBUG", default=False, cast=bool)
 ENV = config("ENV", default="development")
-ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost").split(",")
+_allowed_hosts_raw = config("ALLOWED_HOSTS", default="localhost" if DEBUG else "")
+if not DEBUG and not _allowed_hosts_raw.strip():
+    raise ImproperlyConfigured(
+        "ALLOWED_HOSTS is required when DEBUG=False. "
+        "Set ALLOWED_HOSTS env var (comma-separated)."
+    )
+ALLOWED_HOSTS = [h.strip() for h in _allowed_hosts_raw.split(",") if h.strip()]
 
 # Application definition
 INSTALLED_APPS = [
@@ -180,5 +186,4 @@ if ENV.lower() == "production":
 
 # Gateway authentication - All requests must come through gateway
 # Required: GATEWAY_SECRET must be set in environment, no insecure default allowed
-GATEWAY_SECRET = config("GATEWAY_SECRET")
 GATEWAY_SECRET = config("GATEWAY_SECRET")

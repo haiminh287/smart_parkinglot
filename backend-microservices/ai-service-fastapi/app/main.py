@@ -3,14 +3,15 @@ AI Service - FastAPI Application
 """
 
 import logging
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 from app.config import settings
 from app.engine.camera_monitor import start_camera_monitor, stop_camera_monitor
+from app.engine.esp32_device_store import seed_default_devices
 from app.middleware.gateway_auth import GatewayAuthMiddleware
 from app.routers import camera, detection, esp32, metrics, parking, training
-from app.engine.esp32_device_store import seed_default_devices
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -22,6 +23,7 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Application lifespan — start/stop background workers."""
     logger.info("AI Service starting up...")
+    os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
     seed_default_devices()
     # Pre-warm YOLO slot detector (loads model once into memory)
     from app.engine.slot_detection import get_slot_detector
