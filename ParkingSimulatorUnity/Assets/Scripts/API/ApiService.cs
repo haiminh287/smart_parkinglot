@@ -56,6 +56,14 @@ namespace ParkingSim.API
         private PaginatedResponse<T> Paginated<T>(List<T> items) =>
             new PaginatedResponse<T> { Count = items.Count, Results = items };
 
+        private const int MAX_LOG_BODY = 500;
+
+        private static string TruncateBody(string body)
+        {
+            if (string.IsNullOrEmpty(body) || body.Length <= MAX_LOG_BODY) return body;
+            return body.Substring(0, MAX_LOG_BODY) + $"…[truncated {body.Length - MAX_LOG_BODY} chars]";
+        }
+
         private UnityWebRequest BuildGet(string url)
         {
             var req = UnityWebRequest.Get(url);
@@ -89,7 +97,7 @@ namespace ParkingSim.API
             if (isAi && req.uploadHandler != null)
             {
                 string reqBody = Encoding.UTF8.GetString(req.uploadHandler.data);
-                Debug.Log($"[ApiService] REQ→ {req.method} {req.url}\n{reqBody}");
+                Debug.Log($"[ApiService] REQ→ {req.method} {req.url}\n{TruncateBody(reqBody)}");
             }
 
             float start = Time.realtimeSinceStartup;
@@ -103,7 +111,7 @@ namespace ParkingSim.API
                 {
                     Debug.Log($"[ApiService] {req.method} {req.url} → {status} ({elapsed:F0}ms)");
                     if (isAi)
-                        Debug.Log($"[ApiService] RSP← {req.downloadHandler.text}");
+                        Debug.Log($"[ApiService] RSP← {TruncateBody(req.downloadHandler.text)}");
                     var data = JsonConvert.DeserializeObject<T>(req.downloadHandler.text);
                     cb?.Invoke(new ApiResponse<T> { IsSuccess = true, Data = data, StatusCode = status });
                 }
@@ -114,7 +122,7 @@ namespace ParkingSim.API
                     string errCode = TryParseErrorCode(errBody);
                     Debug.LogWarning($"[ApiService] {req.method} {req.url} → {status} ({elapsed:F0}ms): {errMsg}");
                     if (isAi && !string.IsNullOrEmpty(errBody))
-                        Debug.LogWarning($"[ApiService] ERR← {errBody}");
+                        Debug.LogWarning($"[ApiService] ERR← {TruncateBody(errBody)}");
                     cb?.Invoke(new ApiResponse<T>
                     {
                         IsSuccess = false,
