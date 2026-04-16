@@ -19,13 +19,6 @@ export const ENDPOINTS = {
     RESET_PASSWORD: "/auth/reset-password/",
   },
 
-  // USER: Not yet implemented in backend
-  // USER: {
-  //   PROFILE: '/users/profile/',
-  //   UPDATE_PROFILE: '/users/profile/',
-  //   AVATAR: '/users/avatar/',
-  // },
-
   // =====================
   // VEHICLES
   // =====================
@@ -116,29 +109,6 @@ export const ENDPOINTS = {
   },
 
   // =====================
-  // MAP & NAVIGATION
-  // =====================
-  // MAP: Not yet implemented in backend
-  // MAP: {
-  //   NODES: (floorId: string) => `/floors/${floorId}/map/nodes/`,
-  //   EDGES: (floorId: string) => `/floors/${floorId}/map/edges/`,
-  //   DIRECTIONS: '/map/directions/',
-  //   FLOOR_MAP: (floorId: string) => `/floors/${floorId}/map/`,
-  // },
-
-  // =====================
-  // SUPPORT & CHAT
-  // =====================
-  // SUPPORT: Not yet implemented in backend
-  // SUPPORT: {
-  //   SEND_MESSAGE: '/support/messages/',
-  //   MESSAGES: '/support/messages/',
-  //   AI_CHAT: '/support/ai-chat/',
-  //   TICKETS: '/support/tickets/',
-  //   CREATE_TICKET: '/support/tickets/',
-  // },
-
-  // =====================
   // ADMIN
   // =====================
   ADMIN: {
@@ -166,15 +136,4 @@ export const ENDPOINTS = {
     ESP32_CASH_PAYMENT: "/ai/parking/esp32/cash-payment/",
   },
 
-  // =====================
-  // CALENDAR INTEGRATION
-  // =====================
-  // CALENDAR: Not yet implemented in backend
-  // CALENDAR: {
-  //   CONNECT_GOOGLE: '/calendar/google/connect/',
-  //   CONNECT_APPLE: '/calendar/apple/connect/',
-  //   DISCONNECT: (provider: string) => `/calendar/${provider}/disconnect/`,
-  //   EVENTS: '/calendar/events/',
-  //   AUTO_HOLD_SETTINGS: '/calendar/auto-hold/',
-  // },
 } as const;
