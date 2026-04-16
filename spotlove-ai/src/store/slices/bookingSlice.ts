@@ -266,7 +266,7 @@ export const fetchBookings = createAsyncThunk(
     { rejectWithValue },
   ) => {
     try {
-      const response = await bookingApi.getBookings(params);
+      const response = await bookingService.getBookingsRaw(params);
       return {
         results: response.results.map((item: BookingApiResponse) =>
           mapBookingResponse(item),
@@ -288,7 +288,7 @@ export const fetchCurrentParking = createAsyncThunk(
   "booking/fetchCurrentParking",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await bookingApi.getCurrentParking();
+      const response = await bookingService.getCurrentParkingRaw();
       if (!response) return null;
       return mapCurrentParkingResponse(response);
     } catch (error: unknown) {
@@ -322,7 +322,7 @@ export const createBooking = createAsyncThunk(
     { rejectWithValue },
   ) => {
     try {
-      const response = await bookingApi.createBooking(data);
+      const response = await bookingService.createBookingRaw(data);
       return {
         booking: mapBookingResponse(response.booking as BookingApiResponse),
         paymentUrl: response.paymentUrl,
@@ -342,7 +342,7 @@ export const cancelBooking = createAsyncThunk(
   "booking/cancelBooking",
   async (bookingId: string, { rejectWithValue }) => {
     try {
-      await bookingApi.cancelBooking(bookingId);
+      await bookingService.cancelBookingRaw(bookingId);
       return bookingId;
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } } };

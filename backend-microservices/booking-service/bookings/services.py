@@ -310,7 +310,7 @@ def perform_cancel(booking: Booking) -> Booking:
 # Map booking payment_method to payment service valid methods
 _PAYMENT_METHOD_MAP = {
     "on_exit": "cash",
-    "online": "cash",  # Default; user initiates specific method (momo/vnpay/zalopay) later
+    "online": "e_wallet",
 }
 
 

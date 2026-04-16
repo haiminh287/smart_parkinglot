@@ -6,7 +6,7 @@
 
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import Cookies from "js-cookie";
-import { authApi } from "@/services/api/auth.api";
+import { authService } from "@/services/business";
 
 export type UserRole = "user" | "admin";
 
@@ -84,7 +84,7 @@ export const login = createAsyncThunk(
     { rejectWithValue },
   ) => {
     try {
-      const response = await authApi.login(credentials);
+      const response = await authService.loginRaw(credentials);
       return response.user;
     } catch (error: unknown) {
       return rejectWithValue(getErrorMessage(error, "Đăng nhập thất bại"));
@@ -96,7 +96,7 @@ export const loginWithGoogle = createAsyncThunk(
   "auth/loginWithGoogle",
   async (_, { rejectWithValue }) => {
     try {
-      window.location.href = await authApi.getGoogleAuthUrl();
+      window.location.href = await authService.getGoogleAuthUrlRaw();
       return null; // Will redirect to Google
     } catch (error: unknown) {
       return rejectWithValue(
@@ -110,7 +110,7 @@ export const loginWithFacebook = createAsyncThunk(
   "auth/loginWithFacebook",
   async (_, { rejectWithValue }) => {
     try {
-      window.location.href = await authApi.getFacebookAuthUrl();
+      window.location.href = await authService.getFacebookAuthUrlRaw();
       return null; // Will redirect to Facebook
     } catch (error: unknown) {
       return rejectWithValue(
@@ -127,7 +127,7 @@ export const register = createAsyncThunk(
     { rejectWithValue },
   ) => {
     try {
-      const response = await authApi.register(data);
+      const response = await authService.registerRaw(data);
       return response.user;
     } catch (error: unknown) {
       return rejectWithValue(getErrorMessage(error, "Đăng ký thất bại"));
@@ -139,7 +139,7 @@ export const logout = createAsyncThunk(
   "auth/logout",
   async (_, { rejectWithValue }) => {
     try {
-      await authApi.logout();
+      await authService.logoutRaw();
       Cookies.remove("user_info");
     } catch (error: unknown) {
       return rejectWithValue(getErrorMessage(error, "Đăng xuất thất bại"));
@@ -159,7 +159,7 @@ export const initAuth = createAsyncThunk(
       }
 
       // Verify session with backend
-      const response = await authApi.getCurrentUser();
+      const response = await authService.getCurrentUserRaw();
       return response.user;
     } catch (error: unknown) {
       const status = getErrorStatus(error);
@@ -191,7 +191,7 @@ export const fetchCurrentUser = createAsyncThunk(
   "auth/fetchCurrentUser",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await authApi.getCurrentUser();
+      const response = await authService.getCurrentUserRaw();
       return response.user;
     } catch (error: unknown) {
       return rejectWithValue(
@@ -206,7 +206,7 @@ export const updateProfile = createAsyncThunk(
   async (data: Partial<User>, { rejectWithValue }) => {
     try {
       // FE-BUG 14 FIX: Use real API call instead of mock
-      const response = await authApi.getCurrentUser();
+      const response = await authService.getCurrentUserRaw();
       // For now use auth/me endpoint for profile update until dedicated endpoint exists
       const { default: apiClient } =
         await import("@/services/api/axios.client");
