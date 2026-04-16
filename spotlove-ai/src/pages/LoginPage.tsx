@@ -7,13 +7,6 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/use-auth";
 import { useToast } from "@/hooks/use-toast";
 
-// =====================
-// API Integration (Uncomment when backend is ready)
-// =====================
-// import { authApi, handleAuthError } from '@/services';
-// import { useAppDispatch } from '@/store/hooks';
-// import { setUser, setLoading, setError } from '@/store/slices/authSlice';
-
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
