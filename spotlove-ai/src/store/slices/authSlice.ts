@@ -42,7 +42,10 @@ interface ApiErrorPayload {
 }
 
 const getErrorMessage = (error: unknown, fallbackMessage: string): string => {
-  if (error instanceof Error && error.message === "AUTH_ME_INVALID_CONTENT_TYPE") {
+  if (
+    error instanceof Error &&
+    error.message === "AUTH_ME_INVALID_CONTENT_TYPE"
+  ) {
     return "Lỗi cấu hình API production: endpoint auth trả về dữ liệu không hợp lệ";
   }
 
@@ -69,9 +72,11 @@ const getUserFromCookie = (): User | null => {
   return null;
 };
 
+const cachedUser = getUserFromCookie();
+
 const initialState: AuthState = {
-  user: getUserFromCookie(),
-  isAuthenticated: !!getUserFromCookie(),
+  user: cachedUser,
+  isAuthenticated: !!cachedUser,
   isLoading: false,
   error: null,
 };

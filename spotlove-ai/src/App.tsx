@@ -30,7 +30,9 @@ const SupportPage = lazy(() => import("./pages/SupportPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const PaymentPage = lazy(() => import("./pages/PaymentPage"));
 const PanicButtonPage = lazy(() => import("./pages/PanicButtonPage"));
-const BanknoteDetectionPage = lazy(() => import("./pages/BanknoteDetectionPage"));
+const BanknoteDetectionPage = lazy(
+  () => import("./pages/BanknoteDetectionPage"),
+);
 const KioskPage = lazy(() => import("./pages/KioskPage"));
 const CheckInOutPage = lazy(() => import("./pages/CheckInOutPage"));
 const DetectionHistoryPage = lazy(() => import("./pages/DetectionHistoryPage"));
@@ -42,9 +44,12 @@ const AdminZonesPage = lazy(() => import("./pages/admin/AdminZonesPage"));
 const AdminSlotsPage = lazy(() => import("./pages/admin/AdminSlotsPage"));
 const AdminCamerasPage = lazy(() => import("./pages/admin/AdminCamerasPage"));
 const AdminConfigPage = lazy(() => import("./pages/admin/AdminConfigPage"));
-const AdminViolationsPage = lazy(() => import("./pages/admin/AdminViolationsPage"));
+const AdminViolationsPage = lazy(
+  () => import("./pages/admin/AdminViolationsPage"),
+);
 const AdminESP32Page = lazy(() => import("./pages/admin/AdminESP32Page"));
 const AdminRevenuePage = lazy(() => import("./pages/admin/AdminRevenuePage"));
+const AdminStatsPage = lazy(() => import("./pages/admin/AdminStatsPage"));
 
 const App = () => (
   <Provider store={store}>
@@ -235,6 +240,14 @@ const App = () => (
                     element={
                       <ProtectedRoute requireAdmin>
                         <AdminRevenuePage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/stats"
+                    element={
+                      <ProtectedRoute requireAdmin>
+                        <AdminStatsPage />
                       </ProtectedRoute>
                     }
                   />

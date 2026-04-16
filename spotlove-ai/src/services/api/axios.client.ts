@@ -11,6 +11,12 @@ import axios, {
 } from "axios";
 import webLogger from "@/lib/webLogger";
 
+declare module "axios" {
+  interface InternalAxiosRequestConfig {
+    metadata?: { startTime: number };
+  }
+}
+
 // Base URL
 // - Dev: default /api để đi qua Vite proxy
 // - Prod: nếu VITE_API_URL là domain API trần (không có /api) thì tự append /api
@@ -55,7 +61,7 @@ apiClient.interceptors.request.use(
     }
 
     // Track request start time for duration calculation
-    (config as InternalAxiosRequestConfig & { _t: number })._t = Date.now();
+    config.metadata = { startTime: Date.now() };
 
     // Log every outgoing request
     webLogger.apiReq(
@@ -83,8 +89,8 @@ apiClient.interceptors.request.use(
  */
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => {
-    const cfg = response.config as InternalAxiosRequestConfig & { _t?: number };
-    const duration = cfg._t ? Date.now() - cfg._t : 0;
+    const cfg = response.config;
+    const duration = cfg.metadata?.startTime ? Date.now() - cfg.metadata.startTime : 0;
     webLogger.apiRes(
       cfg.method ?? "GET",
       cfg.url ?? "",
@@ -95,10 +101,8 @@ apiClient.interceptors.response.use(
     return response;
   },
   async (error: AxiosError) => {
-    const cfg = (error.config ?? {}) as InternalAxiosRequestConfig & {
-      _t?: number;
-    };
-    const duration = cfg._t ? Date.now() - cfg._t : 0;
+    const cfg = error.config ?? ({} as InternalAxiosRequestConfig);
+    const duration = cfg.metadata?.startTime ? Date.now() - cfg.metadata.startTime : 0;
 
     if (error.response) {
       webLogger.apiErr(
