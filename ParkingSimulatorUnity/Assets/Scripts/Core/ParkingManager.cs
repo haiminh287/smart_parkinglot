@@ -273,9 +273,19 @@ namespace ParkingSim.Core
 
         private IEnumerator PollSlotsCoroutine()
         {
+            // S2-IMP-11: WebSocket is the primary source of slot updates.
+            // Polling runs only as a FALLBACK when WS is disconnected — avoids
+            // race where stale HTTP snapshot overwrites a fresh WS push.
             while (true)
             {
                 yield return new WaitForSeconds(config.deltaPollInterval);
+
+                // Skip poll if WebSocket is healthy — events flow through
+                // apiService.OnSlotStatusUpdate → HandleSlotStatusUpdate.
+                if (apiService != null && apiService.IsWsConnected)
+                {
+                    continue;
+                }
 
                 bool done = false;
                 ApiResponse<PaginatedResponse<SlotData>> result = null;
@@ -284,7 +294,20 @@ namespace ParkingSim.Core
                     result = r;
                     done = true;
                 }));
-                while (!done) yield return null;
+
+                // Fail-safe timeout — prevent infinite hang if HTTP stalls.
+                float timeoutElapsed = 0f;
+                const float pollTimeoutSeconds = 10f;
+                while (!done && timeoutElapsed < pollTimeoutSeconds)
+                {
+                    timeoutElapsed += Time.deltaTime;
+                    yield return null;
+                }
+                if (!done)
+                {
+                    Debug.LogWarning("[ParkingManager] Poll HTTP timeout — skipping tick");
+                    continue;
+                }
 
                 if (result != null && result.IsSuccess && result.Data?.Results != null)
                 {
@@ -295,7 +318,7 @@ namespace ParkingSim.Core
                     }
 
                     var stats = GetSlotStats();
-                    Debug.Log($"[ParkingManager] Poll: {stats.available}/{stats.total} slots available");
+                    Debug.Log($"[ParkingManager] Poll (fallback): {stats.available}/{stats.total} slots available");
                 }
             }
         }
