@@ -135,6 +135,27 @@ namespace ParkingSim.API
         }
 
         /// <summary>
+        /// Trả TẤT CẢ booking còn hoạt động (not_checked_in + checked_in) với status
+        /// prefix trong label — single dropdown UX. Dùng làm list hiển thị chung ở
+        /// ESP32Simulator cho cả Check-In / Verify / Check-Out.
+        /// </summary>
+        public List<(string label, ActiveBooking booking)> GetAllActiveForDropdown()
+        {
+            return activeBookings
+                .Where(b => b.CheckInStatus == "not_checked_in" || b.CheckInStatus == "checked_in")
+                .Select(b =>
+                {
+                    string shortId = b.BookingId != null && b.BookingId.Length >= 8
+                        ? b.BookingId.Substring(0, 8)
+                        : b.BookingId ?? "???";
+                    string icon = b.CheckInStatus == "checked_in" ? "✓" : "⏳";
+                    string label = $"{icon} {b.LicensePlate} → {b.SlotCode} ({shortId})";
+                    return (label, b);
+                })
+                .ToList();
+        }
+
+        /// <summary>
         /// Return bookings already checked-in (eligible for check-out).
         /// </summary>
         public List<(string label, ActiveBooking booking)> GetCheckedInBookingsForDropdown()

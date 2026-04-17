@@ -26,8 +26,7 @@ namespace ParkingSim.IoT
         /// </summary>
         public static string ActiveCheckInBookingId { get; private set; }
 
-        // CHECK-OUT & VERIFY-SLOT — dropdown shows checked_in bookings (separate index)
-        private int selectedCheckedInIdx = -1;
+        // CHECK-OUT & VERIFY-SLOT reuse selectedBookingIdx (merged dropdown)
 
         // CASH-PAYMENT
         private string cashPlate = "";
@@ -112,31 +111,30 @@ namespace ParkingSim.IoT
             GUI.DragWindow();
         }
 
-        // ── CHECK-IN ──
+        // ── BOOKINGS (single dropdown: ⏳ pending + ✓ checked-in) ──
         private void DrawCheckInSection()
         {
-            GUILayout.Label("── CHECK-IN ──");
+            GUILayout.Label("── ACTIVE BOOKINGS ──");
 
-            // Active bookings info
             var bookings = SharedBookingState.Instance != null
-                ? SharedBookingState.Instance.GetActiveBookingsForDropdown()
+                ? SharedBookingState.Instance.GetAllActiveForDropdown()
                 : new List<(string label, ActiveBooking booking)>();
 
+            ActiveBooking selected = null;
             if (bookings.Count > 0)
             {
-                GUILayout.Label("Active Bookings:");
                 string[] labels = new string[bookings.Count];
                 for (int i = 0; i < bookings.Count; i++) labels[i] = bookings[i].label;
-                selectedBookingIdx = Mathf.Clamp(selectedBookingIdx, 0, bookings.Count - 1);
+                selectedBookingIdx = Mathf.Clamp(selectedBookingIdx < 0 ? 0 : selectedBookingIdx, 0, bookings.Count - 1);
                 selectedBookingIdx = GUILayout.SelectionGrid(selectedBookingIdx, labels, 1);
-                var selected = bookings[selectedBookingIdx].booking;
+                selected = bookings[selectedBookingIdx].booking;
                 checkInPlate = selected.LicensePlate ?? "";
                 manualQrData = selected.QrCodeData ?? "";
                 ActiveCheckInBookingId = selected.BookingId;
             }
             else
             {
-                GUILayout.Label("No active bookings — sync or create via web");
+                GUILayout.Label("Chưa có booking — Sync hoặc tạo từ web");
             }
 
             GUI.enabled = !isProcessing && !isSyncing;
@@ -144,17 +142,17 @@ namespace ParkingSim.IoT
                 StartCoroutine(DoSyncBookings());
             GUI.enabled = true;
 
-            if (bookings.Count > 0)
+            if (selected != null)
             {
                 GUILayout.Space(4);
-                GUILayout.Label($"Plate: {checkInPlate}");
-                GUILayout.Label($"QR: {(string.IsNullOrEmpty(manualQrData) ? "(none)" : manualQrData.Substring(0, Mathf.Min(manualQrData.Length, 36)) + "...")}");
-            }
+                GUILayout.Label($"Plate: {checkInPlate} | Slot: {selected.SlotCode} | Status: {selected.CheckInStatus}");
 
-            GUI.enabled = !isProcessing;
-            if (GUILayout.Button("📥 Check-In"))
-                StartCoroutine(DoCheckIn());
-            GUI.enabled = true;
+                bool notCheckedIn = selected.CheckInStatus == "not_checked_in";
+                GUI.enabled = !isProcessing && notCheckedIn;
+                if (GUILayout.Button(notCheckedIn ? "📥 Check-In" : "📥 Check-In (đã check-in)"))
+                    StartCoroutine(DoCheckIn());
+                GUI.enabled = true;
+            }
         }
 
         private IEnumerator DoSyncBookings()
@@ -178,19 +176,19 @@ namespace ParkingSim.IoT
 
         private IEnumerator DoCheckIn()
         {
-            // Dùng booking tại selectedBookingIdx TRỰC TIẾP, không lookup bằng plate
-            // (plate có thể trùng giữa nhiều booking → GetBookingByPlate trả first match
-            // không phải cái user chọn trong dropdown).
-            var pendingBookings = SharedBookingState.Instance != null
-                ? SharedBookingState.Instance.GetActiveBookingsForDropdown()
+            // Single source of truth: lấy booking tại selectedBookingIdx của merged list
+            var all = SharedBookingState.Instance != null
+                ? SharedBookingState.Instance.GetAllActiveForDropdown()
                 : new List<(string label, ActiveBooking booking)>();
 
-            if (pendingBookings.Count == 0 || selectedBookingIdx < 0 || selectedBookingIdx >= pendingBookings.Count)
-            { SetResult(false, "No pending booking selected. Sync hoặc tạo booking mới."); yield break; }
+            if (all.Count == 0 || selectedBookingIdx < 0 || selectedBookingIdx >= all.Count)
+            { SetResult(false, "No booking selected. Sync hoặc tạo booking mới."); yield break; }
 
-            var activeBooking = pendingBookings[selectedBookingIdx].booking;
+            var activeBooking = all[selectedBookingIdx].booking;
             if (activeBooking == null || string.IsNullOrEmpty(activeBooking.BookingId))
             { SetResult(false, "Selected booking không hợp lệ."); yield break; }
+            if (activeBooking.CheckInStatus != "not_checked_in")
+            { SetResult(false, $"Booking đã ở trạng thái {activeBooking.CheckInStatus}, không thể check-in lại."); yield break; }
 
             checkInPlate = activeBooking.LicensePlate ?? checkInPlate;
             string qr = !string.IsNullOrEmpty(manualQrData) ? manualQrData : activeBooking.QrCodeData;
@@ -268,41 +266,38 @@ namespace ParkingSim.IoT
             GUILayout.Space(5);
             GUILayout.Label("── CHECK-OUT ──");
 
-            var bookings = SharedBookingState.Instance != null
-                ? SharedBookingState.Instance.GetCheckedInBookingsForDropdown()
-                : new List<(string label, ActiveBooking booking)>();
-
-            if (bookings.Count > 0)
+            var selected = GetSelectedBooking();
+            if (selected == null)
             {
-                GUILayout.Label("Checked-in Bookings:");
-                string[] labels = new string[bookings.Count];
-                for (int i = 0; i < bookings.Count; i++) labels[i] = bookings[i].label;
-                selectedCheckedInIdx = Mathf.Clamp(selectedCheckedInIdx < 0 ? 0 : selectedCheckedInIdx, 0, bookings.Count - 1);
-                selectedCheckedInIdx = GUILayout.SelectionGrid(selectedCheckedInIdx, labels, 1);
-                var bk = bookings[selectedCheckedInIdx].booking;
-                GUILayout.Label($"Plate: {bk.LicensePlate ?? "(unknown)"}");
+                GUILayout.Label("Chọn booking ở trên");
             }
             else
             {
-                GUILayout.Label("No checked-in bookings");
+                bool isCheckedIn = selected.CheckInStatus == "checked_in";
+                GUILayout.Label($"Plate: {selected.LicensePlate ?? "(unknown)"} | Status: {selected.CheckInStatus}");
+                GUI.enabled = !isProcessing && isCheckedIn;
+                if (GUILayout.Button(isCheckedIn ? "\ud83d\udce4 Check-Out" : "\ud83d\udce4 Check-Out (cần checked-in)"))
+                    StartCoroutine(DoCheckOut());
+                GUI.enabled = true;
             }
+        }
 
-            GUI.enabled = !isProcessing && bookings.Count > 0;
-            if (GUILayout.Button("\ud83d\udce4 Check-Out"))
-                StartCoroutine(DoCheckOut());
-            GUI.enabled = true;
+        /// <summary>Lấy booking đang được chọn trong merged dropdown.</summary>
+        private ActiveBooking GetSelectedBooking()
+        {
+            var all = SharedBookingState.Instance?.GetAllActiveForDropdown();
+            if (all == null || all.Count == 0 || selectedBookingIdx < 0 || selectedBookingIdx >= all.Count)
+                return null;
+            return all[selectedBookingIdx].booking;
         }
 
         private IEnumerator DoCheckOut()
         {
-            var bookings = SharedBookingState.Instance != null
-                ? SharedBookingState.Instance.GetCheckedInBookingsForDropdown()
-                : new List<(string label, ActiveBooking booking)>();
-
-            if (bookings.Count == 0 || selectedCheckedInIdx < 0 || selectedCheckedInIdx >= bookings.Count)
-            { SetResult(false, "No checked-in booking selected."); yield break; }
-
-            var booking = bookings[selectedCheckedInIdx].booking;
+            var booking = GetSelectedBooking();
+            if (booking == null)
+            { SetResult(false, "No booking selected."); yield break; }
+            if (booking.CheckInStatus != "checked_in")
+            { SetResult(false, $"Booking {booking.CheckInStatus} — không thể check-out."); yield break; }
 
             if (string.IsNullOrEmpty(booking.QrCodeData))
             { SetResult(false, $"No QR data for plate {booking.LicensePlate}."); yield break; }
@@ -357,38 +352,31 @@ namespace ParkingSim.IoT
             GUILayout.Space(5);
             GUILayout.Label("── VERIFY SLOT ──");
 
-            var bookings = SharedBookingState.Instance != null
-                ? SharedBookingState.Instance.GetCheckedInBookingsForDropdown()
-                : new List<(string label, ActiveBooking booking)>();
-
-            if (bookings.Count > 0)
+            var selected = GetSelectedBooking();
+            if (selected == null)
             {
-                selectedCheckedInIdx = Mathf.Clamp(selectedCheckedInIdx < 0 ? 0 : selectedCheckedInIdx, 0, bookings.Count - 1);
-                var bk = bookings[selectedCheckedInIdx].booking;
-                GUILayout.Label($"Slot: {bk.SlotCode ?? "(unknown)"}");
-                GUILayout.Label($"Zone: {(string.IsNullOrEmpty(bk.ZoneId) ? MockIds.ZONE_CAR_PAINTED_F1 : bk.ZoneId).Substring(0, 8)}...");
+                GUILayout.Label("Chọn booking ở trên");
             }
             else
             {
-                GUILayout.Label("No checked-in booking — Check-In first");
+                bool isCheckedIn = selected.CheckInStatus == "checked_in";
+                GUILayout.Label($"Slot: {selected.SlotCode ?? "(unknown)"} | Status: {selected.CheckInStatus}");
+                string zone = string.IsNullOrEmpty(selected.ZoneId) ? MockIds.ZONE_CAR_PAINTED_F1 : selected.ZoneId;
+                GUILayout.Label($"Zone: {zone.Substring(0, System.Math.Min(8, zone.Length))}...");
+                GUI.enabled = !isProcessing && isCheckedIn;
+                if (GUILayout.Button(isCheckedIn ? "\ud83d\udd0d Verify Slot" : "\ud83d\udd0d Verify Slot (cần checked-in)"))
+                    StartCoroutine(DoVerifySlot());
+                GUI.enabled = true;
             }
-
-            GUI.enabled = !isProcessing && bookings.Count > 0;
-            if (GUILayout.Button("\ud83d\udd0d Verify Slot"))
-                StartCoroutine(DoVerifySlot());
-            GUI.enabled = true;
         }
 
         private IEnumerator DoVerifySlot()
         {
-            var bookings = SharedBookingState.Instance != null
-                ? SharedBookingState.Instance.GetCheckedInBookingsForDropdown()
-                : new List<(string label, ActiveBooking booking)>();
-
-            if (bookings.Count == 0 || selectedCheckedInIdx < 0 || selectedCheckedInIdx >= bookings.Count)
-            { SetResult(false, "No checked-in booking selected."); Debug.LogWarning("[FLOW] ❌ Verify Slot blocked: no checked-in booking"); yield break; }
-
-            var booking = bookings[selectedCheckedInIdx].booking;
+            var booking = GetSelectedBooking();
+            if (booking == null)
+            { SetResult(false, "No booking selected."); yield break; }
+            if (booking.CheckInStatus != "checked_in")
+            { SetResult(false, $"Booking {booking.CheckInStatus} — check-in trước khi verify."); yield break; }
 
             if (string.IsNullOrEmpty(booking.SlotCode))
             { SetResult(false, "Selected booking has no slot — Check-In first."); Debug.LogWarning($"[FLOW] ❌ Verify Slot blocked: SlotCode empty for booking={booking.BookingId}"); yield break; }
@@ -574,13 +562,13 @@ namespace ParkingSim.IoT
                 CloseMomoQr();
 
                 // Auto-trigger check-out lần nữa để backend mở barrier (amountDue giờ = 0)
-                var bks = SharedBookingState.Instance?.GetCheckedInBookingsForDropdown();
+                var bks = SharedBookingState.Instance?.GetAllActiveForDropdown();
                 if (bks != null)
                 {
                     int idx = bks.FindIndex(b => b.booking.BookingId == paidBookingId);
                     if (idx >= 0)
                     {
-                        selectedCheckedInIdx = idx;
+                        selectedBookingIdx = idx;
                         yield return new WaitForSeconds(0.5f);
                         StartCoroutine(DoCheckOut());
                     }

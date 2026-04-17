@@ -150,9 +150,12 @@ namespace ParkingSim.Camera
                 {
                     cameraId = "virtual-zone-garage",
                     displayName = "Garage Zone Monitor",
-                    position = new Vector3(19.5f, 4f, -14f),
-                    rotation = new Vector3(20f, 180f, 0f),
-                    fieldOfView = 55f,
+                    // Garage row: X=12..27 (rộng 15m), Z≈-22..-28.
+                    // Camera xa hơn (Z=-10) + cao hơn (Y=5) + FOV 75° để đủ 5 slots
+                    // (trước đây FOV 55° + Z=-14 chỉ thấy 4 ô, G-01 ở X=13.5 bị clip).
+                    position = new Vector3(19.5f, 5f, -10f),
+                    rotation = new Vector3(22f, 180f, 0f),
+                    fieldOfView = 75f,
                     renderWidth = config.cameraResWidth,
                     renderHeight = config.cameraResHeight,
                     jpegQuality = config.cameraJpegQuality,
