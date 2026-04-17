@@ -162,8 +162,25 @@ namespace ParkingSim.API
             foreach (var b in apiBookings)
             {
                 if (b == null || string.IsNullOrEmpty(b.Id)) continue;
-                if (b.CheckInStatus == "checked_in" || b.CheckInStatus == "checked_out") continue;
-                if (activeBookings.Exists(x => x.BookingId == b.Id)) continue;
+                if (b.CheckInStatus == "checked_out") continue;
+
+                // Normalized comparison tránh tạo duplicate khi backend trả id có dash
+                // trong khi local script seed ra no-dash (hoặc ngược lại).
+                var existing = FindBooking(b.Id);
+                if (existing != null)
+                {
+                    // Đã tồn tại: KHÔNG overwrite CheckInStatus local vì DoCheckIn
+                    // vừa update nó thành "checked_in" — backend sync có thể còn
+                    // trả "not_checked_in" nếu eventual consistency chưa kịp.
+                    // Chỉ cập nhật slot/qr nếu trước đó thiếu.
+                    if (string.IsNullOrEmpty(existing.SlotCode) && !string.IsNullOrEmpty(b.CarSlot?.Code))
+                        existing.SlotCode = b.CarSlot.Code;
+                    if (string.IsNullOrEmpty(existing.QrCodeData) && !string.IsNullOrEmpty(b.QrCodeData))
+                        existing.QrCodeData = b.QrCodeData;
+                    continue;
+                }
+
+                if (b.CheckInStatus == "checked_in") continue; // don't auto-import already checked-in
 
                 var active = new ActiveBooking
                 {
