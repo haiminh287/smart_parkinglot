@@ -241,7 +241,38 @@ export interface DetectionHistoryResponse {
 
 // ── API Methods ────────────────────────────────
 
+export interface LiveOccupancyVehicleBox {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  confidence: number;
+  class_id: number;
+}
+
+export interface LiveOccupancyResponse {
+  camera_id: string;
+  frame_age_seconds: number;
+  total_vehicles: number;
+  boxes: LiveOccupancyVehicleBox[];
+  detection_method: string;
+  processing_time_ms: number;
+}
+
 export const aiApi = {
+  /**
+   * Live vehicle count từ camera tổng (virtual-f1-overview) — dùng cho
+   * admin dashboard realtime. Poll 5s/lần.
+   */
+  detectOverviewLive: async (
+    cameraId = "virtual-f1-overview",
+  ): Promise<LiveOccupancyResponse> => {
+    const response = await apiClient.get<LiveOccupancyResponse>(
+      `/ai/parking/detect-overview-live/?camera_id=${encodeURIComponent(cameraId)}`,
+    );
+    return response.data;
+  },
+
   /**
    * Detect Vietnamese banknote denomination from an image.
    */

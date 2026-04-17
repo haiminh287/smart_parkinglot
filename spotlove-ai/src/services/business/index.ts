@@ -83,6 +83,8 @@ export type {
   BarrierAction,
   GateEvent,
   DetectionHistoryParams,
+  LiveOccupancyResponse,
+  LiveOccupancyVehicleBox,
 } from "./ai.service";
 export { DENOMINATION_LABELS, DENOMINATION_COLORS } from "./ai.service";
 

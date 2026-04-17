@@ -28,6 +28,8 @@ import type {
   DetectionHistoryResponse,
   BarrierAction,
   GateEvent,
+  LiveOccupancyResponse,
+  LiveOccupancyVehicleBox,
 } from "@/services/api/ai.api";
 
 // =====================
@@ -55,10 +57,15 @@ export type {
   DetectionHistoryResponse,
   BarrierAction,
   GateEvent,
+  LiveOccupancyResponse,
+  LiveOccupancyVehicleBox,
 };
 
 // Re-export constants
-export { DENOMINATION_LABELS, DENOMINATION_COLORS } from "@/services/api/ai.api";
+export {
+  DENOMINATION_LABELS,
+  DENOMINATION_COLORS,
+} from "@/services/api/ai.api";
 
 // =====================
 // Business Service Types
@@ -95,6 +102,18 @@ export interface DetectionHistoryParams {
 // =====================
 
 export const aiService = {
+  // ── Realtime slot occupancy (admin dashboard) ────
+
+  /**
+   * Live vehicle count từ camera tổng (virtual-f1-overview). Poll 5s/lần
+   * để hiển thị số ô đang đỗ realtime trong admin dashboard.
+   */
+  async detectOverviewLive(
+    cameraId?: string,
+  ): Promise<LiveOccupancyResponse> {
+    return aiApi.detectOverviewLive(cameraId);
+  },
+
   // ── Banknote Detection ──────────────────────────
 
   /**
