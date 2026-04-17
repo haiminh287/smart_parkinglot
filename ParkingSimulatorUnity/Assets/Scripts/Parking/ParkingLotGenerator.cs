@@ -360,9 +360,10 @@ namespace ParkingSim.Parking
                 pos + new Vector3(0f, yOff, -hd),
                 new Vector3(slotWidth, bH, bW), OrangeLineColor);
 
-            // Mini barrier gate at slot entrance (south side) — pivot at left post,
-            // arm swings sideways around Y so ParkingManager.OpenSlotBarrier is visible.
-            BuildSlotBarrier(slotGo.transform, pos, slotWidth, -hw, -hd);
+            // Barrier ở phía cổng aisle (entrance side). Slot entrance waypoint đặt tại
+            // pos.z + (pos.z < 0 ? +hd+1 : -hd-1) → slots z<0 vào từ NORTH, slots z>0 vào từ SOUTH.
+            float entranceZ = pos.z < 0f ? hd : -hd;
+            BuildSlotBarrier(slotGo.transform, pos, slotWidth, -hw, entranceZ);
 
             var slot = slotGo.AddComponent<ParkingSlot>();
             slot.Initialize(code, vType);
@@ -385,8 +386,9 @@ namespace ParkingSim.Parking
                 new Vector3(garageWidth / 2f, hy, 0f), new Vector3(wt, garageHeight, garageDepth), sideColor);
             CreateQuadLocal(slotGo.transform, "FloorMark",
                 new Vector3(0f, 0.02f, 0f), new Vector3(garageWidth * 0.9f, garageDepth * 0.9f, 1f));
-            // Slot barrier at entrance (south side, opens outward into aisle)
-            BuildSlotBarrier(slotGo.transform, pos, garageWidth, -garageWidth / 2f, -garageDepth / 2f);
+            // Garage slot mở về NORTH (+Z) — Wall_Back ở -Z, entrance ở +Z.
+            // Barrier ở entrance side để chắn cửa vào.
+            BuildSlotBarrier(slotGo.transform, pos, garageWidth, -garageWidth / 2f, garageDepth / 2f);
             // Light fixture sphere on back wall
             var light = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             light.name = "LightFixture";

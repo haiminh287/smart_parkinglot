@@ -25,7 +25,9 @@ namespace ParkingSim.IoT
         private readonly Queue<string> _recentLines = new Queue<string>();
         private const int MAX_LINES = 12;
 
-        private bool _showOverlay = true;
+        // Overlay off by default — file log vẫn chạy. Bật bằng F10 hoặc Instance.ToggleOverlay.
+        private bool _showOverlay = false;
+        private bool _showButton = false;
         private GUIStyle _logStyle;
         private GUIStyle _pathStyle;
 
@@ -143,11 +145,17 @@ namespace ParkingSim.IoT
 
         // ── GUI overlay ──────────────────────────────────────────────────── //
 
+        private void Update()
+        {
+            // F10 toggles overlay (log file vẫn viết liên tục)
+            if (Input.GetKeyDown(KeyCode.F10)) _showOverlay = !_showOverlay;
+        }
+
         private void OnGUI()
         {
             if (!_showOverlay)
             {
-                if (GUI.Button(new Rect(10, Screen.height - 28, 120, 24), "Flow Logs"))
+                if (_showButton && GUI.Button(new Rect(10, Screen.height - 28, 120, 24), "Flow Logs"))
                     _showOverlay = true;
                 return;
             }
