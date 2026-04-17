@@ -311,7 +311,7 @@ namespace ParkingSim.IoT
                 if (result.Data.AmountDue > 0)
                 {
                     msg += $"\n\ud83d\udcb0 C\u00f2n n\u1ee3: {result.Data.AmountDue:F0}\u0111 \u2014 Qu\u00e9t QR MoMo \u0111\u1ec3 thanh to\u00e1n";
-                    momoAmount = result.Data.AmountDue;
+                    momoAmount = (double)(result.Data.AmountDue ?? 0f);
                     momoBookingId = result.Data.BookingId ?? booking.BookingId;
                     momoPlate = booking.LicensePlate;
                     StartCoroutine(DownloadMomoQr());

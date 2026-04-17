@@ -143,13 +143,15 @@ namespace ParkingSim.Camera
                     captureFps = config.cameraFps,
                     monitoredSlotCodes = new string[0]
                 },
-                // Angled camera watching garage row G-01..G-05 (X≈12..27, Z≈-25)
+                // Garage row G-01..G-05 opens NORTH (aisle at Z≈-22); camera stands
+                // at the aisle side looking south toward the open entrances so parked
+                // cars' fronts face the camera.
                 new VirtualCameraConfig
                 {
                     cameraId = "virtual-zone-garage",
                     displayName = "Garage Zone Monitor",
-                    position = new Vector3(19.5f, 5f, -34f),
-                    rotation = new Vector3(30f, 0f, 0f),
+                    position = new Vector3(19.5f, 4f, -14f),
+                    rotation = new Vector3(20f, 180f, 0f),
                     fieldOfView = 55f,
                     renderWidth = config.cameraResWidth,
                     renderHeight = config.cameraResHeight,
