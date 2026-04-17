@@ -339,6 +339,16 @@ namespace ParkingSim.API
         [JsonProperty("error")] public string Error;
     }
 
+    [Serializable]
+    public class BanknoteResult
+    {
+        [JsonProperty("decision")] public string Decision;          // accept|low_confidence|no_banknote|bad_quality|error
+        [JsonProperty("denomination")] public string Denomination;  // "1000","10000",...
+        [JsonProperty("confidence")] public float Confidence;
+        [JsonProperty("processingTime")] public float ProcessingTime;
+        [JsonProperty("error")] public string Error;
+    }
+
     // ══════════════════════════════════════════════
     //          WEBSOCKET MODELS (:8006)
     // ══════════════════════════════════════════════

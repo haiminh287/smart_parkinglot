@@ -31,13 +31,22 @@ namespace ParkingSim.IoT
         // CASH-PAYMENT
         private string cashPlate = "";
 
-        // MOMO QR popup (shown when check-out returns amountDue > 0)
+        // PAYMENT popup (MoMo QR + Cash banknote AI) khi check-out amountDue > 0
         private bool showMomoQr;
         private Texture2D momoQrTexture;
         private double momoAmount;
         private string momoBookingId;
         private string momoPlate;
-        private Rect momoWindowRect = new Rect(Screen.width / 2 - 200, 120, 400, 560);
+        private Rect momoWindowRect = new Rect(Screen.width / 2 - 260, 60, 520, 700);
+
+        // Cash banknote AI detection state (tích luỹ tổng qua mỗi lần detect)
+        private double cashAcceptedTotal = 0;
+        private readonly List<string> cashHistory = new List<string>();
+        private bool cashDetecting = false;
+        private Vector2 cashScroll;
+
+        // Banknote dataset root — Editor reads trực tiếp từ disk
+        private static readonly string[] BANKNOTE_DENOMS = { "1000", "2000", "5000", "10000", "20000", "50000", "100000", "500000" };
 
         // DEVICE
         private string deviceId = "ESP32-SIM-001";
@@ -476,60 +485,154 @@ namespace ParkingSim.IoT
             {
                 if (momoQrTexture != null) Destroy(momoQrTexture);
                 momoQrTexture = DownloadHandlerTexture.GetContent(req);
-                showMomoQr = true;
                 Debug.Log($"[FLOW] \ud83d\udcb3 MoMo QR sinh cho {momoAmount:F0}\u0111 — booking {shortId}");
             }
             else
             {
                 Debug.LogWarning($"[FLOW] Kh\u00f4ng t\u1ea3i \u0111\u01b0\u1ee3c QR MoMo: {req.error}");
-                SetResult(false, "Không tải được QR MoMo — dùng Cash Payment thủ công");
             }
+            // Reset cash state + mở popup
+            cashAcceptedTotal = 0;
+            cashHistory.Clear();
+            showMomoQr = true;
         }
 
         private void DrawMomoQrWindow(int id)
         {
             var headerStyle = new GUIStyle(GUI.skin.label)
-            { fontSize = 14, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
+            { fontSize = 13, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
             var amountStyle = new GUIStyle(GUI.skin.label)
-            { fontSize = 22, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
+            { fontSize = 20, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
             amountStyle.normal.textColor = new Color(1f, 0.3f, 0.5f);
+            var okStyle = new GUIStyle(GUI.skin.label)
+            { fontSize = 14, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
+            okStyle.normal.textColor = cashAcceptedTotal >= momoAmount ? new Color(0.3f, 0.9f, 0.4f) : new Color(1f, 0.8f, 0.3f);
+
+            GUILayout.Space(4);
+            GUILayout.Label($"Cần thanh toán: {momoAmount:N0}đ", amountStyle, GUILayout.Height(30));
+            string shortId = string.IsNullOrEmpty(momoBookingId) ? "?" : momoBookingId.Substring(0, System.Math.Min(8, momoBookingId.Length));
+            GUILayout.Label($"Biển số: {momoPlate} · Mã đơn: BK-{shortId}", headerStyle);
 
             GUILayout.Space(6);
-            GUILayout.Label("Quét QR bằng app MoMo để thanh toán", headerStyle);
-            GUILayout.Label($"{momoAmount:N0}đ", amountStyle, GUILayout.Height(38));
-
-            if (!string.IsNullOrEmpty(momoPlate))
-                GUILayout.Label($"Biển số: {momoPlate}", headerStyle);
-            if (!string.IsNullOrEmpty(momoBookingId))
-            {
-                string shortId = momoBookingId.Substring(0, System.Math.Min(8, momoBookingId.Length));
-                GUILayout.Label($"Mã đơn: BK-{shortId}", headerStyle);
-            }
-
-            GUILayout.Space(6);
+            GUILayout.Label("QR MoMo (quét app MoMo để chuyển khoản):", headerStyle);
             if (momoQrTexture != null)
             {
                 GUILayout.BeginHorizontal();
                 GUILayout.FlexibleSpace();
-                GUILayout.Box(momoQrTexture, GUILayout.Width(340), GUILayout.Height(340));
+                GUILayout.Box(momoQrTexture, GUILayout.Width(200), GUILayout.Height(200));
                 GUILayout.FlexibleSpace();
                 GUILayout.EndHorizontal();
             }
             else
             {
-                GUILayout.Label("Đang tải QR…", headerStyle, GUILayout.Height(340));
+                GUILayout.Label("Đang tải QR…", headerStyle, GUILayout.Height(24));
             }
 
             GUILayout.Space(6);
-            GUI.enabled = !isProcessing;
-            if (GUILayout.Button("\u2705 Đã thanh toán", GUILayout.Height(32)))
+            GUILayout.Label("— HOẶC đưa tiền mặt (AI detect từng tờ) —", headerStyle);
+            GUI.enabled = !cashDetecting && !isProcessing;
+            GUILayout.BeginHorizontal();
+            for (int i = 0; i < 4; i++)
+            {
+                string d = BANKNOTE_DENOMS[i];
+                if (GUILayout.Button($"{int.Parse(d) / 1000}k", GUILayout.Height(28)))
+                    StartCoroutine(DetectOneBanknote(d));
+            }
+            GUILayout.EndHorizontal();
+            GUILayout.BeginHorizontal();
+            for (int i = 4; i < 8; i++)
+            {
+                string d = BANKNOTE_DENOMS[i];
+                if (GUILayout.Button($"{int.Parse(d) / 1000}k", GUILayout.Height(28)))
+                    StartCoroutine(DetectOneBanknote(d));
+            }
+            GUILayout.EndHorizontal();
+            GUI.enabled = true;
+
+            GUILayout.Space(4);
+            GUILayout.Label($"AI đã nhận: {cashAcceptedTotal:N0}đ / {momoAmount:N0}đ", okStyle);
+
+            cashScroll = GUILayout.BeginScrollView(cashScroll, GUILayout.Height(80));
+            foreach (var line in cashHistory)
+                GUILayout.Label(line);
+            GUILayout.EndScrollView();
+
+            GUILayout.Space(4);
+            bool canConfirm = cashAcceptedTotal >= momoAmount && !isProcessing;
+            GUI.enabled = canConfirm;
+            string payLabel = canConfirm
+                ? $"\u2705 Xác nhận thanh toán ({cashAcceptedTotal:N0}đ)"
+                : $"\u274c Chưa đủ (còn thiếu {System.Math.Max(0, momoAmount - cashAcceptedTotal):N0}đ)";
+            if (GUILayout.Button(payLabel, GUILayout.Height(32)))
                 StartCoroutine(ConfirmMomoPayment());
             GUI.enabled = true;
 
-            if (GUILayout.Button("Đóng", GUILayout.Height(26)))
+            if (GUILayout.Button("Đóng", GUILayout.Height(24)))
                 CloseMomoQr();
 
             GUI.DragWindow();
+        }
+
+        // ── Cash banknote AI detection ──
+        private static string BanknoteDatasetRoot =>
+            System.IO.Path.Combine(Application.dataPath, "..", "..",
+                "backend-microservices", "ai-service-fastapi", "ml",
+                "datasets", "banknote_v1", "real");
+
+        private byte[] LoadRandomBanknoteBytes(string denomFolder)
+        {
+            try
+            {
+                string dir = System.IO.Path.Combine(BanknoteDatasetRoot, denomFolder);
+                if (!System.IO.Directory.Exists(dir)) return null;
+                var files = System.IO.Directory.GetFiles(dir, "*.jpg");
+                if (files.Length == 0) files = System.IO.Directory.GetFiles(dir, "*.jpeg");
+                if (files.Length == 0) files = System.IO.Directory.GetFiles(dir, "*.png");
+                if (files.Length == 0) return null;
+                string pick = files[UnityEngine.Random.Range(0, files.Length)];
+                return System.IO.File.ReadAllBytes(pick);
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning($"[FLOW] Load banknote thất bại ({denomFolder}): {e.Message}");
+                return null;
+            }
+        }
+
+        private IEnumerator DetectOneBanknote(string denom)
+        {
+            cashDetecting = true;
+            byte[] bytes = LoadRandomBanknoteBytes(denom);
+            if (bytes == null)
+            {
+                cashHistory.Add($"❌ Không tìm thấy ảnh mẫu cho {denom}đ");
+                cashDetecting = false;
+                yield break;
+            }
+
+            bool done = false;
+            ApiResponse<BanknoteResult> result = null;
+            StartCoroutine(apiService.DetectBanknote(bytes, r => { result = r; done = true; }));
+            yield return WaitWithTimeout(() => done, 10f, () => { });
+            cashDetecting = false;
+
+            if (!done || result == null || !result.IsSuccess || result.Data == null)
+            {
+                cashHistory.Add($"⚠️ {denom}đ → API lỗi: {result?.ErrorMessage ?? "timeout"}");
+                yield break;
+            }
+
+            var d = result.Data;
+            if (d.Decision == "accept" && !string.IsNullOrEmpty(d.Denomination) &&
+                double.TryParse(d.Denomination, out double value))
+            {
+                cashAcceptedTotal += value;
+                cashHistory.Add($"✅ Bấm {denom}đ → AI nhận diện {value:N0}đ (conf {d.Confidence:P0})");
+            }
+            else
+            {
+                cashHistory.Add($"❌ Bấm {denom}đ → AI từ chối: {d.Decision} (conf {d.Confidence:P0})");
+            }
         }
 
         private IEnumerator ConfirmMomoPayment()

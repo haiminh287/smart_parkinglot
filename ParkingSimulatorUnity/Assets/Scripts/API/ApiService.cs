@@ -77,6 +77,7 @@ namespace ParkingSim.API
             var req = new UnityWebRequest(url, "POST");
             req.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(json));
             req.downloadHandler = new DownloadHandlerBuffer();
+            req.SetRequestHeader("Content-Type", "application/json");
             return req;
         }
 
@@ -86,6 +87,7 @@ namespace ParkingSim.API
             var req = new UnityWebRequest(url, "PATCH");
             req.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(json));
             req.downloadHandler = new DownloadHandlerBuffer();
+            req.SetRequestHeader("Content-Type", "application/json");
             return req;
         }
 
@@ -429,6 +431,33 @@ namespace ParkingSim.API
                 {
                     string errMsg = ParseError(req.downloadHandler?.text, status);
                     cb?.Invoke(new ApiResponse<PlateScanResult>
+                        { IsSuccess = false, ErrorMessage = errMsg, StatusCode = status });
+                }
+            }
+        }
+
+        public IEnumerator DetectBanknote(byte[] imageBytes, Action<ApiResponse<BanknoteResult>> cb)
+        {
+            string url = AiUrl("ai/detect/banknote/?mode=full");
+            var form = new List<IMultipartFormSection>
+            {
+                new MultipartFormFileSection("image", imageBytes, "banknote.jpg", "image/jpeg")
+            };
+            using (var req = UnityWebRequest.Post(url, form))
+            {
+                req.SetRequestHeader("X-Gateway-Secret", config.gatewaySecret);
+                yield return req.SendWebRequest();
+                int status = (int)req.responseCode;
+                if (req.result == UnityWebRequest.Result.Success)
+                {
+                    var data = JsonConvert.DeserializeObject<BanknoteResult>(req.downloadHandler.text);
+                    cb?.Invoke(new ApiResponse<BanknoteResult>
+                        { IsSuccess = true, Data = data, StatusCode = status });
+                }
+                else
+                {
+                    string errMsg = ParseError(req.downloadHandler?.text, status);
+                    cb?.Invoke(new ApiResponse<BanknoteResult>
                         { IsSuccess = false, ErrorMessage = errMsg, StatusCode = status });
                 }
             }
