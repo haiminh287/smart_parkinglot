@@ -178,20 +178,27 @@ namespace ParkingSim.IoT
 
         private IEnumerator DoCheckIn()
         {
-            if (string.IsNullOrEmpty(checkInPlate))
-            { SetResult(false, "Plate number required"); yield break; }
+            // Dùng booking tại selectedBookingIdx TRỰC TIẾP, không lookup bằng plate
+            // (plate có thể trùng giữa nhiều booking → GetBookingByPlate trả first match
+            // không phải cái user chọn trong dropdown).
+            var pendingBookings = SharedBookingState.Instance != null
+                ? SharedBookingState.Instance.GetActiveBookingsForDropdown()
+                : new List<(string label, ActiveBooking booking)>();
 
-            var activeBooking = SharedBookingState.Instance?.GetBookingByPlate(checkInPlate);
-            string qr = manualQrData;
-            if (string.IsNullOrEmpty(qr))
-            {
-                if (activeBooking == null)
-                { SetResult(false, $"No active booking for plate {checkInPlate}"); yield break; }
-                qr = activeBooking.QrCodeData;
-            }
+            if (pendingBookings.Count == 0 || selectedBookingIdx < 0 || selectedBookingIdx >= pendingBookings.Count)
+            { SetResult(false, "No pending booking selected. Sync hoặc tạo booking mới."); yield break; }
 
+            var activeBooking = pendingBookings[selectedBookingIdx].booking;
+            if (activeBooking == null || string.IsNullOrEmpty(activeBooking.BookingId))
+            { SetResult(false, "Selected booking không hợp lệ."); yield break; }
+
+            checkInPlate = activeBooking.LicensePlate ?? checkInPlate;
+            string qr = !string.IsNullOrEmpty(manualQrData) ? manualQrData : activeBooking.QrCodeData;
             if (string.IsNullOrEmpty(qr))
-            { SetResult(false, $"No QR data for plate {checkInPlate}. Sync bookings first."); yield break; }
+            { SetResult(false, $"No QR data for booking {activeBooking.BookingId.Substring(0, 8)}. Sync lại."); yield break; }
+
+            ActiveCheckInBookingId = activeBooking.BookingId;
+            Debug.Log($"[FLOW] Selected booking → {activeBooking.BookingId.Substring(0, 8)} plate={checkInPlate} slot={activeBooking.SlotCode}");
 
             isProcessing = true;
             SetResult(false, $"Checking in {checkInPlate}...");
