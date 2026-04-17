@@ -16,7 +16,6 @@ import {
   Shield,
   AlertTriangle,
   Banknote,
-  ScanLine,
   ScanSearch,
   Cpu,
   DollarSign,
@@ -32,7 +31,6 @@ import { useNavigate } from "react-router-dom";
 const userNavItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
   { icon: CalendarPlus, label: "Đặt chỗ", path: "/booking" },
-  { icon: ScanLine, label: "Check In/Out", path: "/check-in-out" },
   { icon: History, label: "Lịch sử", path: "/history" },
   { icon: MapPin, label: "Bản đồ", path: "/map" },
   { icon: Camera, label: "Camera", path: "/cameras" },

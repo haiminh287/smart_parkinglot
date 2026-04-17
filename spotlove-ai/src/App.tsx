@@ -34,7 +34,6 @@ const BanknoteDetectionPage = lazy(
   () => import("./pages/BanknoteDetectionPage"),
 );
 const KioskPage = lazy(() => import("./pages/KioskPage"));
-const CheckInOutPage = lazy(() => import("./pages/CheckInOutPage"));
 const DetectionHistoryPage = lazy(() => import("./pages/DetectionHistoryPage"));
 
 // Lazy — admin pages
@@ -147,14 +146,6 @@ const App = () => (
                     element={
                       <ProtectedRoute>
                         <BanknoteDetectionPage />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/check-in-out"
-                    element={
-                      <ProtectedRoute>
-                        <CheckInOutPage />
                       </ProtectedRoute>
                     }
                   />

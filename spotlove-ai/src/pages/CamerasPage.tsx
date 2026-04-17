@@ -33,9 +33,14 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/use-auth";
-import { adminService, bookingService, parkingService } from "@/services/business";
+import {
+  adminService,
+  bookingService,
+  parkingService,
+} from "@/services/business";
 import { useToast } from "@/hooks/use-toast";
 import { mapBookingResponse } from "@/store/slices/bookingSlice";
+import { getCameraForSlot, getCameraStreamUrl } from "@/lib/slotCamera";
 
 interface CameraFeed {
   id: string;
@@ -150,6 +155,15 @@ const MONITORING_CAMERAS: CameraFeed[] = [
     streamUrl: "/ai/cameras/stream?camera_id=virtual-f2-overview&fps=5",
   },
   {
+    id: "virtual-zone-garage",
+    name: "Khu Garage (Sim)",
+    zone: "Garage G",
+    floor: 1,
+    isOnline: true,
+    vehicleCount: 0,
+    streamUrl: "/ai/cameras/stream?camera_id=virtual-zone-garage&fps=5",
+  },
+  {
     id: "virtual-zone-south",
     name: "Zone South (Sim)",
     zone: "South",
@@ -243,32 +257,21 @@ export default function CamerasPage() {
             const parking = await bookingService.getCurrentParkingRaw();
             if (parking && parking.booking) {
               const mapped = mapBookingResponse(parking.booking as never);
-              const slotId = mapped.slotId;
               const zoneName = mapped.zoneName || "";
               const slotCode = mapped.slotCode || "";
               const licensePlate = mapped.licensePlate || "";
 
-              let cameraId = "";
-              let cameraName = `Camera ${zoneName}`;
-              const floorLevel = 1;
-              let streamUrl: string | undefined;
-              const isOnline = true;
-
-              if (slotId) {
+              // Resolve virtual camera covering this slot (Unity sim mapping).
+              // Backend slot.cameraId takes precedence if configured.
+              let cameraId = getCameraForSlot(slotCode);
+              const cameraName = `Ô đỗ ${slotCode}`;
+              if (mapped.slotId) {
                 try {
-                  const slotData = await parkingService.getSlot(slotId);
-                  if (slotData.cameraId) {
-                    cameraId = slotData.cameraId;
-                    cameraName = `Camera Slot ${slotCode}`;
-                  }
-                } catch (e) {
-                  console.warn("Could not fetch slot camera:", e);
+                  const slotData = await parkingService.getSlot(mapped.slotId);
+                  if (slotData.cameraId) cameraId = slotData.cameraId;
+                } catch {
+                  /* backend camera lookup optional */
                 }
-              }
-
-              if (!cameraId) {
-                cameraId = `camera-zone-${mapped.zoneId || "unknown"}`;
-                cameraName = `Camera ${zoneName}`;
               }
 
               vehicles = [
@@ -285,11 +288,11 @@ export default function CamerasPage() {
                 {
                   id: cameraId,
                   name: cameraName,
-                  zone: zoneName,
-                  floor: floorLevel,
-                  isOnline,
+                  zone: zoneName || "Ô đỗ của bạn",
+                  floor: 1,
+                  isOnline: true,
                   vehicleCount: 1,
-                  streamUrl,
+                  streamUrl: getCameraStreamUrl(cameraId, 5),
                 },
               ];
             }

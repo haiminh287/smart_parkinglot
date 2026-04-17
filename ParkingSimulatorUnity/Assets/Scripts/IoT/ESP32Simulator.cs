@@ -15,12 +15,13 @@ namespace ParkingSim.IoT
         [SerializeField] private ApiService apiService;
         [SerializeField] private ApiConfig config;
 
-        // CHECK-IN
+        // CHECK-IN — dropdown shows not_checked_in bookings
         private string checkInPlate = "";
         private int selectedBookingIdx = -1;
         private string manualQrData = "";
 
-        // CHECK-OUT & VERIFY-SLOT reuse selectedBookingIdx (shared with Check-In)
+        // CHECK-OUT & VERIFY-SLOT — dropdown shows checked_in bookings (separate index)
+        private int selectedCheckedInIdx = -1;
 
         // CASH-PAYMENT
         private string cashPlate = "";
@@ -235,20 +236,25 @@ namespace ParkingSim.IoT
             GUILayout.Label("── CHECK-OUT ──");
 
             var bookings = SharedBookingState.Instance != null
-                ? SharedBookingState.Instance.GetActiveBookingsForDropdown()
+                ? SharedBookingState.Instance.GetCheckedInBookingsForDropdown()
                 : new List<(string label, ActiveBooking booking)>();
 
-            if (bookings.Count > 0 && selectedBookingIdx >= 0 && selectedBookingIdx < bookings.Count)
+            if (bookings.Count > 0)
             {
-                var bk = bookings[selectedBookingIdx].booking;
+                GUILayout.Label("Checked-in Bookings:");
+                string[] labels = new string[bookings.Count];
+                for (int i = 0; i < bookings.Count; i++) labels[i] = bookings[i].label;
+                selectedCheckedInIdx = Mathf.Clamp(selectedCheckedInIdx < 0 ? 0 : selectedCheckedInIdx, 0, bookings.Count - 1);
+                selectedCheckedInIdx = GUILayout.SelectionGrid(selectedCheckedInIdx, labels, 1);
+                var bk = bookings[selectedCheckedInIdx].booking;
                 GUILayout.Label($"Plate: {bk.LicensePlate ?? "(unknown)"}");
             }
             else
             {
-                GUILayout.Label("No booking selected ↑");
+                GUILayout.Label("No checked-in bookings");
             }
 
-            GUI.enabled = !isProcessing;
+            GUI.enabled = !isProcessing && bookings.Count > 0;
             if (GUILayout.Button("\ud83d\udce4 Check-Out"))
                 StartCoroutine(DoCheckOut());
             GUI.enabled = true;
@@ -257,13 +263,13 @@ namespace ParkingSim.IoT
         private IEnumerator DoCheckOut()
         {
             var bookings = SharedBookingState.Instance != null
-                ? SharedBookingState.Instance.GetActiveBookingsForDropdown()
+                ? SharedBookingState.Instance.GetCheckedInBookingsForDropdown()
                 : new List<(string label, ActiveBooking booking)>();
 
-            if (bookings.Count == 0 || selectedBookingIdx < 0 || selectedBookingIdx >= bookings.Count)
-            { SetResult(false, "No booking selected. Sync bookings first."); yield break; }
+            if (bookings.Count == 0 || selectedCheckedInIdx < 0 || selectedCheckedInIdx >= bookings.Count)
+            { SetResult(false, "No checked-in booking selected."); yield break; }
 
-            var booking = bookings[selectedBookingIdx].booking;
+            var booking = bookings[selectedCheckedInIdx].booking;
 
             if (string.IsNullOrEmpty(booking.QrCodeData))
             { SetResult(false, $"No QR data for plate {booking.LicensePlate}."); yield break; }
@@ -313,21 +319,22 @@ namespace ParkingSim.IoT
             GUILayout.Label("── VERIFY SLOT ──");
 
             var bookings = SharedBookingState.Instance != null
-                ? SharedBookingState.Instance.GetActiveBookingsForDropdown()
+                ? SharedBookingState.Instance.GetCheckedInBookingsForDropdown()
                 : new List<(string label, ActiveBooking booking)>();
 
-            if (bookings.Count > 0 && selectedBookingIdx >= 0 && selectedBookingIdx < bookings.Count)
+            if (bookings.Count > 0)
             {
-                var bk = bookings[selectedBookingIdx].booking;
+                selectedCheckedInIdx = Mathf.Clamp(selectedCheckedInIdx < 0 ? 0 : selectedCheckedInIdx, 0, bookings.Count - 1);
+                var bk = bookings[selectedCheckedInIdx].booking;
                 GUILayout.Label($"Slot: {bk.SlotCode ?? "(unknown)"}");
                 GUILayout.Label($"Zone: {(string.IsNullOrEmpty(bk.ZoneId) ? MockIds.ZONE_CAR_PAINTED_F1 : bk.ZoneId).Substring(0, 8)}...");
             }
             else
             {
-                GUILayout.Label("No booking selected ↑");
+                GUILayout.Label("No checked-in booking — Check-In first");
             }
 
-            GUI.enabled = !isProcessing;
+            GUI.enabled = !isProcessing && bookings.Count > 0;
             if (GUILayout.Button("\ud83d\udd0d Verify Slot"))
                 StartCoroutine(DoVerifySlot());
             GUI.enabled = true;
@@ -336,13 +343,13 @@ namespace ParkingSim.IoT
         private IEnumerator DoVerifySlot()
         {
             var bookings = SharedBookingState.Instance != null
-                ? SharedBookingState.Instance.GetActiveBookingsForDropdown()
+                ? SharedBookingState.Instance.GetCheckedInBookingsForDropdown()
                 : new List<(string label, ActiveBooking booking)>();
 
-            if (bookings.Count == 0 || selectedBookingIdx < 0 || selectedBookingIdx >= bookings.Count)
-            { SetResult(false, "No booking selected. Sync bookings first."); Debug.LogWarning("[FLOW] ❌ Verify Slot blocked: no booking selected"); yield break; }
+            if (bookings.Count == 0 || selectedCheckedInIdx < 0 || selectedCheckedInIdx >= bookings.Count)
+            { SetResult(false, "No checked-in booking selected."); Debug.LogWarning("[FLOW] ❌ Verify Slot blocked: no checked-in booking"); yield break; }
 
-            var booking = bookings[selectedBookingIdx].booking;
+            var booking = bookings[selectedCheckedInIdx].booking;
 
             if (string.IsNullOrEmpty(booking.SlotCode))
             { SetResult(false, "Selected booking has no slot — Check-In first."); Debug.LogWarning($"[FLOW] ❌ Verify Slot blocked: SlotCode empty for booking={booking.BookingId}"); yield break; }
