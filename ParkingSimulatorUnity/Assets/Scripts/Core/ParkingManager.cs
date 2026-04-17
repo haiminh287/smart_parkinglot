@@ -73,6 +73,11 @@ namespace ParkingSim.Core
         private IEnumerator Start()
         {
             Debug.Log("[ParkingManager] Initializing...");
+            if (generator == null)
+            {
+                Debug.LogError("[ParkingManager] ParkingLotGenerator not found! Cannot initialize.");
+                yield break;
+            }
             generator.Generate();
             AutoLinkBarrierArms();
 
@@ -150,6 +155,12 @@ namespace ParkingSim.Core
             if (vehicle == null) vehicle = go.AddComponent<VehicleController>();
 
             var slot = generator.GetSlotByCode(targetSlotCode);
+            if (slot == null)
+            {
+                Debug.LogWarning($"[ParkingManager] Slot '{targetSlotCode}' not found, skipping spawn for {plate}");
+                Destroy(go);
+                return;
+            }
             vehicle.Initialize(waypointGraph, slot, plate, qrData, vType);
             vehicle.bookingId = bookingId;
 
@@ -178,6 +189,12 @@ namespace ParkingSim.Core
             if (vehicle == null) vehicle = go.AddComponent<VehicleController>();
 
             var slot = generator.GetSlotByCode(targetSlotCode);
+            if (slot == null)
+            {
+                Debug.LogWarning($"[ParkingManager] Slot '{targetSlotCode}' not found, skipping spawn for {plate}");
+                Destroy(go);
+                return null;
+            }
             vehicle.Initialize(waypointGraph, slot, plate, qrData, vType);
             vehicle.bookingId = bookingId;
             vehicle.alreadyCheckedIn = true;
@@ -215,22 +232,33 @@ namespace ParkingSim.Core
         public void OpenSlotBarrier(string slotCode)
         {
             if (string.IsNullOrEmpty(slotCode)) return;
-            if (generator == null || !generator.slotRegistry.TryGetValue(slotCode, out var slot)) return;
+            if (generator == null || !generator.slotRegistry.TryGetValue(slotCode, out var slot))
+            {
+                Debug.LogWarning($"[ParkingManager] OpenSlotBarrier: slot {slotCode} chưa đăng ký — skip");
+                return;
+            }
 
+            // Animate barrier if arm exists (optional visual — không block car movement)
             var arm = slot.transform.Find("SlotBarrierArm");
-            if (arm == null) return;
+            if (arm != null)
+                StartCoroutine(AnimateSlotBarrier(arm, slotCode));
+            else
+                Debug.LogWarning($"[ParkingManager] Slot {slotCode} thiếu SlotBarrierArm — cần Stop+Play lại để regen");
 
-            StartCoroutine(AnimateSlotBarrier(arm, slotCode));
-
+            // Drive the waiting vehicle into slot regardless of barrier visual state
+            bool found = false;
             foreach (var v in FindObjectsOfType<VehicleController>())
             {
                 if (v == null || !v.IsAtSlotEntrance) continue;
                 if (string.Equals(v.TargetSlot?.slotCode, slotCode, StringComparison.OrdinalIgnoreCase))
                 {
                     v.ProceedIntoSlot();
+                    found = true;
                     break;
                 }
             }
+            if (!found)
+                Debug.LogWarning($"[ParkingManager] OpenSlotBarrier({slotCode}): không thấy xe nào đang IsAtSlotEntrance ở slot này");
         }
 
         // === Event Handlers (thin delegation) ===
