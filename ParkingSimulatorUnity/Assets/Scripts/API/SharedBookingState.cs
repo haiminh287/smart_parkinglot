@@ -108,16 +108,41 @@ namespace ParkingSim.API
             return activeBookings.Where(b => b.CheckInStatus == "not_checked_in").ToList();
         }
 
+        /// <summary>
+        /// Return only bookings eligible for check-in (status = not_checked_in).
+        /// Excludes bookings already checked_in, checked_out, no_show, or cancelled.
+        /// </summary>
         public List<(string label, ActiveBooking booking)> GetActiveBookingsForDropdown()
         {
-            return activeBookings.Select(b =>
-            {
-                string shortId = b.BookingId != null && b.BookingId.Length >= 8
-                    ? b.BookingId.Substring(0, 8)
-                    : b.BookingId ?? "???";
-                string label = $"{b.LicensePlate} → {b.SlotCode} ({shortId})";
-                return (label, b);
-            }).ToList();
+            return activeBookings
+                .Where(b => b.CheckInStatus == "not_checked_in")
+                .Select(b =>
+                {
+                    string shortId = b.BookingId != null && b.BookingId.Length >= 8
+                        ? b.BookingId.Substring(0, 8)
+                        : b.BookingId ?? "???";
+                    string label = $"{b.LicensePlate} → {b.SlotCode} ({shortId})";
+                    return (label, b);
+                })
+                .ToList();
+        }
+
+        /// <summary>
+        /// Return bookings already checked-in (eligible for check-out).
+        /// </summary>
+        public List<(string label, ActiveBooking booking)> GetCheckedInBookingsForDropdown()
+        {
+            return activeBookings
+                .Where(b => b.CheckInStatus == "checked_in")
+                .Select(b =>
+                {
+                    string shortId = b.BookingId != null && b.BookingId.Length >= 8
+                        ? b.BookingId.Substring(0, 8)
+                        : b.BookingId ?? "???";
+                    string label = $"{b.LicensePlate} → {b.SlotCode} ({shortId})";
+                    return (label, b);
+                })
+                .ToList();
         }
 
         /// <summary>
