@@ -211,8 +211,15 @@ namespace ParkingSim.IoT
                 SetResult(true, $"{result.Data.Message}\nAction: {result.Data.BarrierAction}\nSlot: {slot}");
                 Debug.Log($"[FLOW] \u2705 Check-In: {checkInPlate} \u2192 slot={slot} barrier={result.Data.BarrierAction}");
 
-                SharedBookingState.Instance?.UpdateStatus(result.Data.BookingId, "checked_in");
-                SharedBookingState.Instance?.UpdateSlotCode(result.Data.BookingId, slot);
+                // Use local activeBooking.BookingId first — guaranteed to match SharedBookingState
+                // entry. result.Data.BookingId may be formatted differently (dashes) and miss.
+                string bookingIdToUpdate = activeBooking?.BookingId ?? result.Data.BookingId;
+                if (!string.IsNullOrEmpty(bookingIdToUpdate))
+                {
+                    SharedBookingState.Instance?.UpdateStatus(bookingIdToUpdate, "checked_in");
+                    SharedBookingState.Instance?.UpdateSlotCode(bookingIdToUpdate, slot);
+                    Debug.Log($"[FLOW] Local booking {bookingIdToUpdate.Substring(0, System.Math.Min(8, bookingIdToUpdate.Length))} → checked_in");
+                }
 
                 // Download detection image if AI returned one
                 if (!string.IsNullOrEmpty(result.Data.PlateImageUrl))

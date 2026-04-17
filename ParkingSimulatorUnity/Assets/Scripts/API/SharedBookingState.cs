@@ -57,9 +57,19 @@ namespace ParkingSim.API
             }
         }
 
+        private static string NormalizeId(string id) =>
+            string.IsNullOrEmpty(id) ? string.Empty : id.Replace("-", "").ToLowerInvariant();
+
+        private ActiveBooking FindBooking(string bookingId)
+        {
+            if (string.IsNullOrEmpty(bookingId)) return null;
+            string needle = NormalizeId(bookingId);
+            return activeBookings.Find(b => NormalizeId(b.BookingId) == needle);
+        }
+
         public void UpdateStatus(string bookingId, string newStatus)
         {
-            var booking = activeBookings.Find(b => b.BookingId == bookingId);
+            var booking = FindBooking(bookingId);
             if (booking != null)
             {
                 booking.CheckInStatus = newStatus;
@@ -68,17 +78,14 @@ namespace ParkingSim.API
 
         public void UpdateSlotCode(string bookingId, string slotCode)
         {
-            var booking = activeBookings.Find(b => b.BookingId == bookingId);
+            var booking = FindBooking(bookingId);
             if (booking != null && !string.IsNullOrEmpty(slotCode) && slotCode != "unknown")
             {
                 booking.SlotCode = slotCode;
             }
         }
 
-        public ActiveBooking GetBookingById(string bookingId)
-        {
-            return activeBookings.Find(b => b.BookingId == bookingId);
-        }
+        public ActiveBooking GetBookingById(string bookingId) => FindBooking(bookingId);
 
         public ActiveBooking GetBookingByPlate(string plate)
         {
