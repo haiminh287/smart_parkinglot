@@ -26,6 +26,14 @@ namespace ParkingSim.IoT
         // CASH-PAYMENT
         private string cashPlate = "";
 
+        // MOMO QR popup (shown when check-out returns amountDue > 0)
+        private bool showMomoQr;
+        private Texture2D momoQrTexture;
+        private double momoAmount;
+        private string momoBookingId;
+        private string momoPlate;
+        private Rect momoWindowRect = new Rect(Screen.width / 2 - 200, 120, 400, 560);
+
         // DEVICE
         private string deviceId = "ESP32-SIM-001";
 
@@ -73,6 +81,10 @@ namespace ParkingSim.IoT
                 return;
             }
             windowRect = GUILayout.Window(101, windowRect, DrawWindow, "\ud83d\udd0c ESP32 Simulator");
+
+            if (showMomoQr)
+                momoWindowRect = GUILayout.Window(102, momoWindowRect, DrawMomoQrWindow,
+                    "\ud83d\udcb3 Thanh to\u00e1n MoMo");
         }
 
         private void DrawWindow(int id)
@@ -297,10 +309,16 @@ namespace ParkingSim.IoT
                 bool ok = result.Data.Success;
                 string msg = result.Data.Message ?? "Check-out response received";
                 if (result.Data.AmountDue > 0)
-                    msg += $"\n\ud83d\udcb0 C\u00f2n n\u1ee3: {result.Data.AmountDue:F0}\u0111 \u2014 Cash Payment \u0111\u1ec3 thanh to\u00e1n";
+                {
+                    msg += $"\n\ud83d\udcb0 C\u00f2n n\u1ee3: {result.Data.AmountDue:F0}\u0111 \u2014 Qu\u00e9t QR MoMo \u0111\u1ec3 thanh to\u00e1n";
+                    momoAmount = result.Data.AmountDue;
+                    momoBookingId = result.Data.BookingId ?? booking.BookingId;
+                    momoPlate = booking.LicensePlate;
+                    StartCoroutine(DownloadMomoQr());
+                }
                 SetResult(ok, msg);
                 Debug.Log($"[FLOW] {(ok ? "\u2705" : "\u274c")} Check-Out: {result.Data.Event} | amountDue={result.Data.AmountDue}");
-                if (ok && result.Data.BookingId != null)
+                if (ok && result.Data.BookingId != null && result.Data.AmountDue <= 0)
                     SharedBookingState.Instance?.RemoveBooking(result.Data.BookingId);
                 if (ok && !string.IsNullOrEmpty(result.Data.PlateImageUrl))
                     StartCoroutine(DownloadAndSavePlateImage(result.Data.PlateImageUrl, "checkout"));
@@ -431,6 +449,128 @@ namespace ParkingSim.IoT
 
             SetResult(result.IsSuccess && result.Data?.Success == true,
                 result.Data?.Message ?? result.ErrorMessage ?? "Payment failed");
+        }
+
+        // ── MOMO QR POPUP (triggered when DoCheckOut returns AmountDue > 0) ──
+        private IEnumerator DownloadMomoQr()
+        {
+            // Build a MoMo-style payload. For demo we use text so any QR scanner can read it;
+            // MoMo production uses a deep-link or VietQR string — same pipeline otherwise.
+            string shortId = string.IsNullOrEmpty(momoBookingId)
+                ? "N/A" : momoBookingId.Substring(0, System.Math.Min(8, momoBookingId.Length));
+            string payload = $"MOMO|ParkSmart|{momoAmount:F0}VND|BK-{shortId}|{momoPlate}";
+            string qrUrl = $"https://api.qrserver.com/v1/create-qr-code/?data={UnityWebRequest.EscapeURL(payload)}&size=340x340&margin=4";
+
+            using var req = UnityWebRequestTexture.GetTexture(qrUrl);
+            yield return req.SendWebRequest();
+            if (req.result == UnityWebRequest.Result.Success)
+            {
+                if (momoQrTexture != null) Destroy(momoQrTexture);
+                momoQrTexture = DownloadHandlerTexture.GetContent(req);
+                showMomoQr = true;
+                Debug.Log($"[FLOW] \ud83d\udcb3 MoMo QR sinh cho {momoAmount:F0}\u0111 — booking {shortId}");
+            }
+            else
+            {
+                Debug.LogWarning($"[FLOW] Kh\u00f4ng t\u1ea3i \u0111\u01b0\u1ee3c QR MoMo: {req.error}");
+                SetResult(false, "Không tải được QR MoMo — dùng Cash Payment thủ công");
+            }
+        }
+
+        private void DrawMomoQrWindow(int id)
+        {
+            var headerStyle = new GUIStyle(GUI.skin.label)
+            { fontSize = 14, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
+            var amountStyle = new GUIStyle(GUI.skin.label)
+            { fontSize = 22, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
+            amountStyle.normal.textColor = new Color(1f, 0.3f, 0.5f);
+
+            GUILayout.Space(6);
+            GUILayout.Label("Quét QR bằng app MoMo để thanh toán", headerStyle);
+            GUILayout.Label($"{momoAmount:N0}đ", amountStyle, GUILayout.Height(38));
+
+            if (!string.IsNullOrEmpty(momoPlate))
+                GUILayout.Label($"Biển số: {momoPlate}", headerStyle);
+            if (!string.IsNullOrEmpty(momoBookingId))
+            {
+                string shortId = momoBookingId.Substring(0, System.Math.Min(8, momoBookingId.Length));
+                GUILayout.Label($"Mã đơn: BK-{shortId}", headerStyle);
+            }
+
+            GUILayout.Space(6);
+            if (momoQrTexture != null)
+            {
+                GUILayout.BeginHorizontal();
+                GUILayout.FlexibleSpace();
+                GUILayout.Box(momoQrTexture, GUILayout.Width(340), GUILayout.Height(340));
+                GUILayout.FlexibleSpace();
+                GUILayout.EndHorizontal();
+            }
+            else
+            {
+                GUILayout.Label("Đang tải QR…", headerStyle, GUILayout.Height(340));
+            }
+
+            GUILayout.Space(6);
+            GUI.enabled = !isProcessing;
+            if (GUILayout.Button("\u2705 Đã thanh toán", GUILayout.Height(32)))
+                StartCoroutine(ConfirmMomoPayment());
+            GUI.enabled = true;
+
+            if (GUILayout.Button("Đóng", GUILayout.Height(26)))
+                CloseMomoQr();
+
+            GUI.DragWindow();
+        }
+
+        private IEnumerator ConfirmMomoPayment()
+        {
+            if (string.IsNullOrEmpty(momoBookingId))
+            { SetResult(false, "Thiếu bookingId"); yield break; }
+
+            isProcessing = true;
+            bool done = false;
+            ApiResponse<ESP32Response> result = null;
+            var request = new ESP32CashPaymentRequest
+            {
+                BookingId = momoBookingId,
+                GateId = MockIds.GATE_OUT
+            };
+            StartCoroutine(apiService.ESP32CashPayment(request, r => { result = r; done = true; }));
+            yield return WaitWithTimeout(() => done, 10f, () => { });
+            isProcessing = false;
+
+            if (!done) { SetResult(false, "Timeout xác nhận thanh toán"); yield break; }
+
+            bool ok = result.IsSuccess && result.Data?.Success == true;
+            SetResult(ok, ok
+                ? $"\u2705 Thanh toán MoMo thành công — {momoAmount:N0}đ. Đang mở cổng…"
+                : (result.Data?.Message ?? "Thanh toán thất bại"));
+
+            if (ok)
+            {
+                string paidBookingId = momoBookingId;
+                CloseMomoQr();
+
+                // Auto-trigger check-out lần nữa để backend mở barrier (amountDue giờ = 0)
+                var bks = SharedBookingState.Instance?.GetCheckedInBookingsForDropdown();
+                if (bks != null)
+                {
+                    int idx = bks.FindIndex(b => b.booking.BookingId == paidBookingId);
+                    if (idx >= 0)
+                    {
+                        selectedCheckedInIdx = idx;
+                        yield return new WaitForSeconds(0.5f);
+                        StartCoroutine(DoCheckOut());
+                    }
+                }
+            }
+        }
+
+        private void CloseMomoQr()
+        {
+            showMomoQr = false;
+            if (momoQrTexture != null) { Destroy(momoQrTexture); momoQrTexture = null; }
         }
 
         // ── DEVICE MANAGEMENT ──
