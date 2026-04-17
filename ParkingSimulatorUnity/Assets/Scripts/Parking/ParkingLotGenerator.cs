@@ -360,13 +360,9 @@ namespace ParkingSim.Parking
                 pos + new Vector3(0f, yOff, -hd),
                 new Vector3(slotWidth, bH, bW), OrangeLineColor);
 
-            // Mini barrier gate at slot entrance (south side)
-            CreateCube(slotGo.transform, "SlotBarrierPost",
-                pos + new Vector3(-hw + 0.15f, 0.15f, -hd),
-                new Vector3(0.1f, 0.3f, 0.1f), BlackColor);
-            CreateCube(slotGo.transform, "SlotBarrierArm",
-                pos + new Vector3(0f, 0.28f, -hd),
-                new Vector3(slotWidth * 0.8f, 0.05f, 0.05f), SignRed);
+            // Mini barrier gate at slot entrance (south side) — pivot at left post,
+            // arm swings sideways around Y so ParkingManager.OpenSlotBarrier is visible.
+            BuildSlotBarrier(slotGo.transform, pos, slotWidth, -hw, -hd);
 
             var slot = slotGo.AddComponent<ParkingSlot>();
             slot.Initialize(code, vType);
@@ -389,6 +385,8 @@ namespace ParkingSim.Parking
                 new Vector3(garageWidth / 2f, hy, 0f), new Vector3(wt, garageHeight, garageDepth), sideColor);
             CreateQuadLocal(slotGo.transform, "FloorMark",
                 new Vector3(0f, 0.02f, 0f), new Vector3(garageWidth * 0.9f, garageDepth * 0.9f, 1f));
+            // Slot barrier at entrance (south side, opens outward into aisle)
+            BuildSlotBarrier(slotGo.transform, pos, garageWidth, -garageWidth / 2f, -garageDepth / 2f);
             // Light fixture sphere on back wall
             var light = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             light.name = "LightFixture";
@@ -901,6 +899,49 @@ namespace ParkingSim.Parking
             go.transform.localScale = scale;
             SetColor(go, color);
             return go;
+        }
+
+        /// <summary>
+        /// Build a mini boom-gate barrier at the slot entrance.
+        /// Post is a vertical cube at (postLocalX, 0, entranceLocalZ). Arm is an empty
+        /// "SlotBarrierArm" pivot at post top with a child cube offset +X; ParkingManager
+        /// rotates the pivot around Y so the arm swings sideways like a real parking lock.
+        /// slotWidth is local X span, postLocalX is -hw (left edge), entranceLocalZ is -hd (south).
+        /// </summary>
+        private static void BuildSlotBarrier(Transform slotRoot, Vector3 slotWorldPos,
+            float slotWidth, float postLocalX, float entranceLocalZ)
+        {
+            Vector3 postBase = slotWorldPos + new Vector3(postLocalX + 0.2f, 0f, entranceLocalZ);
+            const float postHeight = 0.6f;
+            const float postThickness = 0.15f;
+
+            // Post (visible vertical marker)
+            CreateCube(slotRoot, "SlotBarrierPost",
+                postBase + new Vector3(0f, postHeight * 0.5f, 0f),
+                new Vector3(postThickness, postHeight, postThickness), BlackColor);
+
+            // Arm pivot at post top — empty GameObject so ParkingManager can rotate localRotation
+            var armPivot = new GameObject("SlotBarrierArm");
+            armPivot.transform.SetParent(slotRoot);
+            armPivot.transform.position = postBase + new Vector3(0f, postHeight - 0.05f, 0f);
+            armPivot.transform.localRotation = Quaternion.identity;
+
+            // Arm visual — thick red bar, pivot at left end so Y-rotation swings outward
+            float armLength = slotWidth * 0.88f - 0.4f;
+            var armMesh = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            armMesh.name = "ArmMesh";
+            armMesh.transform.SetParent(armPivot.transform, false);
+            armMesh.transform.localPosition = new Vector3(armLength * 0.5f, 0f, 0f);
+            armMesh.transform.localScale = new Vector3(armLength, 0.1f, 0.1f);
+            SetColor(armMesh, SignRed);
+
+            // White tip for visibility
+            var armTip = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            armTip.name = "ArmTip";
+            armTip.transform.SetParent(armPivot.transform, false);
+            armTip.transform.localPosition = new Vector3(armLength - 0.08f, 0f, 0f);
+            armTip.transform.localScale = new Vector3(0.16f, 0.12f, 0.12f);
+            SetColor(armTip, Color.white);
         }
 
         private static void CreateCubeLocal(Transform parent, string name, Vector3 localPos, Vector3 scale, Color color)
