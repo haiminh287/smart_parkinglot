@@ -16,6 +16,8 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
         "/docs",
         "/openapi.json",
         "/ai/cameras/",
+        # Saved plate crops served via <img> tags — cannot send gateway header
+        "/ai/images/",
         # ESP32 device endpoints — ESP32 connects directly (no gateway)
         "/ai/parking/esp32/register",
         "/ai/parking/esp32/heartbeat",
