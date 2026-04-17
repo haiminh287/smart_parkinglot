@@ -20,6 +20,12 @@ namespace ParkingSim.IoT
         private int selectedBookingIdx = -1;
         private string manualQrData = "";
 
+        /// <summary>
+        /// ID của booking user đang chọn trong Check-In dropdown — cho
+        /// VehicleQueue biết để spawn đúng xe cho booking đó (không random).
+        /// </summary>
+        public static string ActiveCheckInBookingId { get; private set; }
+
         // CHECK-OUT & VERIFY-SLOT — dropdown shows checked_in bookings (separate index)
         private int selectedCheckedInIdx = -1;
 
@@ -126,6 +132,7 @@ namespace ParkingSim.IoT
                 var selected = bookings[selectedBookingIdx].booking;
                 checkInPlate = selected.LicensePlate ?? "";
                 manualQrData = selected.QrCodeData ?? "";
+                ActiveCheckInBookingId = selected.BookingId;
             }
             else
             {

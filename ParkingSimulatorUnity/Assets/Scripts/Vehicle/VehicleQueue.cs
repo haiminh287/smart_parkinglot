@@ -183,12 +183,27 @@ namespace ParkingSim.Vehicle
             if (ParkingManager.Instance == null || generatorRef == null) return;
             if (generatorRef.slotRegistry == null || generatorRef.slotRegistry.Count == 0) return;
 
-            // Check for pending real bookings first
+            // Check for pending real bookings first. Ưu tiên booking user đang chọn
+            // trong ESP32Simulator (ActiveCheckInBookingId) để spawn đúng xe cho
+            // slot được chọn — tránh FindLast vớ phải booking khác.
             var pendingBookings = SharedBookingState.Instance?.GetNotCheckedIn();
-            var pendingBooking = pendingBookings?.FindLast(b =>
-                vehicleType == "Motorbike"
-                    ? b.VehicleType == "Motorbike"
-                    : b.VehicleType != "Motorbike");
+            ActiveBooking pendingBooking = null;
+            string activeId = ParkingSim.IoT.ESP32Simulator.ActiveCheckInBookingId;
+            if (!string.IsNullOrEmpty(activeId) && pendingBookings != null)
+            {
+                pendingBooking = pendingBookings.Find(b =>
+                    b != null && b.BookingId == activeId &&
+                    (vehicleType == "Motorbike"
+                        ? b.VehicleType == "Motorbike"
+                        : b.VehicleType != "Motorbike"));
+            }
+            if (pendingBooking == null)
+            {
+                pendingBooking = pendingBookings?.FindLast(b =>
+                    vehicleType == "Motorbike"
+                        ? b.VehicleType == "Motorbike"
+                        : b.VehicleType != "Motorbike");
+            }
 
             if (pendingBooking != null)
             {

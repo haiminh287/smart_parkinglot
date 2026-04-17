@@ -827,7 +827,9 @@ namespace ParkingSim.Parking
                 var slot = kvp.Value;
                 if (slot == null) continue;
                 var ep = slot.transform.position + new Vector3(0f, 0.1f, 0f);
-                ep.z += (slot.transform.position.z < 0f ? 1f : -1f) * (slotDepth / 2f + 1f);
+                // Đẩy entrance waypoint ra xa slot edge thêm ~2m để mũi xe (dài ~4m)
+                // dừng TRƯỚC barrier (barrier tại slot.z ± hd), không đâm xuyên qua.
+                ep.z += (slot.transform.position.z < 0f ? 1f : -1f) * (slotDepth / 2f + 2.5f);
                 var sn = CreateWaypointNode(slot.transform.parent, ep, WaypointNode.NodeType.SlotEntrance, kvp.Key);
                 var near = waypointGraph.GetNearestLaneNode(ep);
                 if (near != null)
