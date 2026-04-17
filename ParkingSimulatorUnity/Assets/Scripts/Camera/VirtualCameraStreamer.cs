@@ -64,9 +64,11 @@ namespace ParkingSim.Camera
             renderTexture.Create();
             cam.targetTexture = renderTexture;
 
+            // RGBA32 matches AsyncGPUReadback R8G8B8A8_UNorm stride (4 bytes/pixel).
+            // Using RGB24 here corrupts LoadRawTextureData — moiré + ghosted output.
             readbackTexture = new Texture2D(
                 config.renderWidth, config.renderHeight,
-                TextureFormat.RGB24, false
+                TextureFormat.RGBA32, false
             );
         }
 
