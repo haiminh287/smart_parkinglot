@@ -34,7 +34,6 @@ const BanknoteDetectionPage = lazy(
   () => import("./pages/BanknoteDetectionPage"),
 );
 const KioskPage = lazy(() => import("./pages/KioskPage"));
-const DetectionHistoryPage = lazy(() => import("./pages/DetectionHistoryPage"));
 
 // Lazy — admin pages
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
@@ -149,15 +148,6 @@ const App = () => (
                       </ProtectedRoute>
                     }
                   />
-                  <Route
-                    path="/detection-history"
-                    element={
-                      <ProtectedRoute>
-                        <DetectionHistoryPage />
-                      </ProtectedRoute>
-                    }
-                  />
-
                   {/* Public Kiosk Route (no auth required) */}
                   <Route path="/kiosk" element={<KioskPage />} />
 

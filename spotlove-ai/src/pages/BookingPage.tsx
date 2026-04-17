@@ -104,7 +104,7 @@ export default function BookingPage() {
   const [selectedSlot, setSelectedSlot] = useState<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any -- TODO: Integrate with Redux slots
   const [packageType, setPackageType] = useState<
     "monthly" | "weekly" | "custom" | "hourly"
-  >("monthly");
+  >("hourly");
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [hourlyDate, setHourlyDate] = useState<Date>(new Date());
   const [hourlyStartTime, setHourlyStartTime] = useState<string>("08:00");
@@ -161,7 +161,9 @@ export default function BookingPage() {
         setLoadingFloors(true);
         try {
           const { parkingService } = await import("@/services/business");
-          const response = await parkingService.getFloors(selectedParkingLot.id);
+          const response = await parkingService.getFloors(
+            selectedParkingLot.id,
+          );
           setFloors(response.results);
         } catch {
           return;
