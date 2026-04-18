@@ -46,11 +46,11 @@ const char* WIFI_PASSWORD = "2462576d";   // ← Đổi mật khẩu WiFi
 // Thay IP bằng IP máy tính chạy AI service
 const char* AI_SERVICE_BASE_URL = "http://192.168.100.194:8009";
 
-// Gateway Secret — phải trùng với server
-const char* GATEWAY_SECRET = "gateway-internal-secret-key";
+// Gateway Secret — phải trùng với GATEWAY_SECRET trong ai-service-fastapi/.env
+const char* GATEWAY_SECRET = "gw-prod-wnMbXWEHc49KXVjhae4IGU7TZfoj4HHEDTOtzYvE";
 
-// Device Token — phải trùng với ESP32_DEVICE_TOKEN trên server
-const char* DEVICE_TOKEN = "your-device-token-here";
+// Device Token — phải trùng với ESP32_DEVICE_TOKEN trong ai-service-fastapi/.env
+const char* DEVICE_TOKEN = "esp32-device-secret-token-local";
 
 // Gate IDs
 const char* GATE_IN_ID  = "GATE-IN-01";
