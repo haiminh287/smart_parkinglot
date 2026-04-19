@@ -34,52 +34,41 @@ def _detect_slots_by_orange(frame: np.ndarray) -> List[dict]:
     Returns: list of dict {x1,y1,x2,y2, status: 'occupied'|'available', confidence}
     """
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    # Cam line marker — range rộng để chịu được shadow + lighting khác nhau.
-    # Hue 3-35 (cam → vàng cam), S>60 (không phải xám), V>80 (không quá tối).
-    orange_mask = cv2.inRange(hsv, (3, 60, 80), (35, 255, 255))
-    # Close gap để nối các đoạn line bị đứt do bóng, rồi dilate để line dày hơn
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (9, 9))
-    orange_mask = cv2.morphologyEx(orange_mask, cv2.MORPH_CLOSE, kernel, iterations=3)
-    orange_mask = cv2.dilate(orange_mask, kernel, iterations=1)
+    # Detect INTERIOR của ô trống (sàn xanh lá trong suốt) thay vì viền cam.
+    # Orange border thường ghép các ô thành 1 contour dài. Green interior mỗi
+    # ô là 1 blob riêng → đếm chính xác từng ô đỗ trống.
+    # Hue ~35-90 = xanh lá + olive, S >= 40 (chịu được sàn bóng/mờ), V >= 50.
+    green_mask = cv2.inRange(hsv, (35, 40, 50), (90, 255, 255))
+    # Morph nhỏ để gom pixel lẻ cùng 1 cell, KHÔNG gộp 2 cell cạnh nhau
+    small = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+    green_mask = cv2.morphologyEx(green_mask, cv2.MORPH_CLOSE, small, iterations=1)
+    green_mask = cv2.morphologyEx(green_mask, cv2.MORPH_OPEN, small, iterations=1)
 
-    # Find filled slot regions — invert mask + floodfill không work tốt cho rect
-    # → dùng contour hierarchy: tìm rect đóng bên trong các đường cam.
-    contours, hierarchy = cv2.findContours(orange_mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    contours, hierarchy = cv2.findContours(green_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     img_h, img_w = frame.shape[:2]
     img_area = img_h * img_w
     slots: List[dict] = []
     seen_rects = set()
 
-    # Dùng Hough rectangles: lấy bounding rect của từng contour, filter size
+    # Mỗi contour = 1 ô đỗ TRỐNG (sàn xanh lộ ra). Filter theo size thôi.
     for c in contours:
         x, y, w, h = cv2.boundingRect(c)
         area = w * h
-        # Slot ~ 0.2% đến 2% tổng area
-        if area < img_area * 0.0015 or area > img_area * 0.03:
+        # Slot ~ 0.05% đến 0.5% tổng area (nhỏ hơn vì chỉ phần sàn trong)
+        if area < img_area * 0.0004 or area > img_area * 0.008:
             continue
         aspect = max(w, h) / max(min(w, h), 1)
-        if aspect > 3.5:
+        if aspect > 4:
             continue
-        # Dedupe rects gần giống nhau
-        key = (x // 10, y // 10, w // 10, h // 10)
+        key = (x // 8, y // 8)
         if key in seen_rects:
             continue
         seen_rects.add(key)
-
-        # Sample HSV ở center để check occupancy
-        cx, cy = x + w // 2, y + h // 2
-        roi = hsv[max(0, cy - 6):cy + 6, max(0, cx - 6):cx + 6]
-        if roi.size == 0:
-            continue
-        mean_h, mean_s, mean_v = roi[..., 0].mean(), roi[..., 1].mean(), roi[..., 2].mean()
-        # Sàn slot xanh lá: H~35-85, S~80-200
-        is_empty = 35 <= mean_h <= 85 and mean_s > 60
-        status = "available" if is_empty else "occupied"
         slots.append({
             "x1": x, "y1": y, "x2": x + w, "y2": y + h,
-            "status": status,
-            "confidence": 0.8,
+            "status": "available",
+            "confidence": 0.85,
         })
     return slots
 
