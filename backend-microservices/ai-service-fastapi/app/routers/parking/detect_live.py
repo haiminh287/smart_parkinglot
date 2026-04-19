@@ -12,6 +12,7 @@ from typing import List, Optional
 import cv2
 import numpy as np
 from fastapi import APIRouter, HTTPException, Query
+from fastapi.responses import Response
 from pydantic import BaseModel
 
 from app.engine.slot_detection import VEHICLE_CLASS_IDS, get_slot_detector
@@ -108,4 +109,66 @@ async def detect_overview_live(
         boxes=boxes,
         detection_method=method,
         processing_time_ms=round((time.time() - t0) * 1000, 1),
+    )
+
+
+@router.get("/detect-overview-annotated/")
+async def detect_overview_annotated(
+    camera_id: str = Query("virtual-f1-overview"),
+) -> Response:
+    """Trả frame camera tổng với bounding boxes YOLO vẽ overlay lên — admin
+    dashboard refresh periodic để xem AI đang detect đúng không."""
+    with _buffer_lock:
+        vf = _virtual_frame_buffer.get(camera_id)
+    if vf is None:
+        raise HTTPException(status_code=404, detail=f"No frame for camera {camera_id}")
+
+    img_array = np.frombuffer(vf.jpeg_data, dtype=np.uint8)
+    frame = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+    if frame is None:
+        raise HTTPException(status_code=422, detail="Cannot decode frame")
+
+    detector = get_slot_detector()
+    yolo = getattr(detector, "_yolo_model", None)
+    count = 0
+    if yolo is not None:
+        try:
+            results = yolo.predict(
+                frame, conf=0.25, iou=0.4, verbose=False, classes=list(VEHICLE_CLASS_IDS)
+            )
+            if results and len(results) > 0:
+                r = results[0]
+                if r.boxes is not None:
+                    for b in r.boxes:
+                        xyxy = b.xyxy[0].tolist()
+                        x1, y1, x2, y2 = int(xyxy[0]), int(xyxy[1]), int(xyxy[2]), int(xyxy[3])
+                        conf = float(b.conf[0])
+                        # Green box + conf label
+                        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 220, 0), 2)
+                        label = f"car {conf:.0%}"
+                        (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+                        cv2.rectangle(frame, (x1, y1 - th - 6), (x1 + tw + 4, y1), (0, 220, 0), -1)
+                        cv2.putText(
+                            frame, label, (x1 + 2, y1 - 4),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA,
+                        )
+                        count += 1
+        except Exception as exc:
+            logger.warning("YOLO annotate fail: %s", exc)
+
+    # Top-left summary banner
+    banner = f"AI detected: {count} vehicle(s) | YOLO11n"
+    cv2.rectangle(frame, (0, 0), (340, 28), (0, 0, 0), -1)
+    cv2.putText(
+        frame, banner, (8, 20),
+        cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 255, 0), 1, cv2.LINE_AA,
+    )
+
+    ok, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+    if not ok:
+        raise HTTPException(status_code=500, detail="Encode fail")
+    return Response(
+        content=buf.tobytes(),
+        media_type="image/jpeg",
+        headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
     )

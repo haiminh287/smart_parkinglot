@@ -108,6 +108,16 @@ export function AILiveOccupancyCard({
             />
           </div>
 
+          {/* Ảnh AI nhận diện realtime — cache-bust để force refresh mỗi poll */}
+          <div className="rounded-xl overflow-hidden border border-border bg-black">
+            <img
+              src={`/ai/parking/detect-overview-annotated/?camera_id=virtual-f1-overview&t=${lastUpdate?.getTime() ?? 0}`}
+              alt="AI detection overlay"
+              className="w-full h-auto block"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+            />
+          </div>
+
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             <Badge variant="outline" className="gap-1">
               <Activity className="h-3 w-3" />
