@@ -183,9 +183,28 @@ namespace ParkingSim.Vehicle
             if (ParkingManager.Instance == null || generatorRef == null) return;
             if (generatorRef.slotRegistry == null || generatorRef.slotRegistry.Count == 0) return;
 
-            // Check for pending real bookings first. Ưu tiên booking user đang chọn
-            // trong ESP32Simulator (ActiveCheckInBookingId) để spawn đúng xe cho
-            // slot được chọn — tránh FindLast vớ phải booking khác.
+            // Trigger sync trước khi spawn để lấy booking MỚI NHẤT từ web/API.
+            // Sau đó delay 1 frame rồi spawn với booking mới.
+            StartCoroutine(SyncAndSpawn(vehicleType));
+        }
+
+        private System.Collections.IEnumerator SyncAndSpawn(string vehicleType)
+        {
+            var apiService = ParkingSim.API.ApiService.Instance;
+            if (apiService != null)
+            {
+                bool synced = false;
+                ParkingSim.API.ApiResponse<ParkingSim.API.PaginatedResponse<ParkingSim.API.BookingData>> result = null;
+                yield return apiService.GetBookings(r => { result = r; synced = true; });
+                if (synced && result != null && result.IsSuccess && result.Data?.Results != null)
+                {
+                    int added = SharedBookingState.Instance?.SyncFromApi(result.Data.Results) ?? 0;
+                    if (added > 0)
+                        Debug.Log($"[VehicleQueue] Pre-spawn sync: loaded {added} booking(s)");
+                }
+            }
+
+            // Ưu tiên booking ActiveCheckInBookingId (user đã chọn trong ESP32 dropdown).
             var pendingBookings = SharedBookingState.Instance?.GetNotCheckedIn();
             ActiveBooking pendingBooking = null;
             string activeId = ParkingSim.IoT.ESP32Simulator.ActiveCheckInBookingId;
@@ -197,12 +216,14 @@ namespace ParkingSim.Vehicle
                         ? b.VehicleType == "Motorbike"
                         : b.VehicleType != "Motorbike"));
             }
-            if (pendingBooking == null)
+            // Fallback: lấy booking mới nhất (sort theo BookingId reverse — UUID-ish ordering by creation time)
+            if (pendingBooking == null && pendingBookings != null && pendingBookings.Count > 0)
             {
-                pendingBooking = pendingBookings?.FindLast(b =>
+                var filtered = pendingBookings.FindAll(b =>
                     vehicleType == "Motorbike"
                         ? b.VehicleType == "Motorbike"
                         : b.VehicleType != "Motorbike");
+                pendingBooking = filtered.Count > 0 ? filtered[filtered.Count - 1] : null;
             }
 
             if (pendingBooking != null)
@@ -219,34 +240,14 @@ namespace ParkingSim.Vehicle
                     ParkingManager.Instance.SpawnVehicle(bkPlate, bkId, bkQr,
                         slotCode, pendingBooking.VehicleType ?? vehicleType);
                     TotalSpawned++;
-                    Debug.Log($"[VehicleQueue] Spawned BOOKING vehicle plate={bkPlate} → {slotCode} (booking={bkId})");
-                    return;
+                    Debug.Log($"[VehicleQueue] Spawned BOOKING vehicle plate={bkPlate} → {slotCode} (booking={bkId.Substring(0, 8)})");
+                    yield break;
                 }
             }
 
-            // Fallback: random vehicle (no real booking available)
-            var availableSlots = generatorRef.slotRegistry.Values
-                .Where(s => s.status == ParkingSlot.SlotStatus.Available)
-                .Where(s => vehicleType == "Motorbike"
-                    ? s.slotType == ParkingSlot.SlotType.Motorbike
-                    : s.slotType != ParkingSlot.SlotType.Motorbike)
-                .ToList();
-
-            if (availableSlots.Count == 0)
-            {
-                Debug.Log($"[VehicleQueue] No available {vehicleType} slots for auto-spawn");
-                return;
-            }
-
-            var targetSlot = availableSlots[Random.Range(0, availableSlots.Count)];
-            string plate = GenerateRandomPlate();
-            string bookingId = System.Guid.NewGuid().ToString();
-            string qrData = $"{{\"booking_id\":\"{bookingId}\"}}";
-
-            ParkingManager.Instance.SpawnVehicle(plate, bookingId, qrData,
-                targetSlot.slotCode, vehicleType);
-            TotalSpawned++;
-            Debug.Log($"[VehicleQueue] Auto-spawned {vehicleType} plate={plate} → {targetSlot.slotCode}");
+            // No real booking → KHÔNG spawn random (tránh biển số lạ).
+            // User cần tạo booking qua web hoặc chạy create_unity_checkin_booking.py.
+            Debug.LogWarning($"[VehicleQueue] No pending {vehicleType} booking — tạo booking qua web/script trước khi spawn");
         }
 
         // ── Plate Generator ─────────────────────────────────

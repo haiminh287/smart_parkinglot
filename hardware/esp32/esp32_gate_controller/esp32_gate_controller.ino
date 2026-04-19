@@ -30,9 +30,6 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
-#include <Wire.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
 
 // ═══════════════════════════════════════════════════════════════
 //  CẤU HÌNH — THAY ĐỔI THEO MẠNG CỦA BẠN
@@ -73,13 +70,6 @@ const char* FIRMWARE_VERSION = "v1.0.0-parksmart";
 
 // Status LED (built-in on most ESP32 dev boards)
 #define LED_PIN 2
-
-// OLED I2C
-#define SCREEN_WIDTH 128
-#define SCREEN_HEIGHT 64
-#define OLED_ADDR 0x3D
-
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
 // ═══════════════════════════════════════════════════════════════
 //  CONSTANTS
@@ -156,22 +146,6 @@ void setup() {
 
   // Connect WiFi
   connectWiFi();
-
-  // OLED INIT
-  Wire.begin(21, 22); // SDA, SCL
-
-  if(!display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR)) {
-    Serial.println("OLED Fail");
-    while(1);
-  }
-  Serial.println("OLED Done");
-
-  display.clearDisplay();
-  display.setTextSize(2);
-  display.setTextColor(WHITE);
-  display.setCursor(0,10);
-  display.println("ParkSmart");
-  display.display();
 
   // Register both gate devices with AI Service
   registerDevice(GATE_IN_ID);
@@ -531,12 +505,6 @@ void parseAndActOnResponse(String& response, const char* actionType) {
   if (strlen(plateText) > 0) {
     Serial.print("│ Plate:   ");
     Serial.println(plateText);
-
-    if (strcmp(actionType, "check_in") == 0) {
-      showPlateOnOLED(plateText, "IN");
-    } else {
-      showPlateOnOLED(plateText, "OUT");
-    }
   }
   Serial.print("│ Time:    ");
   Serial.print(processingTime, 0);
@@ -690,21 +658,3 @@ void blinkLED(int times) {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════
-//  OLED DISPLAY
-// ═══════════════════════════════════════════════════════════════
-
-void showPlateOnOLED(const char* plate, const char* gate) {
-  display.clearDisplay();
-
-  display.setTextSize(1);
-  display.setCursor(0,0);
-  display.print("Gate: ");
-  display.println(gate);
-
-  display.setTextSize(2);
-  display.setCursor(0,20);
-  display.println(plate);
-
-  display.display();
-}
