@@ -25,6 +25,7 @@ from app.schemas.esp32 import (
 from app.services.esp32_helpers import (
     TEST_IMAGES_DIR,
     broadcast_gate_event,
+    broadcast_unity_depart,
     call_booking_checkout,
     check_payment_status,
     get_booking,
@@ -285,6 +286,9 @@ async def process_checkout(
             "message": "Check-out thành công",
         },
     )
+
+    # Unity listens to unity.depart_vehicle → StartDeparture cho xe này.
+    await broadcast_unity_depart(booking_id, ocr_plate or booking_plate)
 
     msg = f"✅ Check-out thành công! Biển số: {ocr_plate or booking_plate}"
     if late_fee > 0:

@@ -23,6 +23,7 @@ namespace ParkingSim.API
 
         public event Action<SlotStatusUpdate> OnSlotStatusUpdate;
         public event Action<CheckinSuccessData> OnCheckinSuccess;
+        public event Action<string> OnDepartVehicle;  // arg = plate
         public event Action<string> OnWsError;
         public event Action OnWsConnected;
         public event Action OnWsDisconnected;
@@ -580,6 +581,11 @@ namespace ParkingSim.API
                 {
                     var data = obj["data"]?.ToObject<CheckinSuccessData>();
                     if (data != null) OnCheckinSuccess?.Invoke(data);
+                }
+                else if (type == "unity.depart_vehicle")
+                {
+                    string plate = obj["data"]?["plate"]?.ToString();
+                    if (!string.IsNullOrEmpty(plate)) OnDepartVehicle?.Invoke(plate);
                 }
             }
             catch (Exception ex)

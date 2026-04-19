@@ -234,6 +234,25 @@ async def broadcast_unity_spawn(
             logger.warning("Failed to broadcast unity spawn: %s", exc)
 
 
+async def broadcast_unity_depart(booking_id: str, plate: str) -> None:
+    """Broadcast unity.depart_vehicle → Unity gọi StartDeparture cho xe biển số này."""
+    url = f"{REALTIME_SERVICE_URL}/api/broadcast/unity-command/"
+    headers = {"X-Gateway-Secret": GATEWAY_SECRET, "Content-Type": "application/json"}
+    async with httpx.AsyncClient(timeout=5.0) as client:
+        try:
+            await client.post(
+                url,
+                headers=headers,
+                json={
+                    "type": "unity.depart_vehicle",
+                    "data": {"booking_id": booking_id, "plate": plate},
+                },
+            )
+            logger.info("Broadcast unity.depart_vehicle: booking=%s plate=%s", booking_id, plate)
+        except Exception as exc:
+            logger.warning("Failed to broadcast unity depart: %s", exc)
+
+
 def save_plate_image(
     image_bytes: bytes,
     booking_id: str,

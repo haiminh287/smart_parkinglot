@@ -88,6 +88,7 @@ namespace ParkingSim.Core
                 _dataSync.SubscribeWebSocket();
                 _gateFlow.SubscribeWebSocket();
                 apiService.OnCheckinSuccess += HandleCheckinSuccess;
+                apiService.OnDepartVehicle += HandleDepartVehicle;
                 _dataSync.StartPolling();
             }
             else
@@ -135,7 +136,10 @@ namespace ParkingSim.Core
             _dataSync?.StopPolling();
             _gateFlow?.UnsubscribeWebSocket();
             if (apiService != null)
+            {
                 apiService.OnCheckinSuccess -= HandleCheckinSuccess;
+                apiService.OnDepartVehicle -= HandleDepartVehicle;
+            }
         }
 
         // === Public API ===
@@ -282,7 +286,38 @@ namespace ParkingSim.Core
             if (data == null) return;
             var (plate, bookingId, qrData, slotCode, vehicleType) = _gateFlow.ParseCheckinSuccess(data);
             Debug.Log($"[ParkingManager] 🚗 WebSocket check-in: plate={plate} slot={slotCode}");
-            SpawnVehicle(plate, bookingId, qrData, slotCode, vehicleType);
+
+            // Ưu tiên: nếu đã có xe cùng biển số đang waiting tại gate (user spawn
+            // thủ công trước, rồi ấn GPIO4 ESP32 vật lý) → release nó thay vì spawn mới.
+            if (_gateFlow.CheckInWaitingVehicle(plate))
+            {
+                Debug.Log($"[ParkingManager] Released waiting vehicle {plate} via WS (physical ESP32 button)");
+                return;
+            }
+
+            // Fallback: không có xe ở gate → spawn pre-checked-in mới.
+            SpawnVehiclePreCheckedIn(plate, bookingId, qrData, slotCode, vehicleType);
+        }
+
+        /// <summary>
+        /// WS unity.depart_vehicle → tìm xe parked với plate này → StartDeparture.
+        /// Kích hoạt khi ESP32 vật lý ấn check-out button.
+        /// </summary>
+        private void HandleDepartVehicle(string plate)
+        {
+            if (string.IsNullOrEmpty(plate)) return;
+            Debug.Log($"[ParkingManager] 🚗 WS depart signal for plate {plate}");
+            foreach (var v in FindObjectsOfType<VehicleController>())
+            {
+                if (v == null) continue;
+                if (string.Equals(v.plateNumber, plate, StringComparison.OrdinalIgnoreCase))
+                {
+                    v.StartDeparture();
+                    Debug.Log($"[ParkingManager] Departing {plate} via WS (physical ESP32 button)");
+                    return;
+                }
+            }
+            Debug.LogWarning($"[ParkingManager] WS depart: no vehicle found with plate {plate}");
         }
 
         private void AutoDepart(VehicleController v, float sec) => StartCoroutine(DepartureTimer(v, sec));
