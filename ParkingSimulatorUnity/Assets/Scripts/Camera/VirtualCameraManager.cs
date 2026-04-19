@@ -76,12 +76,12 @@ namespace ParkingSim.Camera
                 {
                     cameraId = "virtual-f1-overview",
                     displayName = "Floor 1 Overview",
-                    // Focus 4 hàng V1 car slots: X từ -27 đến 18.5 (45.5m) × Z từ
-                    // -16.5 đến 16.5 (33m). Camera center X=-4, Y=16, FOV 110° →
-                    // 2*16*tan(55°)=45.7m cover đủ width. Slots cực lớn rõ cho AI.
-                    position = new Vector3(-4, 16, 0),
+                    // Hạ Y=13 + FOV 120° → 2*13*tan(60°)=45m đúng width 4 hàng V1
+                    // (-27 đến 18.5). Rất gần, mỗi slot lớn ~4× so với y=25.
+                    // AI HSV mask bắt green interior chuẩn từng ô.
+                    position = new Vector3(-4, 13, 0),
                     rotation = new Vector3(90, 0, 0),
-                    fieldOfView = 110f,
+                    fieldOfView = 120f,
                     renderWidth = config.cameraResWidth,
                     renderHeight = config.cameraResHeight,
                     jpegQuality = config.cameraJpegQuality,
