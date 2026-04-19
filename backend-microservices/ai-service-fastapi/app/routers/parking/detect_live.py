@@ -10,7 +10,9 @@ import time
 from typing import List, Optional
 
 import cv2
+import httpx
 import numpy as np
+from app.config import settings
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import Response
 from pydantic import BaseModel
@@ -32,10 +34,13 @@ def _detect_slots_by_orange(frame: np.ndarray) -> List[dict]:
     Returns: list of dict {x1,y1,x2,y2, status: 'occupied'|'available', confidence}
     """
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    # Cam line marker: Hue ~15-25, S cao, V cao
-    orange_mask = cv2.inRange(hsv, (5, 120, 140), (28, 255, 255))
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
-    orange_mask = cv2.morphologyEx(orange_mask, cv2.MORPH_CLOSE, kernel, iterations=2)
+    # Cam line marker — range rộng để chịu được shadow + lighting khác nhau.
+    # Hue 3-35 (cam → vàng cam), S>60 (không phải xám), V>80 (không quá tối).
+    orange_mask = cv2.inRange(hsv, (3, 60, 80), (35, 255, 255))
+    # Close gap để nối các đoạn line bị đứt do bóng, rồi dilate để line dày hơn
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (9, 9))
+    orange_mask = cv2.morphologyEx(orange_mask, cv2.MORPH_CLOSE, kernel, iterations=3)
+    orange_mask = cv2.dilate(orange_mask, kernel, iterations=1)
 
     # Find filled slot regions — invert mask + floodfill không work tốt cho rect
     # → dùng contour hierarchy: tìm rect đóng bên trong các đường cam.
@@ -95,6 +100,30 @@ class LiveOverviewResponse(BaseModel):
     boxes: List[VehicleBox]
     detection_method: str
     processing_time_ms: float
+    # Ground truth từ DB để so sánh
+    db_total_slots: Optional[int] = None
+    db_occupied: Optional[int] = None
+    db_available: Optional[int] = None
+
+
+async def _fetch_db_slot_stats() -> dict:
+    """Query parking-service để biết ground truth."""
+    url = f"{settings.PARKING_SERVICE_URL}/parking/slots/"
+    headers = {"X-Gateway-Secret": settings.GATEWAY_SECRET, "X-User-ID": "system"}
+    params = {"limit": 500}
+    try:
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            resp = await client.get(url, headers=headers, params=params)
+            if resp.status_code != 200:
+                return {}
+            data = resp.json()
+            results = data.get("results", [])
+            total = data.get("count", len(results))
+            occupied = sum(1 for s in results if s.get("status") in ("occupied", "reserved"))
+            available = sum(1 for s in results if s.get("status") == "available")
+            return {"total": total, "occupied": occupied, "available": available}
+    except Exception:
+        return {}
 
 
 @router.get("/detect-overview-live/", response_model=LiveOverviewResponse)
@@ -144,6 +173,7 @@ async def detect_overview_live(
             class_id=1 if s["status"] == "occupied" else 0,  # 1=occupied, 0=available
         ))
 
+    db = await _fetch_db_slot_stats()
     return LiveOverviewResponse(
         camera_id=camera_id,
         frame_age_seconds=round(frame_age, 2),
@@ -151,6 +181,9 @@ async def detect_overview_live(
         boxes=boxes,
         detection_method=method,
         processing_time_ms=round((time.time() - t0) * 1000, 1),
+        db_total_slots=db.get("total"),
+        db_occupied=db.get("occupied"),
+        db_available=db.get("available"),
     )
 
 

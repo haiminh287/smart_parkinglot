@@ -257,6 +257,9 @@ export interface LiveOccupancyResponse {
   boxes: LiveOccupancyVehicleBox[];
   detection_method: string;
   processing_time_ms: number;
+  db_total_slots?: number | null;
+  db_occupied?: number | null;
+  db_available?: number | null;
 }
 
 export const aiApi = {

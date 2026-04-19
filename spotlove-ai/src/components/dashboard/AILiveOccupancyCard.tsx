@@ -90,23 +90,27 @@ export function AILiveOccupancyCard({
         <>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <StatBox
-              label="Xe đang đỗ (AI)"
+              label="AI detect (đang đỗ)"
               value={occupied}
               color="text-primary"
             />
             <StatBox
-              label="Chỗ còn trống"
-              value={available ?? "—"}
-              color="text-success"
-            />
-            <StatBox
-              label="Tỉ lệ lấp"
-              value={
-                occupancyRate !== null ? `${occupancyRate.toFixed(0)}%` : "—"
-              }
+              label="DB occupied"
+              value={data.db_occupied ?? "—"}
               color="text-warning"
             />
+            <StatBox
+              label="DB trống"
+              value={data.db_available ?? "—"}
+              color="text-success"
+            />
           </div>
+          {data.db_total_slots != null && (
+            <p className="text-xs text-muted-foreground">
+              DB ground truth: {data.db_total_slots} slots · AI match{" "}
+              {occupied} — lệch {Math.abs((data.db_occupied ?? 0) - occupied)}
+            </p>
+          )}
 
           {/* Ảnh AI nhận diện realtime — cache-bust để force refresh mỗi poll */}
           <div className="rounded-xl overflow-hidden border border-border bg-black">
