@@ -80,8 +80,12 @@ async def detect_overview_live(
     yolo = getattr(detector, "_yolo_model", None)
     if yolo is not None:
         try:
+            # Unity cars là primitive geometry — confidence thấp hơn real car COCO.
+            # Hạ threshold xuống 0.10 + imgsz lớn để bắt được từ camera overview
+            # top-down ở độ cao 48m.
             results = yolo.predict(
-                frame, conf=0.25, iou=0.4, verbose=False, classes=list(VEHICLE_CLASS_IDS)
+                frame, conf=0.10, iou=0.4, imgsz=960,
+                verbose=False, classes=list(VEHICLE_CLASS_IDS),
             )
             method = "yolo11n"
             if results and len(results) > 0:
@@ -133,8 +137,12 @@ async def detect_overview_annotated(
     count = 0
     if yolo is not None:
         try:
+            # Unity cars là primitive geometry — confidence thấp hơn real car COCO.
+            # Hạ threshold xuống 0.10 + imgsz lớn để bắt được từ camera overview
+            # top-down ở độ cao 48m.
             results = yolo.predict(
-                frame, conf=0.25, iou=0.4, verbose=False, classes=list(VEHICLE_CLASS_IDS)
+                frame, conf=0.10, iou=0.4, imgsz=960,
+                verbose=False, classes=list(VEHICLE_CLASS_IDS),
             )
             if results and len(results) > 0:
                 r = results[0]

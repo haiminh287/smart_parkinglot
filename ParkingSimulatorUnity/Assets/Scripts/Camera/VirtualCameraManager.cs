@@ -76,9 +76,10 @@ namespace ParkingSim.Camera
                 {
                     cameraId = "virtual-f1-overview",
                     displayName = "Floor 1 Overview",
-                    position = new Vector3(0, 22, 0),
+                    // Platform 70×60m: height 48 + FOV 80° → 2*48*tan(40°)=80.6m cover full
+                    position = new Vector3(0, 48, 0),
                     rotation = new Vector3(90, 0, 0),
-                    fieldOfView = 75f,
+                    fieldOfView = 80f,
                     renderWidth = config.cameraResWidth,
                     renderHeight = config.cameraResHeight,
                     jpegQuality = config.cameraJpegQuality,
