@@ -24,6 +24,7 @@ namespace ParkingSim.API
         public event Action<SlotStatusUpdate> OnSlotStatusUpdate;
         public event Action<CheckinSuccessData> OnCheckinSuccess;
         public event Action<string> OnDepartVehicle;  // arg = plate
+        public event Action<string, string, double> OnAwaitingPayment;  // bookingId, plate, amountDue
         public event Action<string> OnWsError;
         public event Action OnWsConnected;
         public event Action OnWsDisconnected;
@@ -586,6 +587,17 @@ namespace ParkingSim.API
                 {
                     string plate = obj["data"]?["plate"]?.ToString();
                     if (!string.IsNullOrEmpty(plate)) OnDepartVehicle?.Invoke(plate);
+                }
+                else if (type == "unity.awaiting_payment")
+                {
+                    var d = obj["data"];
+                    if (d != null)
+                    {
+                        string bookingId = d["booking_id"]?.ToString();
+                        string plate = d["plate"]?.ToString();
+                        double amount = d["amount_due"]?.ToObject<double>() ?? 0;
+                        OnAwaitingPayment?.Invoke(bookingId, plate, amount);
+                    }
                 }
             }
             catch (Exception ex)

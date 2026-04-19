@@ -228,6 +228,17 @@ async def process_checkout(
             0.0,
             time.time() - t0,
         )
+        # Broadcast Unity để hiện popup MoMo QR + cash banknote
+        await broadcast_gate_event(
+            "unity.awaiting_payment",
+            {
+                "booking_id": booking_id,
+                "plate": ocr_plate or booking_plate,
+                "amount_due": booking_price,
+                "gate_id": gate_id,
+                "message": f"Thanh toán {booking_price:,.0f}đ để ra bãi",
+            },
+        )
         return ESP32Response(
             success=False,
             event=GateEvent.CHECK_OUT_AWAITING_PAYMENT,

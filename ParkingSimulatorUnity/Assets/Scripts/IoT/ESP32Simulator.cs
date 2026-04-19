@@ -74,6 +74,29 @@ namespace ParkingSim.IoT
                 config = Resources.Load<ApiConfig>("ApiConfig");
             if (apiService == null)
                 apiService = ApiService.Instance ?? FindObjectOfType<ApiService>();
+
+            // Subscribe WS: khi ESP32 vật lý check-out gặp awaiting_payment,
+            // backend broadcast → mở popup MoMo QR + cash detection tại Unity.
+            if (apiService != null)
+                apiService.OnAwaitingPayment += HandleAwaitingPayment;
+        }
+
+        private void OnDestroy()
+        {
+            if (apiService != null)
+                apiService.OnAwaitingPayment -= HandleAwaitingPayment;
+        }
+
+        private void HandleAwaitingPayment(string bookingId, string plate, double amountDue)
+        {
+            if (amountDue <= 0 || string.IsNullOrEmpty(bookingId)) return;
+            Debug.Log($"[FLOW] 💳 WS awaiting_payment → plate={plate} amount={amountDue:N0}đ booking={bookingId}");
+            momoAmount = amountDue;
+            momoBookingId = bookingId;
+            momoPlate = plate ?? "";
+            cashAcceptedTotal = 0;
+            cashHistory.Clear();
+            StartCoroutine(DownloadMomoQr());
         }
 
         private void Update()
