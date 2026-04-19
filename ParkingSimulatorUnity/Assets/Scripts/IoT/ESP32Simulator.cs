@@ -633,18 +633,27 @@ namespace ParkingSim.IoT
         {
             try
             {
-                string dir = System.IO.Path.Combine(BanknoteDatasetRoot, denomFolder);
-                if (!System.IO.Directory.Exists(dir)) return null;
+                string dir = System.IO.Path.GetFullPath(System.IO.Path.Combine(BanknoteDatasetRoot, denomFolder));
+                if (!System.IO.Directory.Exists(dir))
+                {
+                    Debug.LogWarning($"[FLOW] Banknote dir missing: {dir}");
+                    return null;
+                }
                 var files = System.IO.Directory.GetFiles(dir, "*.jpg");
                 if (files.Length == 0) files = System.IO.Directory.GetFiles(dir, "*.jpeg");
                 if (files.Length == 0) files = System.IO.Directory.GetFiles(dir, "*.png");
-                if (files.Length == 0) return null;
+                if (files.Length == 0)
+                {
+                    Debug.LogWarning($"[FLOW] No images in {dir}");
+                    return null;
+                }
                 string pick = files[UnityEngine.Random.Range(0, files.Length)];
+                Debug.Log($"[FLOW] Banknote load {denomFolder}: {System.IO.Path.GetFileName(pick)} ({files.Length} files avail)");
                 return System.IO.File.ReadAllBytes(pick);
             }
             catch (System.Exception e)
             {
-                Debug.LogWarning($"[FLOW] Load banknote thất bại ({denomFolder}): {e.Message}");
+                Debug.LogWarning($"[FLOW] Load banknote exception ({denomFolder}): {e.Message}");
                 return null;
             }
         }

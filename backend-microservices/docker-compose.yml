@@ -232,7 +232,7 @@ services:
     build: ./booking-service
     container_name: booking-celery-beat
     restart: unless-stopped
-    command: celery -A booking_service beat --loglevel=info
+    command: celery -A booking_service beat --loglevel=info --schedule=/tmp/celerybeat-schedule
     healthcheck:
       disable: true
     environment:
@@ -244,6 +244,7 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:?DB_PASSWORD must be set in .env}
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - GATEWAY_SECRET=${GATEWAY_SECRET:?GATEWAY_SECRET must be set in .env}
       - PYTHONPATH=/app:/app/shared
     volumes:
       - ./shared:/app/shared
@@ -427,7 +428,7 @@ services:
       - REALTIME_SERVICE_URL=http://realtime-service-go:8006
       - PAYMENT_SERVICE_URL=http://payment-service-fastapi:8007
       - CHATBOT_SERVICE_URL=http://chatbot-service-fastapi:8008
-      - AI_SERVICE_URL=http://ai-service-fastapi:8009
+      - AI_SERVICE_URL=${AI_SERVICE_URL_OVERRIDE:-http://ai-service-fastapi:8009}
     ports:
       - "8000:8000"
     depends_on:
