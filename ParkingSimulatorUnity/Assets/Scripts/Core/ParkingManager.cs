@@ -295,15 +295,24 @@ namespace ParkingSim.Core
                 SharedBookingState.Instance?.UpdateSlotCode(bookingId, slotCode);
             }
 
-            // Ưu tiên: nếu đã có xe cùng biển số đang waiting tại gate (user spawn
-            // thủ công trước, rồi ấn GPIO4 ESP32 vật lý) → release nó thay vì spawn mới.
-            if (_gateFlow.CheckInWaitingVehicle(plate))
+            // Check BẤT KỲ xe nào đã tồn tại với biển số này — tránh double-spawn
+            // khi user vừa spawn xe (state=ApproachingGate) rồi ấn GPIO4 ESP32.
+            var existing = FindObjectsOfType<ParkingSim.Vehicle.VehicleController>();
+            foreach (var v in existing)
             {
-                Debug.Log($"[ParkingManager] Released waiting vehicle {plate} via WS (physical ESP32 button)");
-                return;
+                if (v == null) continue;
+                if (string.Equals(v.plateNumber, plate, System.StringComparison.OrdinalIgnoreCase))
+                {
+                    // Đã có xe — nếu chưa checked-in, mark + release khi tới gate
+                    v.alreadyCheckedIn = true;
+                    Debug.Log($"[ParkingManager] Vehicle {plate} đã tồn tại (state={v.state}) — mark alreadyCheckedIn, không spawn mới");
+                    if (_gateFlow.CheckInWaitingVehicle(plate))
+                        Debug.Log($"[ParkingManager] Released waiting vehicle {plate}");
+                    return;
+                }
             }
 
-            // Fallback: không có xe ở gate → spawn pre-checked-in mới.
+            // Không có xe nào — spawn pre-checked-in mới.
             SpawnVehiclePreCheckedIn(plate, bookingId, qrData, slotCode, vehicleType);
         }
 
