@@ -253,6 +253,35 @@ async def broadcast_unity_depart(booking_id: str, plate: str) -> None:
             logger.warning("Failed to broadcast unity depart: %s", exc)
 
 
+async def broadcast_unity_awaiting_payment(
+    booking_id: str, plate: str, amount_due: float, gate_id: str
+) -> None:
+    """Broadcast unity.awaiting_payment → Unity hiện popup MoMo QR + cash."""
+    url = f"{REALTIME_SERVICE_URL}/api/broadcast/unity-command/"
+    headers = {"X-Gateway-Secret": GATEWAY_SECRET, "Content-Type": "application/json"}
+    async with httpx.AsyncClient(timeout=5.0) as client:
+        try:
+            await client.post(
+                url,
+                headers=headers,
+                json={
+                    "type": "unity.awaiting_payment",
+                    "data": {
+                        "booking_id": booking_id,
+                        "plate": plate,
+                        "amount_due": amount_due,
+                        "gate_id": gate_id,
+                    },
+                },
+            )
+            logger.info(
+                "Broadcast unity.awaiting_payment: booking=%s amount=%s",
+                booking_id, amount_due,
+            )
+        except Exception as exc:
+            logger.warning("Failed to broadcast awaiting_payment: %s", exc)
+
+
 def save_plate_image(
     image_bytes: bytes,
     booking_id: str,
