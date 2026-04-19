@@ -76,12 +76,12 @@ namespace ParkingSim.Camera
                 {
                     cameraId = "virtual-f1-overview",
                     displayName = "Floor 1 Overview",
-                    // Góc nhìn perspective từ trên-trước (thay vì top-down thẳng
-                    // đứng): tilt 32° + height 18 từ z=-38 → nhìn chéo 4 hàng slots,
-                    // orange border thấy rõ từng ô, ít bóng đổ che khuất.
-                    position = new Vector3(0, 18, -38),
-                    rotation = new Vector3(32, 0, 0),
-                    fieldOfView = 75f,
+                    // Top-down thẳng y=25 FOV 110° → 2*25*tan(55°)=71.5m cover
+                    // 70×60m floor. Height thấp nhất mà vẫn đủ covers → slots lớn
+                    // rõ nhất cho AI detect.
+                    position = new Vector3(0, 25, 0),
+                    rotation = new Vector3(90, 0, 0),
+                    fieldOfView = 110f,
                     renderWidth = config.cameraResWidth,
                     renderHeight = config.cameraResHeight,
                     jpegQuality = config.cameraJpegQuality,
