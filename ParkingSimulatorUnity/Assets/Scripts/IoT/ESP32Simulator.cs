@@ -37,16 +37,18 @@ namespace ParkingSim.IoT
         private double momoAmount;
         private string momoBookingId;
         private string momoPlate;
-        private Rect momoWindowRect = new Rect(Screen.width / 2 - 260, 60, 520, 700);
+        private Rect momoWindowRect = new Rect(Screen.width / 2 - 260, 40, 520, 820);
 
         // Cash banknote AI detection state (tích luỹ tổng qua mỗi lần detect)
         private double cashAcceptedTotal = 0;
         private readonly List<string> cashHistory = new List<string>();
         private bool cashDetecting = false;
         private Vector2 cashScroll;
+        private Texture2D lastBanknoteTexture;   // Ảnh tờ tiền vừa gửi AI
+        private string lastBanknoteLabel;        // "Bấm 10k → AI: 10k (conf 92%)"
 
         // Banknote dataset root — Editor reads trực tiếp từ disk
-        private static readonly string[] BANKNOTE_DENOMS = { "1000", "2000", "5000", "10000", "20000", "50000", "100000", "500000" };
+        private static readonly string[] BANKNOTE_DENOMS = { "1000", "2000", "5000", "10000", "20000", "50000", "100000", "200000", "500000" };
 
         // DEVICE
         private string deviceId = "ESP32-SIM-001";
@@ -554,26 +556,36 @@ namespace ParkingSim.IoT
             GUILayout.Space(6);
             GUILayout.Label("— HOẶC đưa tiền mặt (AI detect từng tờ) —", headerStyle);
             GUI.enabled = !cashDetecting && !isProcessing;
-            GUILayout.BeginHorizontal();
-            for (int i = 0; i < 4; i++)
+            // 9 nút: 3 hàng × 3 cột (1k/2k/5k, 10k/20k/50k, 100k/200k/500k)
+            for (int row = 0; row < 3; row++)
             {
-                string d = BANKNOTE_DENOMS[i];
-                if (GUILayout.Button($"{int.Parse(d) / 1000}k", GUILayout.Height(28)))
-                    StartCoroutine(DetectOneBanknote(d));
+                GUILayout.BeginHorizontal();
+                for (int col = 0; col < 3; col++)
+                {
+                    int i = row * 3 + col;
+                    if (i >= BANKNOTE_DENOMS.Length) continue;
+                    string d = BANKNOTE_DENOMS[i];
+                    if (GUILayout.Button($"{int.Parse(d) / 1000}k", GUILayout.Height(28)))
+                        StartCoroutine(DetectOneBanknote(d));
+                }
+                GUILayout.EndHorizontal();
             }
-            GUILayout.EndHorizontal();
-            GUILayout.BeginHorizontal();
-            for (int i = 4; i < 8; i++)
-            {
-                string d = BANKNOTE_DENOMS[i];
-                if (GUILayout.Button($"{int.Parse(d) / 1000}k", GUILayout.Height(28)))
-                    StartCoroutine(DetectOneBanknote(d));
-            }
-            GUILayout.EndHorizontal();
             GUI.enabled = true;
 
             GUILayout.Space(4);
             GUILayout.Label($"AI đã nhận: {cashAcceptedTotal:N0}đ / {momoAmount:N0}đ", okStyle);
+
+            // Preview ảnh vừa detect + kết quả AI để user thấy flow thực sự
+            if (lastBanknoteTexture != null)
+            {
+                GUILayout.BeginHorizontal();
+                GUILayout.FlexibleSpace();
+                GUILayout.Box(lastBanknoteTexture, GUILayout.Width(160), GUILayout.Height(80));
+                GUILayout.FlexibleSpace();
+                GUILayout.EndHorizontal();
+                if (!string.IsNullOrEmpty(lastBanknoteLabel))
+                    GUILayout.Label(lastBanknoteLabel, headerStyle);
+            }
 
             cashScroll = GUILayout.BeginScrollView(cashScroll, GUILayout.Height(80));
             foreach (var line in cashHistory)
@@ -633,6 +645,12 @@ namespace ParkingSim.IoT
                 yield break;
             }
 
+            // Load ảnh vào texture preview để user thấy ảnh Unity vừa gửi AI
+            if (lastBanknoteTexture != null) Destroy(lastBanknoteTexture);
+            lastBanknoteTexture = new Texture2D(2, 2);
+            lastBanknoteTexture.LoadImage(bytes);
+            lastBanknoteLabel = $"Đang detect {int.Parse(denom) / 1000}k...";
+
             bool done = false;
             ApiResponse<BanknoteResult> result = null;
             StartCoroutine(apiService.DetectBanknote(bytes, r => { result = r; done = true; }));
@@ -641,20 +659,28 @@ namespace ParkingSim.IoT
 
             if (!done || result == null || !result.IsSuccess || result.Data == null)
             {
-                cashHistory.Add($"⚠️ {denom}đ → API lỗi: {result?.ErrorMessage ?? "timeout"}");
+                string err = result?.ErrorMessage ?? "timeout";
+                cashHistory.Add($"⚠️ {denom}đ → API lỗi: {err}");
+                lastBanknoteLabel = $"⚠️ API lỗi: {err}";
                 yield break;
             }
 
             var d = result.Data;
+            string denomK = $"{int.Parse(denom) / 1000}k";
             if (d.Decision == "accept" && !string.IsNullOrEmpty(d.Denomination) &&
                 double.TryParse(d.Denomination, out double value))
             {
                 cashAcceptedTotal += value;
-                cashHistory.Add($"✅ Bấm {denom}đ → AI nhận diện {value:N0}đ (conf {d.Confidence:P0})");
+                string predK = $"{(int)value / 1000}k";
+                bool correct = value.ToString("F0") == denom;
+                string icon = correct ? "✅" : "⚠️";
+                cashHistory.Add($"{icon} Bấm {denomK} → AI: {predK} (conf {d.Confidence:P0})");
+                lastBanknoteLabel = $"{icon} Gửi: {denomK} | AI: {predK} (conf {d.Confidence:P0})";
             }
             else
             {
-                cashHistory.Add($"❌ Bấm {denom}đ → AI từ chối: {d.Decision} (conf {d.Confidence:P0})");
+                cashHistory.Add($"❌ Bấm {denomK} → AI từ chối: {d.Decision}");
+                lastBanknoteLabel = $"❌ Gửi: {denomK} | AI từ chối: {d.Decision}";
             }
         }
 
