@@ -729,9 +729,13 @@ namespace ParkingSim.IoT
             if (ok)
             {
                 string paidBookingId = momoBookingId;
+                string paidPlate = momoPlate;
                 CloseMomoQr();
 
-                // Auto-trigger check-out lần nữa để backend mở barrier (amountDue giờ = 0)
+                // 1. Call check-out backend lần nữa (amountDue giờ = 0 → barrier=open).
+                // Backend sẽ broadcast unity.depart_vehicle nhưng race-condition với
+                // WS nên mình trigger StartDeparture TRỰC TIẾP ở Unity để chắc chắn
+                // xe chạy ra ngoài.
                 var bks = SharedBookingState.Instance?.GetAllActiveForDropdown();
                 if (bks != null)
                 {
@@ -739,10 +743,29 @@ namespace ParkingSim.IoT
                     if (idx >= 0)
                     {
                         selectedBookingIdx = idx;
-                        yield return new WaitForSeconds(0.5f);
+                        yield return new WaitForSeconds(0.3f);
                         StartCoroutine(DoCheckOut());
                     }
                 }
+
+                // 2. Trigger depart xe ngay (không đợi backend/WS): tìm xe parked với
+                // plate đã thanh toán → StartDeparture → xe tự đi ra cổng exit.
+                if (!string.IsNullOrEmpty(paidPlate))
+                {
+                    foreach (var v in FindObjectsOfType<ParkingSim.Vehicle.VehicleController>())
+                    {
+                        if (v == null) continue;
+                        if (string.Equals(v.plateNumber, paidPlate, System.StringComparison.OrdinalIgnoreCase))
+                        {
+                            v.StartDeparture();
+                            Debug.Log($"[FLOW] 🚗 Depart {paidPlate} sau thanh toán thành công");
+                            break;
+                        }
+                    }
+                }
+
+                // 3. Cleanup local state
+                SharedBookingState.Instance?.RemoveBooking(paidBookingId);
             }
         }
 
