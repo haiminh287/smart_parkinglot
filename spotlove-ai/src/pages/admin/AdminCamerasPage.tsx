@@ -40,6 +40,18 @@ interface CameraDevice {
 }
 
 // ── Hardcoded monitoring cameras (AI service) ─────────────────────────── //
+const mkVirtual = (id: string, name: string, zone: string): CameraDevice => ({
+  id, name,
+  ipAddress: "Unity Sim",
+  port: 8009,
+  zoneId: "",
+  zoneName: zone,
+  status: "online",
+  streamUrl: `/ai/cameras/stream?camera_id=${id}&fps=5`,
+  isActive: true,
+  isSystem: true,
+});
+
 const SYSTEM_CAMERAS: CameraDevice[] = [
   {
     id: "plate-camera-ezviz",
@@ -65,6 +77,14 @@ const SYSTEM_CAMERAS: CameraDevice[] = [
     isActive: true,
     isSystem: true,
   },
+  mkVirtual("virtual-f1-overview", "Tổng quan Tầng 1 (Sim)", "Floor 1"),
+  mkVirtual("virtual-gate-in", "Cổng Vào (Sim)", "Cổng vào"),
+  mkVirtual("virtual-gate-out", "Cổng Ra (Sim)", "Cổng ra"),
+  mkVirtual("virtual-anpr-entry", "ANPR Entry (Sim)", "Cổng vào"),
+  mkVirtual("virtual-anpr-exit", "ANPR Exit (Sim)", "Cổng ra"),
+  mkVirtual("virtual-zone-garage", "Khu Garage G (Sim)", "Garage G"),
+  mkVirtual("virtual-zone-south", "Zone South (Sim)", "South V1"),
+  mkVirtual("virtual-zone-north", "Zone North (Sim)", "North V1"),
 ];
 
 interface ZoneOption {
