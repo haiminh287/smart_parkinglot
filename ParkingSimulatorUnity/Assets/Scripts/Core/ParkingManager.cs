@@ -285,7 +285,15 @@ namespace ParkingSim.Core
         {
             if (data == null) return;
             var (plate, bookingId, qrData, slotCode, vehicleType) = _gateFlow.ParseCheckinSuccess(data);
-            Debug.Log($"[ParkingManager] 🚗 WebSocket check-in: plate={plate} slot={slotCode}");
+            Debug.Log($"[ParkingManager] 🚗 WebSocket check-in: plate={plate} slot={slotCode} booking={bookingId}");
+
+            // Update local SharedBookingState để Verify Slot / Check-Out dropdown thấy
+            // booking này đã checked_in (giống logic trong ESP32Simulator.DoCheckIn).
+            if (!string.IsNullOrEmpty(bookingId))
+            {
+                SharedBookingState.Instance?.UpdateStatus(bookingId, "checked_in");
+                SharedBookingState.Instance?.UpdateSlotCode(bookingId, slotCode);
+            }
 
             // Ưu tiên: nếu đã có xe cùng biển số đang waiting tại gate (user spawn
             // thủ công trước, rồi ấn GPIO4 ESP32 vật lý) → release nó thay vì spawn mới.
@@ -307,6 +315,12 @@ namespace ParkingSim.Core
         {
             if (string.IsNullOrEmpty(plate)) return;
             Debug.Log($"[ParkingManager] 🚗 WS depart signal for plate {plate}");
+
+            // Remove booking khỏi dropdown local (tương đương DoCheckOut success flow)
+            var booking = SharedBookingState.Instance?.GetBookingByPlate(plate);
+            if (booking != null)
+                SharedBookingState.Instance?.RemoveBooking(booking.BookingId);
+
             foreach (var v in FindObjectsOfType<VehicleController>())
             {
                 if (v == null) continue;
