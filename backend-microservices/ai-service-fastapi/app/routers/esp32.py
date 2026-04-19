@@ -60,6 +60,43 @@ async def esp32_verify_slot(payload: ESP32VerifySlotRequest, db: Session = Depen
     return await process_verify_slot(payload, db)
 
 
+@router.get("/pending-qr/")
+async def esp32_pending_qr(status: str = "not_checked_in") -> dict:
+    """Trả QR data + booking_id của booking mới nhất theo status cho ESP32 vật lý.
+
+    Cho phép ESP32 tự pull QR giống Unity sim — tránh phải cắm QR scanner khi demo.
+    - status=not_checked_in → dùng cho check-in button
+    - status=checked_in     → dùng cho check-out button
+    """
+    url = f"{settings.BOOKING_SERVICE_URL}/bookings/"
+    headers = {"X-Gateway-Secret": settings.GATEWAY_SECRET, "X-User-ID": "system"}
+    params = {"check_in_status": status, "limit": 1, "ordering": "-created_at"}
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(url, headers=headers, params=params)
+            if resp.status_code != 200:
+                raise HTTPException(
+                    status_code=resp.status_code,
+                    detail=f"booking-service error: {resp.text[:120]}",
+                )
+            results = resp.json().get("results", [])
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail=f"booking-service unreachable: {exc}")
+
+    if not results:
+        raise HTTPException(status_code=404, detail=f"No {status} bookings available")
+
+    b = results[0]
+    car_slot = b.get("carSlot") or {}
+    return {
+        "booking_id": b.get("id"),
+        "qr_data": b.get("qrCodeData") or b.get("qr_code_data") or "",
+        "slot_code": car_slot.get("code") if isinstance(car_slot, dict) else None,
+        "zone_id": car_slot.get("zoneId") if isinstance(car_slot, dict) else None,
+        "license_plate": (b.get("vehicle") or {}).get("licensePlate"),
+    }
+
+
 @router.post("/cash-payment/", response_model=ESP32Response)
 async def esp32_cash_payment(payload: CashPaymentRequest, db: Session = Depends(get_db)):
     return await process_cash_payment(payload, db)

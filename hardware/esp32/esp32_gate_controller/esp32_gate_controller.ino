@@ -373,17 +373,60 @@ void sendLog(const char* deviceId, const char* level, String message) {
 //  CHECK-IN HANDLER
 // ═══════════════════════════════════════════════════════════════
 
+/**
+ * Fetch QR data của booking pending gần nhất từ backend.
+ * Dùng cho ESP32 vật lý không có QR scanner — giống Unity sim pull bookings.
+ * Trả về empty string nếu không có booking hoặc lỗi.
+ */
+String fetchPendingQr(const char* status) {
+  String url = String(AI_SERVICE_BASE_URL) + "/ai/parking/esp32/pending-qr/?status=" + String(status);
+
+  HTTPClient http;
+  http.begin(url);
+  http.addHeader("X-Gateway-Secret", GATEWAY_SECRET);
+  http.addHeader("X-Device-Token", DEVICE_TOKEN);
+  http.setTimeout(5000);
+
+  int code = http.GET();
+  String body = (code == 200) ? http.getString() : "";
+  http.end();
+
+  if (code != 200) {
+    Serial.print("⚠️ fetchPendingQr HTTP "); Serial.println(code);
+    return "";
+  }
+  JsonDocument doc;
+  if (deserializeJson(doc, body)) return "";
+  String qr = doc["qr_data"] | "";
+  const char* plate = doc["license_plate"] | "";
+  const char* bkId = doc["booking_id"] | "";
+  if (qr.length() > 0) {
+    Serial.print("📋 QR pending: plate="); Serial.print(plate);
+    Serial.print(" booking="); Serial.println(String(bkId).substring(0, 8));
+  }
+  return qr;
+}
+
 void handleCheckIn() {
   Serial.println("📡 Calling AI service: /check-in/ ...");
-  Serial.println("   (Server sẽ mở camera QR, quét mã QR, đọc biển số...)");
-  sendLog(GATE_IN_ID, "info", "Calling AI service /check-in/ — waiting for QR scan & plate recognition...");
+  sendLog(GATE_IN_ID, "info", "Fetching latest pending QR then calling /check-in/ ...");
+
+  // Lấy QR của booking not_checked_in mới nhất (tương đương Unity sim auto-sync)
+  String qrData = fetchPendingQr("not_checked_in");
+  if (qrData.length() == 0) {
+    Serial.println("❌ Không có booking pending nào — tạo booking qua web trước");
+    sendLog(GATE_IN_ID, "warn", "No pending booking — create via web first");
+    blinkLED(5);
+    return;
+  }
 
   // Build URL
   String url = String(AI_SERVICE_BASE_URL) + "/ai/parking/esp32/check-in/";
 
-  // Build JSON body
+  // Build JSON body — kèm qr_data
   JsonDocument doc;
   doc["gate_id"] = GATE_IN_ID;
+  doc["qr_data"] = qrData;
 
   String jsonBody;
   serializeJson(doc, jsonBody);
@@ -409,15 +452,24 @@ void handleCheckIn() {
 
 void handleCheckOut() {
   Serial.println("📡 Calling AI service: /check-out/ ...");
-  Serial.println("   (Server sẽ mở camera QR, quét mã QR, xác nhận thanh toán...)");
-  sendLog(GATE_OUT_ID, "info", "Calling AI service /check-out/ — waiting for QR scan & payment check...");
+  sendLog(GATE_OUT_ID, "info", "Fetching latest checked-in QR then calling /check-out/ ...");
+
+  // Lấy QR của booking đã checked_in (đang đậu) gần nhất
+  String qrData = fetchPendingQr("checked_in");
+  if (qrData.length() == 0) {
+    Serial.println("❌ Không có xe nào đang đậu");
+    sendLog(GATE_OUT_ID, "warn", "No checked-in booking — check-in first");
+    blinkLED(5);
+    return;
+  }
 
   // Build URL
   String url = String(AI_SERVICE_BASE_URL) + "/ai/parking/esp32/check-out/";
 
-  // Build JSON body
+  // Build JSON body — kèm qr_data
   JsonDocument doc;
   doc["gate_id"] = GATE_OUT_ID;
+  doc["qr_data"] = qrData;
 
   String jsonBody;
   serializeJson(doc, jsonBody);

@@ -53,7 +53,9 @@ DENOMINATION_COLOR_MAP: dict[str, tuple[list[tuple[int, int]], DenominationGroup
     "20000":  ([(110, 10)], DenominationGroup.DANGER),
     "50000":  ([(160, 15)], DenominationGroup.DANGER),
     "100000": ([(55, 15)], DenominationGroup.SAFE),
-    "200000": ([(5, 10), (172, 8)], DenominationGroup.SAFE),  # wraps around 0/180
+    # 200000 đỏ/nâu wraps around 0/180. Thu hẹp range back từ 172±8 → 176±4 để
+    # tránh chồng hue 160 của 50k. DANGER threshold 0.90 buộc AI kiểm tra.
+    "200000": ([(5, 8), (176, 4)], DenominationGroup.DANGER),
     "500000": ([(92, 12)], DenominationGroup.DANGER),
 }
 
