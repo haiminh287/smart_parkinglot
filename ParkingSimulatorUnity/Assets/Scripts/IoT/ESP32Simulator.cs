@@ -575,6 +575,21 @@ namespace ParkingSim.IoT
             GUILayout.Space(4);
             GUILayout.Label($"AI đã nhận: {cashAcceptedTotal:N0}đ / {momoAmount:N0}đ", okStyle);
 
+            // Thối tiền khi quá
+            double change = cashAcceptedTotal - momoAmount;
+            if (change > 0)
+            {
+                var changeStyle = new GUIStyle(GUI.skin.label) { fontSize = 14, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
+                changeStyle.normal.textColor = new Color(0.3f, 0.9f, 1f);
+                GUILayout.Label($"💰 Thối lại: {change:N0}đ", changeStyle);
+            }
+            else if (cashAcceptedTotal > 0 && cashAcceptedTotal < momoAmount)
+            {
+                var shortStyle = new GUIStyle(GUI.skin.label) { fontSize = 13, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
+                shortStyle.normal.textColor = new Color(1f, 0.5f, 0.3f);
+                GUILayout.Label($"⚠️ Còn thiếu: {(momoAmount - cashAcceptedTotal):N0}đ", shortStyle);
+            }
+
             // Preview ảnh vừa detect + kết quả AI để user thấy flow thực sự
             if (lastBanknoteTexture != null)
             {
@@ -704,9 +719,12 @@ namespace ParkingSim.IoT
             if (!done) { SetResult(false, "Timeout xác nhận thanh toán"); yield break; }
 
             bool ok = result.IsSuccess && result.Data?.Success == true;
-            SetResult(ok, ok
-                ? $"\u2705 Thanh toán MoMo thành công — {momoAmount:N0}đ. Đang mở cổng…"
-                : (result.Data?.Message ?? "Thanh toán thất bại"));
+            double refund = cashAcceptedTotal - momoAmount;
+            string okMsg = refund > 0
+                ? $"\u2705 Đã thanh toán {momoAmount:N0}đ. 💰 Thối lại: {refund:N0}đ. Đang mở cổng…"
+                : $"\u2705 Đã thanh toán đủ {momoAmount:N0}đ. Đang mở cổng…";
+            SetResult(ok, ok ? okMsg : (result.Data?.Message ?? "Thanh toán thất bại"));
+            Debug.Log(ok ? $"[FLOW] {okMsg}" : $"[FLOW] ❌ Payment failed: {result.Data?.Message}");
 
             if (ok)
             {
