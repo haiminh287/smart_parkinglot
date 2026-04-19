@@ -34,11 +34,11 @@ Nguyễn Hải Minh
 
 Trong bối cảnh đô thị hóa nhanh chóng tại Việt Nam, đặc biệt tại Thành phố Hồ Chí Minh với hơn 8 triệu xe máy và gần 1 triệu ô tô đăng ký, hệ thống bãi giữ xe truyền thống bộc lộ nhiều hạn chế nghiêm trọng: ùn tắc cổng ra/vào, rủi ro mất vé và gian lận, quản lý doanh thu thiếu minh bạch, và thiếu dữ liệu phân tích. Khóa luận này trình bày việc nghiên cứu và phát triển **ParkSmart** — hệ thống bãi giữ xe thông minh tích hợp trí tuệ nhân tạo, Internet of Things, và kiến trúc Microservices nhằm giải quyết triệt để các hạn chế nêu trên.
 
-Hệ thống được xây dựng trên nền tảng **10 microservices** (4 Django 5.2.12 + 4 FastAPI 0.134.0 + 2 Go 1.22), triển khai trong **15 Docker containers**, giao tiếp qua API Gateway duy nhất. Về trí tuệ nhân tạo, ParkSmart tích hợp **5 pipeline AI** phục vụ nhận diện biển số xe (YOLOv8 + TrOCR cascade), phát hiện trạng thái ô đỗ (YOLO11n), đọc mã QR (OpenCV), nhận dạng tiền giấy (MobileNetV3 multi-branch), và nhận dạng tiền mặt (ResNet50). Chatbot thông minh sử dụng Google Gemini (gemini-3-flash-preview) với **7 giai đoạn pipeline** (Wizard → Intent → Confidence Gate → Safety → Action → Response → Memory), hỗ trợ **16 loại intent** và đặt chỗ qua hội thoại tiếng Việt tự nhiên.
+Hệ thống được xây dựng trên nền tảng **10 microservices** (4 Django 5.2.12 + 4 FastAPI 0.134.0 + 2 Go 1.22), triển khai trong **15 Docker containers**, giao tiếp qua API Gateway duy nhất. Về trí tuệ nhân tạo, ParkSmart tích hợp **4 pipeline AI** phục vụ nhận diện biển số xe (YOLOv8 + TrOCR cascade), phát hiện trạng thái ô đỗ (YOLO11n), đọc mã QR (OpenCV), và nhận diện mệnh giá tiền Việt Nam (MobileNetV3-Large multi-branch, phân lớp 9 mệnh giá từ 1.000đ đến 500.000đ). Chatbot thông minh sử dụng Google Gemini (gemini-3-flash-preview) với **7 giai đoạn pipeline** (Wizard → Intent → Confidence Gate → Safety → Action → Response → Memory), hỗ trợ **16 loại intent** và đặt chỗ qua hội thoại tiếng Việt tự nhiên.
 
 Giao diện người dùng là ứng dụng React 18 SPA với **28 trang** (19 root + 9 admin) và **73 tổng UI components** (51 shadcn/ui + 22 custom). Phần cứng IoT gồm ESP32 kết nối WiFi giao tiếp HTTP với AI server, Arduino điều khiển servo barrier qua UART, cùng màn hình OLED và camera IP. Bộ mô phỏng Digital Twin trên Unity 2022.3 LTS với **30 C# scripts**, **6 camera ảo**, và **158 ô đỗ** tạo procedural cho phép kiểm thử toàn bộ pipeline mà không cần phần cứng thực tế.
 
-Kết quả đạt được bao gồm: quy trình check-in/check-out hoàn toàn tự động, hệ thống đặt chỗ trực tuyến với bản đồ real-time qua WebSocket, chatbot AI hỗ trợ tiếng Việt 24/7, nhận dạng tiền mặt tại quầy, và admin dashboard phân tích doanh thu.
+Kết quả đạt được bao gồm: quy trình check-in/check-out hoàn toàn tự động, hệ thống đặt chỗ trực tuyến với bản đồ real-time qua WebSocket, chatbot AI hỗ trợ tiếng Việt 24/7, nhận diện mệnh giá tiền Việt Nam tại quầy phục vụ thanh toán không tiếp xúc, và admin dashboard phân tích doanh thu.
 
 **Từ khóa:** Bãi giữ xe thông minh, Nhận diện biển số tự động, Internet of Things, Microservices, Chatbot AI, Digital Twin.
 
@@ -48,7 +48,7 @@ Kết quả đạt được bao gồm: quy trình check-in/check-out hoàn toàn
 
 This thesis presents the design and implementation of **ParkSmart** — a smart parking system integrating Artificial Intelligence, Internet of Things, and Microservices Architecture. The system addresses critical limitations of traditional parking lots in Vietnam, including gate congestion, ticket fraud, opaque revenue management, and lack of analytical data.
 
-ParkSmart comprises **10 microservices** (4 Django 5.2.12 + 4 FastAPI 0.134.0 + 2 Go 1.22) deployed across **15 Docker containers**. The AI subsystem features **5 pipelines** for license plate recognition (YOLOv8 + TrOCR với xử lý dự phòng theo tầng), parking slot occupancy detection (YOLO11n), QR code reading, banknote classification (MobileNetV3 multi-branch), and cash recognition (ResNet50). An AI chatbot powered by Google Gemini processes Vietnamese natural language through a **7-stage pipeline** supporting 16 intent types and conversational booking.
+ParkSmart comprises **10 microservices** (4 Django 5.2.12 + 4 FastAPI 0.134.0 + 2 Go 1.22) deployed across **15 Docker containers**. The AI subsystem features **4 pipelines** for license plate recognition (YOLOv8 + TrOCR cascade with tiered fallback), parking slot occupancy detection (YOLO11n), QR code reading (OpenCV), and Vietnamese banknote denomination recognition (MobileNetV3-Large multi-branch, 9-class classifier from 1,000 VND to 500,000 VND). An AI chatbot powered by Google Gemini processes Vietnamese natural language through a **7-stage pipeline** supporting 16 intent types and conversational booking.
 
 The frontend is a React 18 SPA with **28 pages** and **73 UI components**. The IoT hardware consists of an ESP32 WiFi gateway communicating via HTTP with the AI server, an Arduino controlling servo barriers via UART, an OLED display, and IP cameras. A Unity 2022.3 LTS Digital Twin simulator with 6 virtual cameras and 158 procedurally-generated parking slots enables end-to-end testing without physical hardware.
 
@@ -149,7 +149,7 @@ Về phương diện trí tuệ nhân tạo, hệ thống tích hợp một **AI
 - **Nhận diện biển số xe (License Plate Recognition — LPR)**: Sử dụng mô hình YOLO được tinh chỉnh (fine-tuned) để phát hiện vùng biển số, kết hợp TrOCR (Transformer-based OCR) làm bộ đọc chính, với cơ chế fallback sang EasyOCR và Tesseract khi cần thiết.
 - **Phát hiện trạng thái ô đỗ (Slot Occupancy Detection)**: Sử dụng YOLO11n (phiên bản nano, tối ưu cho thiết bị biên) để phát hiện phương tiện trên bản đồ bãi xe, kết hợp IoU (Intersection over Union) matching để xác định ô đỗ trống hay đã có xe.
 - **Đọc mã QR**: Sử dụng thư viện OpenCV để quét và giải mã mã QR booking tại cổng vào/ra.
-- **Nhận dạng tiền giấy Việt Nam**: Sử dụng mô hình MobileNetV3 kết hợp phân tích HSV để nhận dạng mệnh giá tiền mặt, phục vụ thanh toán tại quầy.
+- **Nhận diện mệnh giá tiền Việt Nam**: Sử dụng mô hình MobileNetV3-Large multi-branch kết hợp phân tích HSV color signature, phân lớp 9 mệnh giá từ 1.000đ đến 500.000đ phục vụ thanh toán tiền mặt tại quầy.
 
 Bên cạnh các pipeline AI nêu trên, hệ thống còn tích hợp một **chatbot trợ lý ảo** dựa trên mô hình ngôn ngữ lớn Google Gemini (phiên bản `gemini-3-flash-preview`), cho phép người dùng tương tác bằng tiếng Việt tự nhiên để tra cứu thông tin bãi xe, đặt chỗ, kiểm tra trạng thái booking và nhận hỗ trợ trực tuyến 24/7.
 
@@ -411,15 +411,17 @@ Docker là lựa chọn tối ưu cho ParkSmart vì hai lý do cốt lõi: (1) *
 
 ### 2.1.5. Nginx — Reverse Proxy và Web Server
 
-Nginx (đọc "engine-x") là phần mềm web server và reverse proxy hiệu năng cao, nổi tiếng với khả năng xử lý hàng chục ngàn kết nối đồng thời nhờ kiến trúc event-driven, non-blocking I/O. Trong ParkSmart, Nginx được triển khai trong môi trường production (image: nginx:alpine) với bốn vai trò chính:
+**Nginx** (phát âm "engine-x") là phần mềm máy chủ web và reverse proxy mã nguồn mở, được phát triển bởi **Igor Sysoev** và phát hành lần đầu vào năm 2004. Nginx nổi bật nhờ kiến trúc **event-driven, non-blocking I/O** — cho phép xử lý hàng chục nghìn kết nối đồng thời trên một tiến trình duy nhất mà không cần tạo thread riêng cho mỗi kết nối như mô hình truyền thống của Apache HTTP Server. Nhờ đặc tính này, Nginx trở thành một trong những máy chủ web được sử dụng rộng rãi nhất trên thế giới, chiếm hơn 30% thị phần theo thống kê của W3Techs (2025).
 
-**Thứ nhất — Phục vụ static frontend**: Nginx serve trực tiếp các file tĩnh của ứng dụng React (HTML, CSS, JavaScript, hình ảnh) từ thư mục build (`spotlove-ai/dist/`). Mỗi khi người dùng truy cập trang web, Nginx trả về file `index.html` — từ đó React app khởi động và xử lý routing phía client (client-side routing). Nginx phục vụ file tĩnh nhanh hơn đáng kể so với bất kỳ application server nào (Gunicorn, Uvicorn) vì nó được thiết kế chuyên biệt cho tác vụ này.
+Trong kiến trúc ứng dụng web hiện đại, Nginx thường đảm nhận bốn vai trò chính:
 
-**Thứ hai — Reverse proxy cho API requests**: Mọi request có path `/api/*` được Nginx chuyển tiếp đến Gateway Service (port 8000). Nginx đóng vai trò "lớp chắn" đầu tiên — client chỉ thấy một endpoint duy nhất, không biết phía sau có 10 services riêng biệt. Cấu hình proxy bao gồm truyền tiếp headers (`X-Real-IP`, `X-Forwarded-For`, `Host`) để backend services nhận được thông tin chính xác về client gốc.
+**Thứ nhất — phục vụ tài nguyên tĩnh (static file serving):** Nginx được thiết kế chuyên biệt để phân phối các tệp tĩnh (HTML, CSS, JavaScript, hình ảnh) với hiệu năng vượt trội so với các application server như Gunicorn hay Uvicorn. Khi người dùng truy cập ứng dụng web dạng Single Page Application, Nginx trả về tệp `index.html` ban đầu — từ đó framework phía client (React, Vue, Angular) tự xử lý điều hướng nội bộ (client-side routing) mà không cần gửi thêm yêu cầu đến máy chủ ứng dụng.
 
-**Thứ ba — WebSocket upgrade**: Các request đến path `/ws/*` được Nginx upgrade từ HTTP sang giao thức WebSocket và chuyển tiếp đến Realtime Service (port 8006). Nginx xử lý HTTP Upgrade handshake (header `Connection: Upgrade`, `Upgrade: websocket`) và duy trì kết nối persistent cho WebSocket communication.
+**Thứ hai — reverse proxy cho các yêu cầu API:** Nginx đóng vai trò lớp trung gian giữa trình duyệt người dùng và các dịch vụ backend phía sau. Mọi yêu cầu HTTP có đường dẫn phù hợp (ví dụ `/api/*`) được Nginx chuyển tiếp đến máy chủ ứng dụng tương ứng. Phía người dùng chỉ nhìn thấy một điểm truy cập duy nhất mà không cần biết hệ thống phía sau bao gồm bao nhiêu dịch vụ riêng biệt. Trong quá trình chuyển tiếp, Nginx truyền kèm các header quan trọng như `X-Real-IP`, `X-Forwarded-For` và `Host` để dịch vụ đích nhận được thông tin chính xác về máy khách gốc.
 
-**Thứ tư — Security headers và tối ưu hiệu năng**: Nginx tự động thêm các HTTP security headers theo khuyến nghị OWASP: `Content-Security-Policy` (CSP) ngăn XSS injection, `Strict-Transport-Security` (HSTS) bắt buộc HTTPS, `X-Frame-Options` ngăn clickjacking, `X-Content-Type-Options` ngăn MIME type sniffing. Về hiệu năng, Nginx bật Gzip compression giảm kích thước response truyền tải, và cấu hình cache policy dài hạn (1 năm, immutable) cho static assets có content hash trong tên file — giảm đáng kể bandwidth và thời gian tải trang.
+**Thứ ba — nâng cấp kết nối WebSocket:** Đối với các yêu cầu đến đường dẫn kết nối thời gian thực (ví dụ `/ws/*`), Nginx thực hiện quy trình nâng cấp giao thức từ HTTP sang WebSocket thông qua các header `Connection: Upgrade` và `Upgrade: websocket`. Sau khi nâng cấp thành công, Nginx duy trì kết nối hai chiều liên tục (persistent connection) giữa trình duyệt và dịch vụ xử lý thời gian thực, cho phép máy chủ chủ động đẩy dữ liệu đến máy khách mà không cần máy khách gửi yêu cầu lặp lại.
+
+**Thứ tư — bổ sung các header bảo mật và tối ưu hiệu năng truyền tải:** Nginx có khả năng tự động thêm các HTTP security header theo khuyến nghị của OWASP — bao gồm `Content-Security-Policy` (CSP) nhằm ngăn chặn tấn công XSS, `Strict-Transport-Security` (HSTS) bắt buộc trình duyệt chỉ giao tiếp qua HTTPS, `X-Frame-Options` chống clickjacking, và `X-Content-Type-Options` ngăn trình duyệt tự suy đoán kiểu nội dung (MIME type sniffing). Về mặt hiệu năng, Nginx hỗ trợ nén Gzip giúp giảm đáng kể kích thước dữ liệu truyền tải trên đường truyền, đồng thời cho phép cấu hình chính sách cache dài hạn cho các tệp tĩnh có mã băm nội dung (content hash) trong tên tệp — nhờ đó trình duyệt có thể tái sử dụng các tài nguyên đã tải mà không cần tải lại, giảm thiểu băng thông và cải thiện tốc độ hiển thị trang.
 
 ### 2.1.6. Kiến trúc Microservices — Mô hình phát triển phần mềm
 
@@ -563,28 +565,26 @@ Tất cả các ứng dụng AI trong đề tài này (nhận diện biển số
 
 ### 2.2.3. Thị giác máy tính (Computer Vision)
 
-**Thị giác máy tính (Computer Vision — CV)** là lĩnh vực liên ngành nghiên cứu cách máy tính có thể hiểu được nội dung hình ảnh và video kỹ thuật số ở **mức ngữ nghĩa** — tương tự cách hệ thống thị giác của con người nhận diện đối tượng, đọc chữ viết, và hiểu bối cảnh không gian. Computer Vision nằm ở giao điểm của khoa học máy tính, toán học ứng dụng, và khoa học nhận thức.
+**Thị giác máy tính (Computer Vision — CV)** là lĩnh vực nghiên cứu liên ngành tập trung vào việc phát triển các phương pháp giúp máy tính có khả năng **hiểu nội dung hình ảnh và video kỹ thuật số ở mức ngữ nghĩa** — tức là không chỉ thu nhận dữ liệu điểm ảnh (pixel) mà còn rút trích được ý nghĩa từ dữ liệu đó: nhận diện đối tượng, đọc chữ viết, hiểu bối cảnh không gian, và đưa ra quyết định dựa trên thông tin thị giác. Quá trình này tương tự cách hệ thống thị giác sinh học của con người tiếp nhận và xử lý thông tin hình ảnh từ môi trường xung quanh, tuy nhiên máy tính thực hiện thông qua các mô hình toán học và thuật toán tính toán thay vì các cơ chế sinh lý thần kinh. Thị giác máy tính nằm ở giao điểm của ba lĩnh vực: khoa học máy tính (cung cấp thuật toán và năng lực tính toán), toán học ứng dụng (cung cấp nền tảng đại số tuyến tính, xác suất thống kê và tối ưu hóa), và khoa học nhận thức (cung cấp hiểu biết về cơ chế tri giác của con người).
 
 **Lịch sử phát triển:**
 
-- **Thập niên 1960–1970**: Những nghiên cứu đầu tiên tại MIT (Larry Roberts, 1963) về nhận diện hình học 3D từ ảnh 2D. Hướng tiếp cận dựa trên quy tắc thủ công (rule-based), xử lý cạnh (edge detection) và biến đổi hình học.
-- **Thập niên 1980–1990**: Phát triển các kỹ thuật xử lý ảnh cổ điển: bộ lọc Gaussian, phát hiện cạnh Canny (1986), biến đổi Hough, optical flow. Các thuật toán feature-based: SIFT (Scale-Invariant Feature Transform, 1999), HOG (Histogram of Oriented Gradients, 2005).
-- **Thập niên 2000**: Machine Learning bắt đầu ứng dụng vào CV: Support Vector Machine (SVM) kết hợp HOG cho phát hiện người đi bộ (Dalal & Triggs, 2005), Viola-Jones detector cho nhận diện khuôn mặt (2001).
-- **2012 — Bước ngoặt ImageNet**: Mạng **AlexNet** (Alex Krizhevsky, 2012) lần đầu sử dụng Deep CNN trong cuộc thi phân loại ảnh ImageNet Large Scale Visual Recognition Challenge (ILSVRC), giảm top-5 error rate từ 25.8% (phương pháp truyền thống) xuống 16.4% — mở ra kỷ nguyên Deep Learning cho Computer Vision. Từ đây, mọi bài toán CV đều chuyển sang hướng tiếp cận deep learning.
-- **2015–nay**: Đột phá liên tiếp — ResNet (2015, 152 tầng, skip connections), YOLO (2016, real-time object detection), Transformer trong CV (ViT, 2020), Foundation Models (SAM, DINO, 2023).
+Thị giác máy tính khởi nguồn từ các nghiên cứu tại MIT vào thập niên 1960, phát triển qua giai đoạn xử lý ảnh cổ điển (phát hiện cạnh Canny, trích xuất đặc trưng SIFT/HOG), và đạt bước ngoặt vào năm 2012 khi mạng nơ-ron tích chập sâu **AlexNet** giành chiến thắng cuộc thi ImageNet — mở ra kỷ nguyên Học sâu cho toàn bộ lĩnh vực. Các kiến trúc quan trọng sau đó bao gồm **ResNet** (2015, mạng sâu hàng trăm tầng), **YOLO** (2016, phát hiện đối tượng thời gian thực), và **Vision Transformer** (2020, ứng dụng Transformer vào thị giác).
 
-**Các bài toán cơ bản trong Computer Vision:**
+**Các bài toán cơ bản trong thị giác máy tính:**
 
-| Bài toán | Mô tả | Đầu ra | Ví dụ mô hình |
+Thị giác máy tính bao gồm nhiều nhóm bài toán, trong đó sáu nhóm bài toán cơ bản nhất được tổng hợp trong bảng dưới đây:
+
+| Bài toán | Mô tả | Đầu ra | Mô hình tiêu biểu |
 | --- | --- | --- | --- |
-| **Image Classification** | Phân loại toàn bộ ảnh thuộc lớp nào | Nhãn lớp + xác suất | ResNet, MobileNet, EfficientNet |
-| **Object Detection** | Phát hiện VỊ TRÍ (bounding box) và LOẠI đối tượng trong ảnh | Danh sách [bbox, class, confidence] | YOLO, Faster R-CNN, SSD |
-| **Semantic Segmentation** | Phân loại từng pixel trong ảnh thuộc lớp nào | Mask (cùng kích thước ảnh) | U-Net, DeepLab, FCN |
-| **Instance Segmentation** | Phân loại + tách biệt từng instance đối tượng | Mask + instance ID | Mask R-CNN, YOLACT |
-| **Optical Character Recognition (OCR)** | Nhận diện và đọc chữ viết trong ảnh | Chuỗi ký tự | TrOCR, Tesseract, EasyOCR |
-| **Pose Estimation** | Phát hiện các điểm khớp (keypoints) trên cơ thể | Tọa độ keypoints | OpenPose, MediaPipe |
+| **Phân loại ảnh** (Image Classification) | Xác định toàn bộ ảnh thuộc lớp đối tượng nào | Nhãn lớp kèm xác suất | ResNet, MobileNet, EfficientNet |
+| **Phát hiện đối tượng** (Object Detection) | Xác định vị trí (hộp bao — bounding box) và loại của từng đối tượng trong ảnh | Danh sách các bộ [hộp bao, lớp, độ tin cậy] | YOLO, Faster R-CNN, SSD |
+| **Phân đoạn ngữ nghĩa** (Semantic Segmentation) | Phân loại từng điểm ảnh (pixel) trong ảnh thuộc lớp đối tượng nào | Mặt nạ (mask) cùng kích thước ảnh gốc | U-Net, DeepLab, FCN |
+| **Phân đoạn thực thể** (Instance Segmentation) | Phân loại từng điểm ảnh đồng thời phân biệt các thực thể riêng lẻ cùng lớp | Mặt nạ kèm định danh thực thể | Mask R-CNN, YOLACT |
+| **Nhận dạng ký tự quang học** (OCR) | Phát hiện và đọc chữ viết có trong ảnh | Chuỗi ký tự văn bản | TrOCR, Tesseract, EasyOCR |
+| **Ước lượng tư thế** (Pose Estimation) | Phát hiện các điểm khớp (keypoints) trên cơ thể người hoặc đối tượng | Tọa độ các điểm khớp | OpenPose, MediaPipe |
 
-Trong đề tài ParkSmart, ba bài toán được sử dụng trực tiếp là: **Object Detection** (phát hiện biển số xe, phát hiện xe trong ô đỗ), **Image Classification** (phân loại mệnh giá tiền giấy), và **OCR** (đọc ký tự biển số).
+Trong số các bài toán nêu trên, ba nhóm bài toán được ứng dụng trực tiếp trong lĩnh vực bãi giữ xe thông minh là: **phát hiện đối tượng** (xác định vùng biển số xe trong ảnh, phát hiện phương tiện trong ô đỗ), **phân loại ảnh** (nhận dạng mệnh giá tiền giấy tại quầy thanh toán), và **nhận dạng ký tự quang học** (đọc các ký tự trên biển số xe sau khi đã phát hiện vùng biển số). Chi tiết cách ứng dụng ba bài toán này vào hệ thống cụ thể được trình bày tại Chương 3.
 
 ### 2.2.4. Mạng nơ-ron tích chập (Convolutional Neural Network — CNN)
 
