@@ -76,11 +76,11 @@ namespace ParkingSim.Camera
                 {
                     cameraId = "virtual-f1-overview",
                     displayName = "Floor 1 Overview",
-                    // Platform 70×60m: height 30 + FOV 100° → 2*30*tan(50°)=71.5m vừa
-                    // cover hết floor mà slot vẫn lớn đủ AI YOLO nhận diện.
-                    position = new Vector3(0, 30, 0),
+                    // Platform 70×60m: height 22 + FOV 120° → 2*22*tan(60°)=76m cover
+                    // full floor với slots lớn ~2× so với height 30 → YOLO dễ match.
+                    position = new Vector3(0, 22, 0),
                     rotation = new Vector3(90, 0, 0),
-                    fieldOfView = 100f,
+                    fieldOfView = 120f,
                     renderWidth = config.cameraResWidth,
                     renderHeight = config.cameraResHeight,
                     jpegQuality = config.cameraJpegQuality,
