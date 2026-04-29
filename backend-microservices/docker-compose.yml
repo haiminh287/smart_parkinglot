@@ -373,6 +373,7 @@ services:
     build: ./chatbot-service-fastapi
     container_name: chatbot-service-fastapi
     restart: unless-stopped
+    user: root  # v3.1: RAG volumes (hf_cache, chroma_db) need write perms; app user blocked by volume root-ownership
     environment:
       - DB_HOST=mysql
       - DB_PORT=3306
@@ -387,7 +388,12 @@ services:
       - REALTIME_SERVICE_URL=http://realtime-service-go:8006
       # ─── LLM Config ───
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
-      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.0-flash}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-flash}
+      # LLM_BASE_URL disabled: local OpenAI-compat proxy at :8045 not running → falls back to keyword.
+      # Forcing empty routes via Gemini SDK directly (uses GEMINI_API_KEY).
+      - LLM_BASE_URL=
+      - LLM_API_KEY=${LLM_API_KEY:-}
+      - LLM_MODEL=${LLM_MODEL:-}
       # ─── Redis (chatbot uses DB 6) ───
       - REDIS_HOST=redis
       - REDIS_PORT=6379
@@ -395,8 +401,18 @@ services:
       # ─── RabbitMQ (proactive events) ───
       - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
       - DEBUG=${DEBUG:-False}
+      # ─── RAG cache (container runs as user app, HOME=/app) ───
+      - HF_HOME=/app/hf_cache
+      - TRANSFORMERS_CACHE=/app/hf_cache
+      - SENTENCE_TRANSFORMERS_HOME=/app/hf_cache
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     expose:
       - "8008"
+    volumes:
+      - ../docs/chatbot-knowledge:/app/knowledge:ro
+      - chatbot-chroma-data:/app/chroma_db
+      - chatbot-hf-cache-v2:/app/hf_cache
     depends_on:
       mysql:
         condition: service_healthy
@@ -456,3 +472,5 @@ volumes:
   ai_models:
   ai_datasets:
   parksmart_media:
+  chatbot-chroma-data:   # Vector DB persist giữa restart
+  chatbot-hf-cache-v2:      # HuggingFace model cache (sentence-transformers)

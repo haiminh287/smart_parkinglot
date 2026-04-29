@@ -134,9 +134,13 @@ def _fetch_floor_info(floor_id):
 
 
 def _fetch_slot_info(slot_id):
-    """Fetch slot details from parking-service."""
+    """Fetch slot details from parking-service.
+
+    Phải truyền X-User-ID — parking-service dùng IsGatewayAuthenticated,
+    thiếu sẽ trả 403 và fetch fail silent (slot_code còn rỗng trên booking).
+    """
     try:
-        headers = _get_service_headers()
+        headers = _get_service_headers(user_id="system")
         resp = http_requests.get(
             f"{PARKING_SERVICE_URL}/parking/slots/{slot_id}/",
             headers=headers,
@@ -149,6 +153,10 @@ def _fetch_slot_info(slot_id):
                 "zone_id": data.get("zoneId", data.get("zone_id", "")),
                 "status": data.get("status", "available"),
             }
+        logger.warning(
+            "Slot fetch %s → HTTP %s: %s",
+            slot_id, resp.status_code, resp.text[:150],
+        )
     except Exception as e:
         logger.warning(f"Failed to fetch slot {slot_id}: {e}")
     return None
@@ -404,8 +412,12 @@ class BookingSerializer(serializers.ModelSerializer):
     startTime = serializers.DateTimeField(source="start_time")
     endTime = serializers.DateTimeField(source="end_time")
     paymentType = serializers.CharField(source="payment_method")
-    paymentStatus = serializers.CharField(source="payment_status")
+    paymentStatus = serializers.SerializerMethodField(method_name="get_payment_status")
     checkInStatus = serializers.CharField(source="check_in_status")
+    # Status derived cho FE: parked/completed/confirmed/... (FE filter "đang đậu"
+    # cần field `status` có giá trị "parked" khi đã checked_in).
+    status = serializers.SerializerMethodField()
+    bookingStatus = serializers.SerializerMethodField(method_name="get_booking_status")
     checkedInAt = serializers.DateTimeField(source="checked_in_at")
     checkedOutAt = serializers.DateTimeField(source="checked_out_at")
     qrCodeData = serializers.CharField(source="qr_code_data")
@@ -438,6 +450,8 @@ class BookingSerializer(serializers.ModelSerializer):
             "paymentType",
             "paymentStatus",
             "checkInStatus",
+            "status",
+            "bookingStatus",
             "price",
             "checkedInAt",
             "checkedOutAt",
@@ -448,6 +462,36 @@ class BookingSerializer(serializers.ModelSerializer):
             "extendedUntil",
             "lateFeeApplied",
         ]
+
+    _CHECK_IN_TO_STATUS = {
+        "not_checked_in": "confirmed",
+        "checked_in": "parked",
+        "checked_out": "completed",
+        "cancelled": "cancelled",
+        "no_show": "no_show",
+    }
+
+    def get_status(self, obj) -> str:
+        return self._CHECK_IN_TO_STATUS.get(obj.check_in_status or "", "pending")
+
+    def get_booking_status(self, obj) -> str:
+        return self.get_status(obj)
+
+    # FE chỉ biết các enum pending/processing/completed/failed/refunded/cancelled.
+    # DB có thể lưu "paid" (legacy) → normalize về "completed".
+    _PAYMENT_NORMALIZE = {
+        "paid": "completed",
+        "success": "completed",
+        "done": "completed",
+    }
+
+    def get_payment_status(self, obj) -> str:
+        raw = (obj.payment_status or "pending").lower()
+        # Nếu đã checked_out nhưng payment vẫn "pending" → coi như completed
+        # (giao dịch cash/momo xong ở cổng nhưng update lag).
+        if obj.check_in_status == "checked_out" and raw == "pending":
+            return "completed"
+        return self._PAYMENT_NORMALIZE.get(raw, raw)
 
     def get_vehicle(self, obj):
         """Build Vehicle object from denormalized fields. No HTTP calls."""
@@ -501,11 +545,27 @@ class BookingSerializer(serializers.ModelSerializer):
         }
 
     def get_car_slot(self, obj):
-        """Build CarSlot object from denormalized fields. No HTTP calls."""
+        """Build CarSlot object.
+
+        Thường đọc từ denormalized field `slot_code`. Nhưng nếu slot_code
+        rỗng (race condition khi create — parking-service fetch fail), fallback
+        gọi parking-service 1 lần + backfill để Unity/FE vẫn match được slot.
+        """
         if not obj.slot_id:
             return None
+        code = obj.slot_code or ""
+        if not code:
+            info = _fetch_slot_info(obj.slot_id)
+            if info and info.get("code"):
+                code = info["code"]
+                # Backfill để lần sau không cần fetch nữa
+                try:
+                    type(obj).objects.filter(id=obj.id).update(slot_code=code)
+                    obj.slot_code = code
+                except Exception:
+                    pass
         return {
             "id": str(obj.slot_id),
             "zoneId": str(obj.zone_id),
-            "code": obj.slot_code or "",
+            "code": code,
         }

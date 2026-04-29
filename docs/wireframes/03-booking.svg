@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Wireframe mockup: Booking Wizard | Design phase artifact for thesis report -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" width="1200" height="800" font-family="Inter, sans-serif">
+  <rect x="0" y="0" width="1200" height="800" fill="#ffffff"/>
+
+  <!-- Sidebar (compact) -->
+  <rect x="20" y="20" width="200" height="760" rx="6" fill="#f5f5f5" stroke="#333" stroke-width="1.5"/>
+  <rect x="35" y="35" width="170" height="36" rx="4" fill="#e0e0e0" stroke="#333" stroke-width="1"/>
+  <text x="120" y="58" font-size="13" fill="#222" text-anchor="middle">ParkSmart Logo</text>
+
+  <rect x="35" y="85" width="170" height="50" rx="6" fill="#ffffff" stroke="#333" stroke-width="1"/>
+  <text x="120" y="115" font-size="12" fill="#222" text-anchor="middle">e2e_playwright</text>
+
+  <rect x="35" y="150" width="170" height="32" rx="4" fill="none" stroke="#333" stroke-width="1"/>
+  <text x="50" y="171" font-size="12" fill="#222">Dashboard</text>
+  <rect x="35" y="186" width="170" height="32" rx="4" fill="#e0e0e0" stroke="#333" stroke-width="1"/>
+  <text x="50" y="207" font-size="12" fill="#222">Dat cho</text>
+  <rect x="35" y="222" width="170" height="32" rx="4" fill="none" stroke="#333" stroke-width="1"/>
+  <text x="50" y="243" font-size="12" fill="#222">Lich su</text>
+  <rect x="35" y="258" width="170" height="32" rx="4" fill="none" stroke="#333" stroke-width="1"/>
+  <text x="50" y="279" font-size="12" fill="#222">Ban do</text>
+  <rect x="35" y="294" width="170" height="32" rx="4" fill="none" stroke="#333" stroke-width="1"/>
+  <text x="50" y="315" font-size="12" fill="#222">Camera</text>
+  <rect x="35" y="330" width="170" height="32" rx="4" fill="none" stroke="#333" stroke-width="1"/>
+  <text x="50" y="351" font-size="12" fill="#222">Nhan dien tien</text>
+  <rect x="35" y="366" width="170" height="32" rx="4" fill="none" stroke="#333" stroke-width="1"/>
+  <text x="50" y="387" font-size="12" fill="#222">Ho tro</text>
+  <rect x="35" y="402" width="170" height="32" rx="4" fill="none" stroke="#333" stroke-width="1"/>
+  <text x="50" y="423" font-size="12" fill="#222">Cai dat</text>
+  <text x="35" y="455" font-size="11" fill="#666" font-style="italic">Sidebar nav</text>
+
+  <!-- Main: Page Header -->
+  <text x="250" y="50" font-size="18" fill="#222" font-weight="bold">Dat cho giu xe</text>
+  <text x="250" y="72" font-size="13" fill="#666">Chon cach dat cho phu hop voi ban</text>
+
+  <!-- Mode tabs -->
+  <rect x="250" y="90" width="640" height="44" rx="6" fill="#f5f5f5" stroke="#333" stroke-width="1"/>
+  <rect x="258" y="98" width="208" height="28" rx="4" fill="#e0e0e0" stroke="#333" stroke-width="1"/>
+  <text x="362" y="117" font-size="12" fill="#222" text-anchor="middle">Dat cho</text>
+  <rect x="466" y="98" width="208" height="28" rx="4" fill="none" stroke="#333" stroke-width="1"/>
+  <text x="570" y="117" font-size="12" fill="#222" text-anchor="middle">Di dau cung co cho</text>
+  <rect x="674" y="98" width="208" height="28" rx="4" fill="none" stroke="#333" stroke-width="1"/>
+  <text x="778" y="117" font-size="12" fill="#222" text-anchor="middle">Auto-Hold</text>
+  <text x="890" y="117" font-size="11" fill="#666" font-style="italic">Mode tabs</text>
+
+  <!-- Step Indicator (5 steps) -->
+  <rect x="250" y="148" width="640" height="56" rx="6" fill="#ffffff" stroke="#333" stroke-width="1.5"/>
+  <circle cx="290" cy="176" r="14" fill="#e0e0e0" stroke="#333" stroke-width="1"/>
+  <text x="290" y="180" font-size="12" fill="#222" text-anchor="middle">1</text>
+  <text x="320" y="180" font-size="12" fill="#222">Chon bai</text>
+  <line x1="400" y1="176" x2="430" y2="176" stroke="#333" stroke-width="1"/>
+
+  <circle cx="450" cy="176" r="14" fill="#ffffff" stroke="#333" stroke-width="1"/>
+  <text x="450" y="180" font-size="12" fill="#222" text-anchor="middle">2</text>
+  <text x="475" y="180" font-size="12" fill="#222">Chon xe</text>
+  <line x1="540" y1="176" x2="570" y2="176" stroke="#333" stroke-width="1"/>
+
+  <circle cx="590" cy="176" r="14" fill="#ffffff" stroke="#333" stroke-width="1"/>
+  <text x="590" y="180" font-size="12" fill="#222" text-anchor="middle">3</text>
+  <text x="615" y="180" font-size="12" fill="#222">Vi tri</text>
+  <line x1="660" y1="176" x2="690" y2="176" stroke="#333" stroke-width="1"/>
+
+  <circle cx="710" cy="176" r="14" fill="#ffffff" stroke="#333" stroke-width="1"/>
+  <text x="710" y="180" font-size="12" fill="#222" text-anchor="middle">4</text>
+  <text x="735" y="180" font-size="12" fill="#222">Thoi gian</text>
+  <line x1="800" y1="176" x2="820" y2="176" stroke="#333" stroke-width="1"/>
+
+  <circle cx="840" cy="176" r="14" fill="#ffffff" stroke="#333" stroke-width="1"/>
+  <text x="840" y="180" font-size="12" fill="#222" text-anchor="middle">5</text>
+  <text x="865" y="180" font-size="12" fill="#222">Thanh toan</text>
+  <text x="890" y="200" font-size="11" fill="#666" font-style="italic">5-step indicator</text>
+
+  <!-- Parking Lot List -->
+  <rect x="250" y="220" width="640" height="490" rx="6" fill="#f5f5f5" stroke="#333" stroke-width="1.5"/>
+  <text x="270" y="245" font-size="14" fill="#222" font-weight="bold">Chon bai giu xe</text>
+  <rect x="780" y="230" width="100" height="26" rx="4" fill="none" stroke="#333" stroke-width="1"/>
+  <text x="830" y="248" font-size="11" fill="#222" text-anchor="middle">Tim gan nhat</text>
+
+  <!-- Lot rows -->
+  <rect x="270" y="270" width="600" height="80" rx="6" fill="#ffffff" stroke="#333" stroke-width="1"/>
+  <rect x="285" y="285" width="50" height="50" rx="4" fill="#e0e0e0" stroke="#333" stroke-width="1"/>
+  <text x="350" y="300" font-size="13" fill="#222" font-weight="bold">Aeon Mall Binh Tan</text>
+  <text x="350" y="318" font-size="11" fill="#666">1 Duong so 17A, Binh Tri Dong B</text>
+  <text x="350" y="338" font-size="11" fill="#666">56 cho trong</text>
+
+  <rect x="270" y="358" width="600" height="80" rx="6" fill="#ffffff" stroke="#333" stroke-width="1"/>
+  <rect x="285" y="373" width="50" height="50" rx="4" fill="#e0e0e0" stroke="#333" stroke-width="1"/>
+  <text x="350" y="388" font-size="13" fill="#222" font-weight="bold">Lotte Mart Go Vap</text>
+  <text x="350" y="406" font-size="11" fill="#666">242 Nguyen Van Luong, Go Vap</text>
+  <text x="350" y="426" font-size="11" fill="#666">60 cho trong</text>
+
+  <rect x="270" y="446" width="600" height="80" rx="6" fill="#ffffff" stroke="#333" stroke-width="1"/>
+  <rect x="285" y="461" width="50" height="50" rx="4" fill="#e0e0e0" stroke="#333" stroke-width="1"/>
+  <text x="350" y="476" font-size="13" fill="#222" font-weight="bold">ParkSmart Tower</text>
+  <text x="350" y="494" font-size="11" fill="#666">Nguyen Hue, Q1, TP.HCM</text>
+  <text x="350" y="514" font-size="11" fill="#666">85 cho trong</text>
+
+  <rect x="270" y="534" width="600" height="80" rx="6" fill="#ffffff" stroke="#333" stroke-width="1"/>
+  <rect x="285" y="549" width="50" height="50" rx="4" fill="#e0e0e0" stroke="#333" stroke-width="1"/>
+  <text x="350" y="564" font-size="13" fill="#222" font-weight="bold">Saigon Centre</text>
+  <text x="350" y="582" font-size="11" fill="#666">65 Le Loi, Ben Nghe, Q1</text>
+  <text x="350" y="602" font-size="11" fill="#666">56 cho trong</text>
+
+  <rect x="270" y="622" width="600" height="80" rx="6" fill="#ffffff" stroke="#333" stroke-width="1"/>
+  <rect x="285" y="637" width="50" height="50" rx="4" fill="#e0e0e0" stroke="#333" stroke-width="1"/>
+  <text x="350" y="652" font-size="13" fill="#222" font-weight="bold">Vincom Center Parking</text>
+  <text x="350" y="670" font-size="11" fill="#666">72 Le Thanh Ton, Q1</text>
+  <text x="350" y="690" font-size="11" fill="#666">87 cho trong</text>
+
+  <text x="270" y="730" font-size="11" fill="#666" font-style="italic">Parking lot card list (scrollable)</text>
+
+  <!-- Order Summary card (right) -->
+  <rect x="910" y="220" width="270" height="380" rx="6" fill="#ffffff" stroke="#333" stroke-width="1.5"/>
+  <text x="930" y="245" font-size="14" fill="#222" font-weight="bold">Chi tiet don hang</text>
+  <text x="930" y="263" font-size="11" fill="#666">Tong tien du kien</text>
+
+  <line x1="930" y1="280" x2="1160" y2="280" stroke="#ccc" stroke-width="1"/>
+
+  <text x="930" y="305" font-size="12" fill="#666">Loai xe</text>
+  <text x="1160" y="305" font-size="12" fill="#222" text-anchor="end">O to</text>
+
+  <text x="930" y="330" font-size="12" fill="#666">Goi dich vu</text>
+  <text x="1160" y="330" font-size="12" fill="#222" text-anchor="end">Theo gio</text>
+
+  <text x="930" y="355" font-size="12" fill="#666">Thoi gian</text>
+  <text x="1160" y="355" font-size="12" fill="#222" text-anchor="end">08:00 - 17:00</text>
+
+  <text x="930" y="385" font-size="12" fill="#666">Thanh tien</text>
+  <text x="1160" y="385" font-size="12" fill="#222" text-anchor="end">135.000 d</text>
+
+  <line x1="930" y1="405" x2="1160" y2="405" stroke="#333" stroke-width="1"/>
+
+  <text x="930" y="435" font-size="14" fill="#222" font-weight="bold">Tong cong</text>
+  <text x="1160" y="435" font-size="14" fill="#222" font-weight="bold" text-anchor="end">135.000 d</text>
+
+  <text x="930" y="475" font-size="10" fill="#666" font-style="italic">* Gia chi la du kien, co the thay doi</text>
+  <text x="930" y="488" font-size="10" fill="#666" font-style="italic">tuy theo thoi gian thuc te</text>
+
+  <text x="910" y="620" font-size="11" fill="#666" font-style="italic">Order summary card</text>
+
+  <!-- Footer buttons -->
+  <rect x="910" y="640" width="120" height="40" rx="6" fill="none" stroke="#333" stroke-width="1.5"/>
+  <text x="970" y="665" font-size="13" fill="#222" text-anchor="middle">Quay lai</text>
+
+  <rect x="1040" y="640" width="140" height="40" rx="6" fill="#e0e0e0" stroke="#333" stroke-width="1.5"/>
+  <text x="1110" y="665" font-size="13" fill="#222" text-anchor="middle">Tiep tuc</text>
+</svg>

@@ -407,7 +407,10 @@ export const adminService = {
   /**
    * Update slot
    */
-  async updateSlot(slotId: string, data: Partial<{ code: string; zone: string; status: string }>) {
+  async updateSlot(
+    slotId: string,
+    data: Partial<{ code: string; zone: string; status: string }>,
+  ) {
     return adminApi.updateSlot(slotId, data);
   },
 
@@ -436,7 +439,10 @@ export const adminService = {
   /**
    * Update floor
    */
-  async updateFloor(floorId: string, data: Partial<{ level: number; name: string }>) {
+  async updateFloor(
+    floorId: string,
+    data: Partial<{ level: number; name: string }>,
+  ) {
     return adminApi.updateFloor(floorId, data);
   },
 

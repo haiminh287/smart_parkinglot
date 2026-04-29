@@ -213,33 +213,55 @@ namespace ParkingSim.Core.Sync
 
         private IEnumerator PollCoroutine()
         {
+            int tick = 0;
             while (true)
             {
                 yield return new WaitForSeconds(_config.deltaPollInterval);
+                tick++;
 
-                // Skip if WS is healthy
-                if (_apiService != null && _apiService.IsWsConnected)
-                    continue;
+                // Skip slot sync nếu WS còn healthy; booking sync luôn chạy
+                // vì WS chưa push event booking:created.
+                bool skipSlots = _apiService != null && _apiService.IsWsConnected;
 
-                bool done = false;
-                ApiResponse<PaginatedResponse<SlotData>> result = null;
-                _coroutineHost.StartCoroutine(_apiService.GetSlots(
-                    _config.targetParkingLotId,
-                    r => { result = r; done = true; }));
-
-                yield return CoroutineHelpers.WaitUntilOrTimeout(
-                    () => done, 10f, null, "PollSlots");
-
-                if (!done) continue; // Timeout — skip tick
-
-                if (result?.IsSuccess == true && result.Data?.Results != null)
+                if (!skipSlots)
                 {
-                    foreach (var apiSlot in result.Data.Results)
+                    bool done = false;
+                    ApiResponse<PaginatedResponse<SlotData>> result = null;
+                    _coroutineHost.StartCoroutine(_apiService.GetSlots(
+                        _config.targetParkingLotId,
+                        r => { result = r; done = true; }));
+
+                    yield return CoroutineHelpers.WaitUntilOrTimeout(
+                        () => done, 10f, null, "PollSlots");
+
+                    if (done && result?.IsSuccess == true && result.Data?.Results != null)
                     {
-                        if (_generator.slotRegistry.TryGetValue(apiSlot.Code, out var slot))
-                            slot.UpdateState(ParkingSlot.ParseStatus(apiSlot.Status));
+                        foreach (var apiSlot in result.Data.Results)
+                        {
+                            if (_generator.slotRegistry.TryGetValue(apiSlot.Code, out var slot))
+                                slot.UpdateState(ParkingSlot.ParseStatus(apiSlot.Status));
+                        }
+                        OnSlotsUpdated?.Invoke(result.Data.Results);
                     }
-                    OnSlotsUpdated?.Invoke(result.Data.Results);
+                }
+
+                // Booking poll — tick chẵn để không đè slot poll (giảm load gateway)
+                if (tick % 2 == 0)
+                {
+                    bool bDone = false;
+                    ApiResponse<PaginatedResponse<BookingData>> bRes = null;
+                    _coroutineHost.StartCoroutine(_apiService.GetBookings(
+                        r => { bRes = r; bDone = true; }));
+                    yield return CoroutineHelpers.WaitUntilOrTimeout(
+                        () => bDone, 10f, null, "PollBookings");
+
+                    if (bDone && bRes?.IsSuccess == true && bRes.Data?.Results != null)
+                    {
+                        CachedBookings = bRes.Data.Results;
+                        int synced = SharedBookingState.Instance?.SyncFromApi(CachedBookings) ?? 0;
+                        if (synced > 0)
+                            Debug.Log($"[ParkingDataSync] Poll synced {synced} new booking(s)");
+                    }
                 }
             }
         }

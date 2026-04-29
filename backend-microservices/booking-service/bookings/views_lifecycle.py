@@ -2,19 +2,14 @@
 Lifecycle actions for bookings: checkin, checkout, extend, cancel.
 """
 
-import logging
-
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from shared.gateway_permissions import IsGatewayAuthenticated
 
 from . import services
-from .events import create_booking_event, create_slot_event
 from .models import Booking
 from .serializers import BookingSerializer
-
-logger = logging.getLogger(__name__)
 
 
 class BookingLifecycleViewSet(viewsets.GenericViewSet):
@@ -37,15 +32,19 @@ class BookingLifecycleViewSet(viewsets.GenericViewSet):
         """Check-in to a booking (scan QR code at entry gate)."""
         booking = self.get_object()
 
-        error = services.validate_checkin(booking)
-        if error:
-            return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)
+        checkin_result = services.perform_checkin_with_reallocation(booking)
+        if not checkin_result.get("ok"):
+            return Response(
+                {
+                    "error": checkin_result.get(
+                        "error",
+                        "No slot available for check-in",
+                    )
+                },
+                status=checkin_result.get("status_code", status.HTTP_409_CONFLICT),
+            )
 
-        services.perform_checkin(booking)
-
-        if booking.slot_id:
-            create_slot_event(booking.slot_id, "occupied", booking)
-        create_booking_event("booking.checked_in", booking)
+        booking = checkin_result["booking"]
 
         serializer = self.get_serializer(booking)
         return Response(
@@ -67,12 +66,16 @@ class BookingLifecycleViewSet(viewsets.GenericViewSet):
         if error:
             return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)
 
-        pricing = services.calculate_checkout_price(booking)
-        services.perform_checkout(booking)
+        checkout_result = services.perform_checkout(booking)
+        if not checkout_result.get("ok"):
+            return Response(
+                {"error": checkout_result.get("error", "Checkout conflict")},
+                status=checkout_result.get(
+                    "status_code", status.HTTP_409_CONFLICT
+                ),
+            )
 
-        if booking.slot_id:
-            create_slot_event(booking.slot_id, "available", booking)
-        create_booking_event("booking.checked_out", booking)
+        pricing = checkout_result["pricing"]
 
         booking.refresh_from_db()
         serializer = BookingSerializer(booking)
@@ -132,11 +135,14 @@ class BookingLifecycleViewSet(viewsets.GenericViewSet):
         if error:
             return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)
 
-        services.perform_cancel(booking)
+        cancel_result = services.perform_cancel(booking)
+        if not cancel_result.get("ok"):
+            return Response(
+                {"error": cancel_result.get("error", "Cancel conflict")},
+                status=cancel_result.get("status_code", status.HTTP_409_CONFLICT),
+            )
 
-        if booking.slot_id:
-            create_slot_event(booking.slot_id, "available", booking)
-        create_booking_event("booking.cancelled", booking)
+        booking = cancel_result["booking"]
 
         serializer = self.get_serializer(booking)
         return Response(

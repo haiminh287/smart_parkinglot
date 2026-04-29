@@ -24,6 +24,9 @@ namespace ParkingSim.Camera
         private string lastCaptureStatus = "Idle";
         private float lastConfidence;
 
+        private float _physicsCheckTimer;
+        private const float PHYSICS_CHECK_INTERVAL = 0.5f;
+
         private bool showWindow = true;
         private Rect windowRect = new Rect(Screen.width - 320, 220, 300, 200);
 
@@ -31,6 +34,8 @@ namespace ParkingSim.Camera
         {
             if (apiService == null)
                 apiService = ApiService.Instance ?? FindObjectOfType<ApiService>();
+            if (esp32Simulator == null)
+                esp32Simulator = FindObjectOfType<ESP32Simulator>();
             audioSource = gameObject.AddComponent<AudioSource>();
             audioSource.playOnAwake = false;
         }
@@ -38,6 +43,10 @@ namespace ParkingSim.Camera
         private void Update()
         {
             if (capturePoint == null) return;
+
+            _physicsCheckTimer += Time.deltaTime;
+            if (_physicsCheckTimer < PHYSICS_CHECK_INTERVAL) return;
+            _physicsCheckTimer = 0f;
 
             // Scan for vehicles waiting at gate and enqueue
             var colliders = Physics.OverlapSphere(capturePoint.position, captureRadius);
@@ -221,7 +230,8 @@ namespace ParkingSim.Camera
 
                     Debug.Log($"[GateCamera] \u2705 AI OCR: {lastRecognizedPlate} " +
                               $"(confidence: {lastConfidence:P0})");
-                    esp32Simulator.SetPlateFromCamera(lastRecognizedPlate);
+                    if (esp32Simulator != null)
+                        esp32Simulator.SetPlateFromCamera(lastRecognizedPlate);
                     lastCaptureStatus = "Complete \u2705";
 
                     if (beepClip != null && audioSource != null)
@@ -234,7 +244,8 @@ namespace ParkingSim.Camera
                     lastConfidence = 0f;
                     Debug.Log($"[GateCamera] \u26a0\ufe0f AI OCR failed, using known plate: " +
                               $"{lastRecognizedPlate}");
-                    esp32Simulator.SetPlateFromCamera(lastRecognizedPlate);
+                    if (esp32Simulator != null)
+                        esp32Simulator.SetPlateFromCamera(lastRecognizedPlate);
                     lastCaptureStatus = "Fallback (known plate)";
                 }
             }
@@ -244,7 +255,8 @@ namespace ParkingSim.Camera
                 lastRecognizedPlate = vehicle.plateNumber;
                 lastConfidence = 1f;
                 Debug.Log($"[GateCamera] \ud83d\udcf7 Simulated capture: {lastRecognizedPlate}");
-                esp32Simulator.SetPlateFromCamera(lastRecognizedPlate);
+                if (esp32Simulator != null)
+                    esp32Simulator.SetPlateFromCamera(lastRecognizedPlate);
                 lastCaptureStatus = "Simulated \u2705";
 
                 if (beepClip != null && audioSource != null)

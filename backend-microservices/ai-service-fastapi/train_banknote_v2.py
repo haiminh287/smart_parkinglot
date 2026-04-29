@@ -31,6 +31,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from app.ml.augmentations import build_train_transform, build_val_transform
+from torch.cuda.amp import GradScaler, autocast
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.utils.data import DataLoader, Dataset, WeightedRandomSampler
@@ -63,13 +64,14 @@ NUM_CLASSES = len(DENOMINATIONS)
 CLASS_TO_IDX = {c: i for i, c in enumerate(DENOMINATIONS)}
 
 # -- Hyperparams --------------------------------------------- #
-EPOCHS = 50
-BATCH_SIZE = 4        # fp32 EfficientNetV2-S: batch 12 OOM trên 4GB → dùng 4×3 accum
-ACCUM_STEPS = 3      # effective batch = BATCH_SIZE * ACCUM_STEPS = 12
-LR = 3e-4
+EPOCHS_OLD = 50  # legacy
+BATCH_SIZE = 6  # fp32 on GTX 1650 4GB (AMP unstable với torch 1.13 cu116)
+ACCUM_STEPS = 1  # no accumulation
+EPOCHS = 25  # bớt từ 50 xuống 25 — đủ hội tụ + còn early stop patience 5
+LR = 1e-4  # giảm từ 3e-4 → 1e-4 tránh NaN với fp16 AMP + weighted loss
 WEIGHT_DECAY = 1e-4
 LABEL_SMOOTHING = 0.1
-EARLY_STOP_PATIENCE = 8
+EARLY_STOP_PATIENCE = 5  # giảm xuống 5 phù hợp với 25 epochs
 # Windows + PyTorch CUDA dễ gặp WinError 1455 khi worker spawn/import torch.
 # Dùng 0 worker để ổn định huấn luyện trong môi trường hiện tại.
 NUM_WORKERS = 0
@@ -151,14 +153,10 @@ def main() -> None:
     model = model.to(device)
 
     # -- Loss / Optimizer / Scheduler --
-    cls_w = torch.tensor(CLASS_WEIGHTS, dtype=torch.float32, device=device)
-    criterion = nn.CrossEntropyLoss(weight=cls_w, label_smoothing=LABEL_SMOOTHING)
-    optimizer = AdamW(
-        model.parameters(),
-        lr=LR,
-        weight_decay=WEIGHT_DECAY,
-        capturable=device.type == "cuda",
-    )
+    # fp16 AMP có thể NaN với weighted loss + label_smoothing → dùng CE thuần,
+    # class imbalance đã handle bằng WeightedRandomSampler
+    criterion = nn.CrossEntropyLoss(label_smoothing=LABEL_SMOOTHING)
+    optimizer = AdamW(model.parameters(), lr=LR, weight_decay=WEIGHT_DECAY, eps=1e-6)
     scheduler = CosineAnnealingLR(optimizer, T_max=EPOCHS)
 
     # -- Training loop --
@@ -174,24 +172,23 @@ def main() -> None:
     for epoch in range(1, EPOCHS + 1):
         t_start = time.time()
 
-        # Train — fp32 + gradient accumulation (effective batch = BATCH_SIZE * ACCUM_STEPS)
+        # Train — fp32 (AMP unstable với torch 1.13 + GTX 1650)
         model.train()
         tr_loss_sum, tr_correct, tr_total = 0.0, 0, 0
-        optimizer.zero_grad()
         for step, (imgs, labels) in enumerate(train_loader):
             imgs = imgs.to(device, non_blocking=True)
             labels = labels.to(device, non_blocking=True)
-            out = model(imgs)  # fp32 forward
-            loss = criterion(out, labels) / ACCUM_STEPS
+            optimizer.zero_grad()
+            out = model(imgs)
+            loss = criterion(out, labels)
             loss.backward()
-            loss_val = loss.item() * ACCUM_STEPS  # restore scale for logging
-            tr_loss_sum += loss_val * imgs.size(0)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+            optimizer.step()
+            tr_loss_sum += loss.item() * imgs.size(0)
             tr_correct += (out.argmax(1) == labels).sum().item()
             tr_total += imgs.size(0)
-            if (step + 1) % ACCUM_STEPS == 0 or (step + 1) == len(train_loader):
-                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-                optimizer.step()
-                optimizer.zero_grad()
+            if (step + 1) % 200 == 0:
+                logger.info("  batch %d/%d loss=%.4f", step + 1, len(train_loader), loss.item())
         tr_loss = tr_loss_sum / tr_total if tr_total > 0 else float("nan")
         tr_acc = tr_correct / tr_total if tr_total > 0 else 0.0
 
@@ -202,7 +199,7 @@ def main() -> None:
             for imgs, labels in val_loader:
                 imgs = imgs.to(device, non_blocking=True)
                 labels = labels.to(device, non_blocking=True)
-                out = model(imgs)  # fp32
+                out = model(imgs)
                 loss = criterion(out, labels)
                 val_loss_sum += loss.item() * imgs.size(0)
                 val_correct += (out.argmax(1) == labels).sum().item()

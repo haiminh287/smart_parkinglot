@@ -17,8 +17,8 @@ RUN python -c "import easyocr; easyocr.Reader(['en'], gpu=False, download_enable
 
 COPY --chown=app:app . .
 
-RUN mkdir -p /app/media /app/media/plate_debug /app/ml/models \
-    && chown -R app:app /app/media /app/ml/models
+RUN mkdir -p /app/media /app/media/plate_debug /app/ml/models /app/.EasyOCR \
+    && chown -R app:app /app/media /app/ml/models /app/.EasyOCR
 
 USER app
 

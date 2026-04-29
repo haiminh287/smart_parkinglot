@@ -41,9 +41,7 @@ class ResponseService:
 
         return self._template_response(decision, action_result, style)
 
-    async def generate_clarification(
-        self, decision: IntentDecision
-    ) -> dict[str, Any]:
+    async def generate_clarification(self, decision: IntentDecision) -> dict[str, Any]:
         """Generate a clarification question with helpful guidance."""
         intent = decision.primary_intent
         missing = decision.missing_entities or []
@@ -62,16 +60,16 @@ class ResponseService:
             "confirmationNeeded": False,
         }
 
-    async def generate_confirmation(
-        self, decision: IntentDecision
-    ) -> dict[str, Any]:
+    async def generate_confirmation(self, decision: IntentDecision) -> dict[str, Any]:
         """Generate a confirmation prompt for high-stakes actions."""
         intent_labels = {
             "book_slot": "đặt chỗ đậu xe",
             "cancel_booking": "hủy booking",
             "check_out": "check-out",
         }
-        action_label = intent_labels.get(decision.primary_intent, decision.primary_intent)
+        action_label = intent_labels.get(
+            decision.primary_intent, decision.primary_intent
+        )
 
         entity_summary = ""
         if decision.entities:
@@ -146,7 +144,9 @@ class ResponseService:
         style: dict,
     ) -> dict[str, Any]:
         """Generate response using LLM with user style context."""
-        tone = "ngắn gọn" if style.get("prefers_short", True) else "chi tiết, thân thiện"
+        tone = (
+            "ngắn gọn" if style.get("prefers_short", True) else "chi tiết, thân thiện"
+        )
         emoji_note = ""
         emoji_level = style.get("emoji_level", 1)
         if emoji_level >= 2:

@@ -59,48 +59,90 @@ def build_rich_response(intent: str, entities: dict, action_result: dict) -> str
     if intent == "help":
         return (
             "ℹ️ **Tôi có thể giúp bạn:**\n"
-            "• **Xem chỗ trống** — hỏi \"Còn mấy chỗ trống cho ô tô?\"\n"
-            "• **Đặt chỗ** — hỏi \"Tôi muốn đặt chỗ cho xe máy\"\n"
-            "• **Xem booking** — hỏi \"Cho tôi xem lịch đặt\"\n"
-            "• **Hủy booking** — hỏi \"Hủy booking\"\n"
-            "• **Check-in/out** — hỏi \"Check-in\" hoặc \"Check-out\"\n"
-            "• **Xem giá** — hỏi \"Giá đậu xe bao nhiêu?\"\n"
-            "• **Xe đang đậu** — hỏi \"Xe tôi đang đậu ở đâu?\""
+            '• **Xem chỗ trống** — hỏi "Còn mấy chỗ trống cho ô tô?"\n'
+            '• **Đặt chỗ** — hỏi "Tôi muốn đặt chỗ cho xe máy"\n'
+            '• **Xem booking** — hỏi "Cho tôi xem lịch đặt"\n'
+            '• **Hủy booking** — hỏi "Hủy booking"\n'
+            '• **Check-in/out** — hỏi "Check-in" hoặc "Check-out"\n'
+            '• **Xem giá** — hỏi "Giá đậu xe bao nhiêu?"\n'
+            '• **Xe đang đậu** — hỏi "Xe tôi đang đậu ở đâu?"'
         )
 
     if intent == "feedback":
         return "Cảm ơn phản hồi của bạn! 🙏"
 
+    if intent == "faq":
+        return format_faq(entities, action_result)
+
     return "Đã xử lý yêu cầu của bạn."
 
 
+def format_faq(entities: dict, result: dict) -> str:
+    """Format FAQ answer từ RAG retrieval + LLM."""
+    status = result.get("status")
+    if status == "error":
+        return result.get("error", "Xin lỗi, tôi chưa kết nối được knowledge base.")
+    if status == "no_match":
+        return result.get(
+            "message",
+            "Tôi chưa tìm được thông tin phù hợp. Vui lòng liên hệ support@parksmart.com.",
+        )
+    answer = (result.get("answer") or "").strip()
+    if not answer:
+        return "Tôi chưa có câu trả lời cho câu hỏi này."
+    # LLM đã kèm citation trong answer. Nếu không có, append sources.
+    if "[Nguồn" not in answer and result.get("sources"):
+        src_list = ", ".join(result["sources"][:3])
+        answer += f"\n\n_Nguồn: {src_list}_"
+    return answer
+
+
 def format_availability(entities: dict, result: dict) -> str:
-    """Format slot availability data into readable response."""
+    """Format slot availability data into readable response.
+
+    Ưu tiên dùng `result.zones` (enriched từ action_service) có sample_codes
+    cụ thể. Fallback về raw slots list nếu chưa enrich.
+    """
     vehicle_type = entities.get("vehicle_type", "")
-    vehicle_label = "ô tô" if vehicle_type == "car" else "xe máy" if vehicle_type == "motorcycle" else "xe"
+    vehicle_label = (
+        "ô tô"
+        if vehicle_type == "car"
+        else "xe máy" if vehicle_type == "motorcycle" else "xe"
+    )
     slots = result.get("slots", [])
     total = result.get("totalAvailable", len(slots))
+    zones_summary = result.get("zones") or []
+    lot_name = result.get("lot_name_query") or entities.get("lot_name") or ""
 
     if total == 0:
-        return f"😔 Hiện tại không còn chỗ trống cho {vehicle_label}. Bạn có thể thử lại sau!"
+        lot_suffix = f" tại **{lot_name}**" if lot_name else ""
+        return f"😔 Hiện tại không còn chỗ trống cho {vehicle_label}{lot_suffix}. Bạn có thể thử lại sau!"
 
-    text = f"🅿️ Hiện có **{total} chỗ trống** cho {vehicle_label}:\n"
+    lot_suffix = f" tại **{lot_name}**" if lot_name else ""
+    text = f"🅿️ Hiện có **{total} chỗ trống** cho {vehicle_label}{lot_suffix}:\n"
 
-    # Group by zone/floor if data available
-    zones: dict[str, list] = {}
-    for slot in slots[:20]:  # Limit display
-        zone_name = slot.get("zone_name") or slot.get("zone") or slot.get("lot_name") or "Khu vực chung"
-        floor = slot.get("floor", "")
-        key = f"{zone_name}" + (f" - Tầng {floor}" if floor else "")
-        zones.setdefault(key, []).append(slot)
-
-    if zones:
-        for zone_key, zone_slots in zones.items():
-            text += f"• **{zone_key}**: {len(zone_slots)} chỗ\n"
+    if zones_summary:
+        for z in zones_summary[:6]:  # Limit top 6 zones
+            zone = z.get("zone", "?")
+            count = z.get("count", 0)
+            codes = z.get("sample_codes") or []
+            code_text = ", ".join(f"`{c}`" for c in codes[:5])
+            more = f" (+{count - len(codes)} slot khác)" if count > len(codes) else ""
+            text += f"• **{zone}** — {count} chỗ: {code_text}{more}\n"
     else:
-        text += f"• Tổng cộng: {total} chỗ trống\n"
+        # Fallback cho case chưa enrich
+        zones: dict[str, list] = {}
+        for slot in slots[:30]:
+            zone_name = (
+                slot.get("zone_name") or slot.get("zone") or "Khu vực chung"
+            )
+            zones.setdefault(zone_name, []).append(slot.get("code", "?"))
+        for zone_key, codes in list(zones.items())[:6]:
+            shown = ", ".join(f"`{c}`" for c in codes[:5])
+            more = f" (+{len(codes) - 5} khác)" if len(codes) > 5 else ""
+            text += f"• **{zone_key}** — {len(codes)} chỗ: {shown}{more}\n"
 
-    text += "\nBạn muốn đặt chỗ không?"
+    text += "\n💡 Bấm **Đặt chỗ** rồi chọn khu vực + ô bạn thích, hoặc báo tôi biết ô cụ thể nếu đã có dự định."
     return text
 
 
@@ -108,9 +150,9 @@ def format_floor_selection(entities: dict, result: dict) -> str:
     """Format floor selection step of booking wizard."""
     vehicle_type = entities.get("vehicle_type", "")
     vehicle_label = (
-        "ô tô" if vehicle_type == "car"
-        else "xe máy" if vehicle_type == "motorcycle"
-        else "xe"
+        "ô tô"
+        if vehicle_type == "car"
+        else "xe máy" if vehicle_type == "motorcycle" else "xe"
     )
     floors = result.get("floors", [])
     total = result.get("total_available", 0)
@@ -128,7 +170,7 @@ def format_floor_selection(entities: dict, result: dict) -> str:
             text += f" ({zone_names})"
         text += "\n"
 
-    text += "\n💡 Hãy chọn tầng bạn muốn (ví dụ: \"Tầng 1\" hoặc \"B1\")"
+    text += '\n💡 Hãy chọn tầng bạn muốn (ví dụ: "Tầng 1" hoặc "B1")'
     return text
 
 
@@ -144,7 +186,7 @@ def format_zone_selection(entities: dict, result: dict) -> str:
         avail = zone.get("availableSlots", 0)
         text += f"**{i}. {name}** — {avail} chỗ trống\n"
 
-    text += "\n💡 Hãy chọn khu vực (ví dụ: \"Zone A\" hoặc \"1\")"
+    text += '\n💡 Hãy chọn khu vực (ví dụ: "Zone A" hoặc "1")'
     return text
 
 
@@ -159,13 +201,19 @@ def format_booking_result(entities: dict, result: dict) -> str:
         booking.get("id") or booking.get("booking_id") or booking.get("bookingId", "")
     )
     slot_name = (
-        booking.get("slotCode") or booking.get("slot_code")
-        or booking.get("slot_name") or booking.get("slotName", "")
+        booking.get("slotCode")
+        or booking.get("slot_code")
+        or booking.get("slot_name")
+        or booking.get("slotName", "")
     )
     zone_name = booking.get("zoneName") or booking.get("zone_name", "")
     lot_name = booking.get("parkingLotName") or booking.get("parking_lot_name", "")
     vehicle_type = entities.get("vehicle_type", "")
-    vehicle_label = "ô tô" if vehicle_type == "car" else "xe máy" if vehicle_type == "motorcycle" else "xe"
+    vehicle_label = (
+        "ô tô"
+        if vehicle_type == "car"
+        else "xe máy" if vehicle_type == "motorcycle" else "xe"
+    )
     start_time = booking.get("startTime") or booking.get("start_time", "")
     end_time = booking.get("endTime") or booking.get("end_time", "")
     price = booking.get("price", "")
@@ -217,7 +265,12 @@ def format_bookings_list(result: dict) -> str:
             "cancelled": "Đã hủy",
         }.get(check_in_status, check_in_status)
 
-        slot = b.get("slotCode") or b.get("slot_code") or b.get("slotName") or b.get("slot_name", "")
+        slot = (
+            b.get("slotCode")
+            or b.get("slot_code")
+            or b.get("slotName")
+            or b.get("slot_name", "")
+        )
         zone = b.get("zoneName") or b.get("zone_name", "")
         lot = b.get("parkingLotName") or b.get("parking_lot_name", "")
         vehicle_type = b.get("vehicleType") or b.get("vehicle_type", "")
@@ -255,7 +308,8 @@ def format_current_parking(result: dict) -> str:
     slot_obj = parking.get("carSlot") or {}
     slot_name = (
         slot_obj.get("code") or slot_obj.get("slotCode")
-        if isinstance(slot_obj, dict) else ""
+        if isinstance(slot_obj, dict)
+        else ""
     ) or parking.get("slotCode", "")
 
     # Extract zone info
@@ -266,9 +320,7 @@ def format_current_parking(result: dict) -> str:
 
     # Extract floor info
     floor_obj = parking.get("floor") or {}
-    floor_level = (
-        floor_obj.get("level") if isinstance(floor_obj, dict) else ""
-    )
+    floor_level = floor_obj.get("level") if isinstance(floor_obj, dict) else ""
 
     # Extract parking lot info
     lot_obj = parking.get("parkingLot") or {}
@@ -314,14 +366,16 @@ def format_pricing(entities: dict, result: dict) -> str:
         name = p.get("name") or p.get("vehicle_type", "")
         price = p.get("price") or p.get("hourly_rate") or p.get("amount", 0)
         unit = p.get("unit", "giờ")
-        text += f"• {name}: {price:,.0f}đ/{unit}\n" if isinstance(price, (int, float)) else f"• {name}: {price}/{unit}\n"
+        text += (
+            f"• {name}: {price:,.0f}đ/{unit}\n"
+            if isinstance(price, (int, float))
+            else f"• {name}: {price}/{unit}\n"
+        )
 
     return text
 
 
-def build_smart_clarification(
-    intent: str, missing: list[str], entities: dict
-) -> str:
+def build_smart_clarification(intent: str, missing: list[str], entities: dict) -> str:
     """Build natural clarification questions based on intent + missing entities."""
     if intent == "check_availability":
         if "vehicle_type" in missing:
@@ -338,12 +392,14 @@ def build_smart_clarification(
             missing_parts.append("thời gian kết thúc (hoặc số giờ)")
 
         if missing_parts:
-            return f"🚗 Để đặt chỗ, bạn cho tôi biết thêm: {', '.join(missing_parts)} nhé!"
+            return (
+                f"🚗 Để đặt chỗ, bạn cho tôi biết thêm: {', '.join(missing_parts)} nhé!"
+            )
         return "Bạn muốn đặt chỗ như thế nào?"
 
     if intent == "cancel_booking":
         if "booking_id" in missing:
-            return "🗑️ Bạn muốn hủy booking nào? Hãy cho tôi mã booking hoặc nói \"Xem booking của tôi\" để tôi liệt kê."
+            return '🗑️ Bạn muốn hủy booking nào? Hãy cho tôi mã booking hoặc nói "Xem booking của tôi" để tôi liệt kê.'
 
     if intent in ("check_in", "check_out"):
         if "booking_id" in missing:

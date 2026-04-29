@@ -25,10 +25,27 @@ async def lifespan(app: FastAPI):
     logger.info("AI Service starting up...")
     os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
     seed_default_devices()
-    # Pre-warm YOLO slot detector (loads model once into memory)
-    from app.engine.slot_detection import get_slot_detector
 
+    # Pre-warm tất cả model nặng ngay khi startup để request đầu tiên
+    # (check-in/check-out/scan-plate) không bị timeout 30s do lazy load.
+    from app.engine.slot_detection import get_slot_detector
     get_slot_detector()
+    logger.info("✓ YOLO slot detector warmed")
+
+    try:
+        from app.engine.plate_pipeline import get_plate_pipeline
+        get_plate_pipeline(model_path=settings.PLATE_MODEL_PATH)
+        logger.info("✓ Plate OCR pipeline warmed")
+    except Exception as e:
+        logger.warning("Plate pipeline warm failed: %s", e)
+
+    try:
+        from app.routers.detection import _get_pipeline
+        _get_pipeline()
+        logger.info("✓ Banknote pipeline warmed")
+    except Exception as e:
+        logger.warning("Banknote warm failed: %s", e)
+
     await start_camera_monitor()
     yield
     logger.info("AI Service shutting down...")

@@ -89,6 +89,11 @@ class CashPaymentRequest(BaseModel):
     camera_url: Optional[str] = Field(None, description="Cash slot camera URL")
     gate_id: str = Field(..., description="Gate identifier")
     request_id: Optional[str] = Field(None, description="Idempotency key")
+    # User-selected denomination (VND, e.g. 50000). Khi set → bỏ qua AI
+    # scan ảnh, cộng trực tiếp vào running total.
+    denomination: Optional[int] = Field(
+        None, description="User-selected denomination (VND); skips AI when set"
+    )
 
 
 # ── Response Schema ──────────────────────────────────────────────────────── #

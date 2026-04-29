@@ -67,7 +67,10 @@ export function RecentBookings() {
   useEffect(() => {
     const fetchRecentBookings = async () => {
       try {
-        const response = await bookingService.getHistory({ page: 1, pageSize: 5 });
+        const response = await bookingService.getHistory({
+          page: 1,
+          pageSize: 5,
+        });
         const mapped = (response.results || []).map((item) =>
           mapBookingResponse(item),
         );

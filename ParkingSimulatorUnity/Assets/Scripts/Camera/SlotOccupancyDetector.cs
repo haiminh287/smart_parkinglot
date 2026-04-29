@@ -358,7 +358,10 @@ namespace ParkingSim.Camera
             var configs = vcm.GetCameraConfigs();
             if (configs == null) yield break;
 
-            bool loggedOnce = false; // only log "not connected" once per detection cycle
+            if (ApiService.Instance == null) yield break;
+
+            int sent = 0;
+            int failed = 0;
 
             foreach (var cfg in configs)
             {
@@ -370,14 +373,18 @@ namespace ParkingSim.Camera
                 byte[] snapshot = streamer.SnapshotJpeg();
                 if (snapshot == null || snapshot.Length == 0) continue;
 
-                // TODO: Send to AI slot detection endpoint when available
-                if (!loggedOnce)
+                yield return ApiService.Instance.PostCameraFrame(cfg.cameraId, snapshot, ok =>
                 {
-                    loggedOnce = true;
-                    Debug.Log($"[SlotDetector/AI] AI snapshots captured (e.g. {cfg.cameraId} {snapshot.Length} bytes) — AI endpoint not yet connected");
-                }
+                    if (ok) sent++;
+                    else failed++;
+                });
 
                 yield return null; // spread across frames
+            }
+
+            if (sent > 0 || failed > 0)
+            {
+                Debug.Log($"[SlotDetector/AI] Frames sent: {sent} OK, {failed} failed");
             }
         }
 
@@ -449,8 +456,10 @@ namespace ParkingSim.Camera
                 {
                     if (hasEmissive) mat.SetColor("_EmissionColor", magenta * 2f);
                     yield return new WaitForSeconds(0.1f);
+                    if (slot == null) yield break;
                     if (hasEmissive) mat.SetColor("_EmissionColor", Color.black);
                     yield return new WaitForSeconds(0.1f);
+                    if (slot == null) yield break;
                 }
                 if (hasEmissive) mat.SetColor("_EmissionColor", Color.black);
             }
@@ -462,8 +471,10 @@ namespace ParkingSim.Camera
                 {
                     if (hasEmissive) mat.SetColor("_EmissionColor", flashColor * 2f);
                     yield return new WaitForSeconds(0.1f);
+                    if (slot == null) yield break;
                     if (hasEmissive) mat.SetColor("_EmissionColor", Color.black);
                     yield return new WaitForSeconds(0.23f);
+                    if (slot == null) yield break;
                 }
             }
             else if (newStatus == ParkingSlot.SlotStatus.Available)
@@ -474,8 +485,10 @@ namespace ParkingSim.Camera
                 {
                     if (hasEmissive) mat.SetColor("_EmissionColor", flashColor * 2f);
                     yield return new WaitForSeconds(0.1f);
+                    if (slot == null) yield break;
                     if (hasEmissive) mat.SetColor("_EmissionColor", Color.black);
                     yield return new WaitForSeconds(0.23f);
+                    if (slot == null) yield break;
                 }
             }
 

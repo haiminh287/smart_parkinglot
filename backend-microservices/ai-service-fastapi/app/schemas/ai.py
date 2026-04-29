@@ -59,14 +59,6 @@ class BanknoteRecognitionResponse(CamelModel):
     pipeline_version: str = "hybrid-mvp-v1"
 
 
-class TrainRequest(CamelModel):
-    train_dir: str = "./datasets/cash/train"
-    val_dir: str = "./datasets/cash/val"
-    epochs: int = 50
-    batch_size: int = 32
-    lr: float = 0.001
-
-
 class BanknoteTrainRequest(CamelModel):
     data_dir: str = "./cash_dataset"
     epochs_classifier: int = 100
@@ -111,7 +103,6 @@ class ModelVersionResponse(CamelModel):
 
 class MetricsResponse(CamelModel):
     license_plate: dict
-    cash_recognition: dict
     banknote_recognition: dict
 
 class SlotOccupancyResult(CamelModel):

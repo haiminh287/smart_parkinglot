@@ -8,9 +8,12 @@ import { bookingService } from "@/services/business";
 
 export type BookingStatus =
   | "pending" // Chờ thanh toán
-  | "confirmed" // Đã xác nhận
+  | "confirmed" // Đã xác nhận (not_checked_in)
+  | "parked" // Đang đậu (checked_in)
+  | "completed" // Hoàn thành (checked_out)
   | "cancelled" // Đã hủy
-  | "expired"; // Hết hạn
+  | "expired" // Hết hạn
+  | "no_show"; // Không đến đúng giờ
 
 export type CheckInStatus =
   | "not_checked_in"
@@ -155,6 +158,28 @@ export function mapBookingResponse(data: BookingApiResponse): Booking {
     }
   }
 
+  // Backend không trả field `bookingStatus` riêng — derive từ checkInStatus
+  // để FE filter "parked/completed/cancelled" hoạt động đúng.
+  const rawCheckIn = (data.checkInStatus || data.check_in_status || "not_checked_in") as string;
+  let derivedStatus: string;
+  switch (rawCheckIn) {
+    case "checked_in":
+      derivedStatus = "parked"; // đang đậu trong bãi
+      break;
+    case "checked_out":
+      derivedStatus = "completed";
+      break;
+    case "cancelled":
+      derivedStatus = "cancelled";
+      break;
+    case "no_show":
+      derivedStatus = "no_show";
+      break;
+    case "not_checked_in":
+    default:
+      derivedStatus = "confirmed";
+  }
+
   return {
     id: (data.id || data.booking_id || "") as string,
     userId: (data.userId || data.user_id || "") as string,
@@ -207,14 +232,12 @@ export function mapBookingResponse(data: BookingApiResponse): Booking {
     status: (data.bookingStatus ||
       data.booking_status ||
       data.status ||
-      "pending") as BookingStatus,
+      derivedStatus) as BookingStatus,
     bookingStatus: (data.bookingStatus ||
       data.booking_status ||
       data.status ||
-      "pending") as BookingStatus,
-    checkInStatus: (data.checkInStatus ||
-      data.check_in_status ||
-      "not_checked_in") as CheckInStatus,
+      derivedStatus) as BookingStatus,
+    checkInStatus: rawCheckIn as CheckInStatus,
     paymentStatus: (data.paymentStatus ||
       data.payment_status ||
       "pending") as PaymentStatus,

@@ -199,7 +199,22 @@ class IntentService:
 
 Các intent hợp lệ: greeting, goodbye, check_availability, book_slot, rebook_previous,
 cancel_booking, check_in, check_out, my_bookings, current_parking,
-pricing, help, feedback, handoff, unknown
+pricing, help, feedback, handoff, operating_hours, faq, unknown
+
+Intent "faq" dùng cho câu hỏi về:
+- Chính sách (hủy booking, hoàn tiền, no-show)
+- Thông tin bãi xe cụ thể (giờ mở, giá, loại xe hỗ trợ)
+- Quy định (grace period, late fee, điều khoản sử dụng)
+- Hướng dẫn (cách đăng ký, reset password, OCR biển số)
+- Xử lý sự cố (lỗi thanh toán, barrier không mở)
+Ví dụ faq:
+- "Chính sách hủy booking như thế nào?"
+- "Bãi Vincom có cho xe điện không?"
+- "Giờ mở cửa bãi Aeon?"
+- "Làm sao đăng ký tài khoản?"
+- "Xe bán tải có được vào không?"
+- "Có hỗ trợ tiền mặt không?"
+- "Hóa đơn VAT thế nào?"
 
 Tin nhắn: "{message}"
 """
@@ -430,6 +445,28 @@ Context: {json.dumps(context.get("lastEntities", {}), ensure_ascii=False)}
     def _keyword_classify(self, message: str) -> IntentClassification:
         """Fallback classification using keywords with word-boundary matching."""
         msg = self._normalize_vietnamese(message)
+
+        # FAQ detection first — policy/info questions must win over action keywords.
+        # VD "chính sách hủy booking có phí không?" có "hủy" nhưng là câu hỏi policy,
+        # không phải cancel_booking. Gate bằng strong FAQ marker + ending question.
+        faq_markers = [
+            "chính sách", "quy định", "điều khoản", "điều kiện",
+            "làm sao", "làm thế nào", "cách nào", "cách đăng ký", "cách reset",
+            "hỗ trợ xe", "có được vào", "có được đậu", "có cho",
+            "có hỗ trợ", "có nhận", "có chấp nhận",
+            "hóa đơn vat", "vat", "biển số", "ocr",
+            "phí trễ", "late fee", "grace period", "no-show",
+            "forgot password", "quên mật khẩu", "đổi mật khẩu",
+            # Location-specific queries → FAQ/RAG (not generic operating_hours/pricing)
+            "bãi vincom", "bãi aeon", "bãi saigon", "bãi lotte", "bãi parksmart",
+            "vincom center", "aeon mall", "saigon centre", "lotte mart", "parksmart tower",
+        ]
+        if any(marker in msg for marker in faq_markers):
+            return IntentClassification(
+                primary_intent="faq",
+                llm_confidence=0.85,
+                reasoning="keyword_faq_marker",
+            )
 
         # Order: specific intents first, generic greeting last
         mapping = [

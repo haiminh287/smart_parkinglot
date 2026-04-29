@@ -92,4 +92,3 @@ def booking(db, pricing):
         end_time=now + timezone.timedelta(hours=2),
         total_amount=Decimal("20000"),
     )
-    )

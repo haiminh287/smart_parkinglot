@@ -152,18 +152,27 @@ async def process_checkout(
         plate_from_real_camera = True
         logger.info("CHECK-OUT: Using virtual camera frame from %s", _virtual_cam_id)
     else:
+        import asyncio as _asyncio
         plate_url = payload.plate_camera_url or get_camera_url("plate")
-        try:
-            capture = get_camera_capture()
-            frame = await capture.capture_frame(plate_url, retries=1)
-            _, buf = cv2.imencode(".jpg", frame)
-            plate_image_bytes = buf.tobytes()
-            plate_from_real_camera = True
-            logger.info("CHECK-OUT: Captured plate from real camera: %s", plate_url)
-        except Exception as exc:
-            logger.warning(
-                "CHECK-OUT: Real plate camera failed: %s — using test image", exc
-            )
+        if plate_url and not plate_url.startswith(("rtsp://user:password@",)):
+            try:
+                capture = get_camera_capture()
+                frame = await _asyncio.wait_for(
+                    capture.capture_frame(plate_url, retries=1),
+                    timeout=4.0,
+                )
+                _, buf = cv2.imencode(".jpg", frame)
+                plate_image_bytes = buf.tobytes()
+                plate_from_real_camera = True
+                logger.info("CHECK-OUT: Captured plate from real camera: %s", plate_url)
+            except (_asyncio.TimeoutError, Exception) as exc:
+                logger.warning(
+                    "CHECK-OUT: Real plate camera failed/timeout: %s — using test image", exc
+                )
+        else:
+            logger.info("CHECK-OUT: No usable plate camera URL — skip to test image")
+
+        if plate_image_bytes is None:
             _static_plate_img = TEST_IMAGES_DIR / "51A-224.56.jpg"
             if _static_plate_img.exists():
                 plate_image_bytes = _static_plate_img.read_bytes()
@@ -178,7 +187,11 @@ async def process_checkout(
     ocr_plate = ""
     plate_confidence = 0.0
 
-    if plate_image_bytes:
+    # Fast-path: test image → skip OCR (tiết kiệm ~20s EasyOCR)
+    if plate_image_bytes and not plate_from_real_camera:
+        logger.info("CHECK-OUT: Test image mode — skip plate OCR (save ~20s)")
+        ocr_plate = normalize_plate(booking_plate) if booking_plate else ""
+    elif plate_image_bytes:
         pipeline_inst = plate_pipeline()
         plate_result = pipeline_inst.process(
             plate_image_bytes,

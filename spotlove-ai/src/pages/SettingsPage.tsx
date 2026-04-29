@@ -20,7 +20,11 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/contexts/use-theme";
-import { vehicleService, notificationService, authService } from "@/services/business";
+import {
+  vehicleService,
+  notificationService,
+  authService,
+} from "@/services/business";
 import { useAuth } from "@/contexts/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { AddVehicleDialog } from "@/components/settings/AddVehicleDialog";

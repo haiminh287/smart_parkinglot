@@ -423,7 +423,9 @@ export const bookingService = {
    * Create booking (raw API call)
    * For use by Redux async thunks
    */
-  async createBookingRaw(data: CreateBookingRequest): Promise<CreateBookingResponse> {
+  async createBookingRaw(
+    data: CreateBookingRequest,
+  ): Promise<CreateBookingResponse> {
     return bookingApi.createBooking(data);
   },
 

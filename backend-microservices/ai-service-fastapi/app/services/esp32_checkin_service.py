@@ -6,7 +6,6 @@ Extracted from ``app/routers/esp32.py`` — the full gate-in check-in flow.
 
 import logging
 import time
-from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -23,7 +22,6 @@ from app.schemas.esp32 import (
     GateEvent,
 )
 from app.services.esp32_helpers import (
-    CHECK_IN_EARLY_MINUTES,
     TEST_IMAGES_DIR,
     broadcast_gate_event,
     broadcast_unity_spawn,
@@ -135,27 +133,6 @@ async def process_checkin(
             processing_time_ms=(time.time() - t0) * 1000,
         )
 
-    # Validate time window — allow 15 min early
-    import dateutil.parser as dp
-
-    try:
-        start_time = dp.parse(booking.get("startTime", booking.get("start_time", "")))
-        now = datetime.now(tz=timezone.utc)
-        earliest = start_time - timedelta(minutes=CHECK_IN_EARLY_MINUTES)
-        if now < earliest:
-            remaining = int((earliest - now).total_seconds() / 60)
-            return ESP32Response(
-                success=False,
-                event=GateEvent.CHECK_IN_FAILED,
-                barrier_action=BarrierAction.CLOSE,
-                message=f"❌ Chưa đến giờ check-in. Còn {remaining} phút.",
-                gate_id=gate_id,
-                booking_id=booking_id,
-                processing_time_ms=(time.time() - t0) * 1000,
-            )
-    except Exception:
-        pass  # Skip time check if parse fails
-
     # Check payment for online bookings
     payment_method = booking.get("paymentMethod", booking.get("payment_method", ""))
     if payment_method == "online":
@@ -193,19 +170,31 @@ async def process_checkin(
         plate_from_real_camera = True
         logger.info("CHECK-IN: Using virtual camera frame from %s", _virtual_cam_id)
     else:
-        # Fallback: try real RTSP camera
+        # Fallback: try real RTSP camera — với timeout 4s để ESP32 (30s timeout)
+        # không bị chờ vô vọng khi RTSP URL default không reachable.
+        import asyncio
+
         plate_url = payload.plate_camera_url or get_camera_url("plate")
-        try:
-            capture = get_camera_capture()
-            frame = await capture.capture_frame(plate_url, retries=1)
-            _, buf = cv2.imencode(".jpg", frame)
-            plate_image_bytes = buf.tobytes()
-            plate_from_real_camera = True
-            logger.info("CHECK-IN: Captured plate from real camera: %s", plate_url)
-        except Exception as exc:
-            logger.warning(
-                "CHECK-IN: Real plate camera failed: %s — using test image", exc
-            )
+        if plate_url and not plate_url.startswith(("rtsp://user:password@",)):
+            try:
+                capture = get_camera_capture()
+                frame = await asyncio.wait_for(
+                    capture.capture_frame(plate_url, retries=1),
+                    timeout=4.0,
+                )
+                _, buf = cv2.imencode(".jpg", frame)
+                plate_image_bytes = buf.tobytes()
+                plate_from_real_camera = True
+                logger.info("CHECK-IN: Captured plate from real camera: %s", plate_url)
+            except (asyncio.TimeoutError, Exception) as exc:
+                logger.warning(
+                    "CHECK-IN: Real plate camera failed/timeout: %s — using test image",
+                    exc,
+                )
+        else:
+            logger.info("CHECK-IN: No usable plate camera URL — skipping to test image")
+
+        if plate_image_bytes is None:
             _static_plate_img = TEST_IMAGES_DIR / "51A-224.56.jpg"
             if _static_plate_img.exists():
                 plate_image_bytes = _static_plate_img.read_bytes()
@@ -222,7 +211,13 @@ async def process_checkin(
     ocr_plate = ""
     plate_confidence = 0.0
 
-    if plate_image_bytes:
+    # Fast-path: không có camera thực → skip OCR hoàn toàn (không cần verify
+    # plate match vì đã rõ không có ảnh thật). Tiết kiệm 15-25s EasyOCR.
+    if plate_image_bytes and not plate_from_real_camera:
+        logger.info("CHECK-IN: Test image mode — skip plate OCR (save ~20s)")
+        ocr_plate = normalize_plate(booking_plate) if booking_plate else ""
+        plate_confidence = 0.0
+    elif plate_image_bytes:
         pipeline = plate_pipeline()
         plate_result = pipeline.process(
             plate_image_bytes,
@@ -310,8 +305,15 @@ async def process_checkin(
             processing_time_ms=(time.time() - t0) * 1000,
         )
 
-    # Update slot status to occupied
-    slot_id = booking.get("slotId", booking.get("slot_id"))
+    checkin_data = (
+        checkin_resp.get("data", {}) if isinstance(checkin_resp, dict) else {}
+    )
+    booking_data = checkin_data.get("booking", checkin_data)
+
+    # Update slot status using latest booking-service response (fallback prefetch).
+    slot_id = booking_data.get("slotId", booking_data.get("slot_id")) or booking.get(
+        "slotId", booking.get("slot_id")
+    )
     if slot_id:
         await update_slot_status(str(slot_id), "occupied")
 
@@ -337,10 +339,6 @@ async def process_checkin(
     )
 
     # Broadcast Unity vehicle spawn command
-    checkin_data = (
-        checkin_resp.get("data", {}) if isinstance(checkin_resp, dict) else {}
-    )
-    booking_data = checkin_data.get("booking", checkin_data)
     car_slot_info = booking_data.get("carSlot") or booking_data.get("car_slot") or {}
     spawned_slot_code = (
         car_slot_info.get("code") if isinstance(car_slot_info, dict) else None

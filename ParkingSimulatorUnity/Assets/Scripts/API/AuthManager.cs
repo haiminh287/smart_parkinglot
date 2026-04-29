@@ -119,7 +119,7 @@ namespace ParkingSim.API
                 // Take the name=value part before any attributes
                 string nameValue = trimmed.Split(';')[0].Trim();
 
-                if (nameValue.StartsWith("sessionid=", StringComparison.OrdinalIgnoreCase))
+                if (nameValue.StartsWith("session_id=", StringComparison.OrdinalIgnoreCase))
                 {
                     sessionCookie = nameValue;
                 }

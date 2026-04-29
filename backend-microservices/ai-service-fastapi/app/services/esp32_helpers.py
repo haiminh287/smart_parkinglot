@@ -167,13 +167,27 @@ async def get_booking_by_slot(slot_id: str) -> Optional[dict]:
 
 
 async def update_slot_status(slot_id: str, new_status: str) -> bool:
-    """Update slot status in parking-service."""
+    """Update slot status in parking-service.
+
+    Parking-service's IsGatewayAuthenticated permission yêu cầu cả X-User-ID,
+    nếu không sẽ 403 silent fail (slot không đổi status).
+    """
     url = f"{PARKING_SERVICE_URL}/parking/slots/{slot_id}/update-status/"
-    headers = {"X-Gateway-Secret": GATEWAY_SECRET, "Content-Type": "application/json"}
+    headers = {
+        "X-Gateway-Secret": GATEWAY_SECRET,
+        "X-User-ID": "system",
+        "Content-Type": "application/json",
+    }
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:
             resp = await client.patch(url, headers=headers, json={"status": new_status})
-            return resp.status_code in (200, 204)
+            if resp.status_code not in (200, 204):
+                logger.warning(
+                    "update_slot_status %s → HTTP %s: %s",
+                    slot_id, resp.status_code, resp.text[:200],
+                )
+                return False
+            return True
         except Exception as exc:
             logger.warning("Failed to update slot status: %s", exc)
     return False
@@ -452,22 +466,37 @@ def log_prediction(
 async def check_payment_status(booking: dict) -> bool:
     """Check if booking payment is completed.
 
-    Args:
-        booking: Booking data dict from booking-service.
-
-    Returns:
-        True if payment is completed or payment method is on_exit.
+    - `online` payment: booking.payment_status phải là completed/paid
+    - `on_exit` (cash tại cổng): phải có cash session đã collect đủ tiền
+      (user bấm xác nhận trên popup MoMo/cash)
     """
     payment_status = booking.get(
         "paymentStatus", booking.get("payment_status", "pending")
     )
-    payment_method = booking.get(
-        "paymentMethod", booking.get("payment_method", "online")
+    payment_method = (
+        booking.get("paymentType")
+        or booking.get("paymentMethod")
+        or booking.get("payment_method")
+        or "online"
     )
 
-    # On-exit payment is verified at checkout time
-    if payment_method == "on_exit":
+    # Nếu booking đã đánh dấu paid (cash-payment endpoint cập nhật trước đó)
+    if payment_status in ("completed", "paid", "success", "done"):
         return True
 
-    return payment_status == "completed"
+    if payment_method == "on_exit":
+        # Check cash session — phải có collect đủ amount trước khi mở cổng
+        try:
+            from app.engine.cash_session import get_cash_session_manager
+            booking_id = booking.get("id") or booking.get("bookingId")
+            amount_due = float(booking.get("price", 0))
+            if booking_id and amount_due > 0:
+                session_mgr = get_cash_session_manager()
+                collected = session_mgr.get_total(booking_id)
+                return collected >= amount_due
+        except Exception:
+            logger.exception("cash session check failed")
+        return False
+
+    return False
     return payment_status == "completed"

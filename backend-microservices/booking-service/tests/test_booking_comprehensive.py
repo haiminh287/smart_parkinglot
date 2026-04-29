@@ -8,9 +8,12 @@ import os
 import uuid
 from datetime import timedelta
 from decimal import Decimal
+from unittest.mock import patch
 
 import pytest
-from bookings.models import Booking, PackagePricing
+from bookings import services
+from bookings import views_lifecycle
+from bookings.models import Booking, OutboxEvent, PackagePricing
 from django.test import TestCase
 from django.utils import timezone
 from rest_framework import status
@@ -168,7 +171,9 @@ class TestBookingCRUD(TestCase):
         data = response.json()
         results = data if isinstance(data, list) else data.get("results", data)
         booking_ids = [b["id"] for b in results] if isinstance(results, list) else []
-        assert str(our_booking.id) in booking_ids or len(results) >= 0
+        assert isinstance(results, list)
+        assert str(our_booking.id) in booking_ids
+        assert str(other_booking.id) not in booking_ids
 
     def test_create_booking(self):
         response = self.client.post(
@@ -240,6 +245,77 @@ class TestCheckIn(TestCase):
         )
         response = self.client.post(f"/bookings/{booking.id}/checkin/")
         assert response.status_code == 400
+
+    def test_checkin_returns_409_when_reallocation_plan_fails(self):
+        booking = create_booking(
+            user_id=self.user_id,
+            check_in_status="not_checked_in",
+            payment_status="completed",
+        )
+        with patch.object(
+            views_lifecycle.services,
+            "build_checkin_reallocation_plan",
+            return_value={"ok": False, "error": "No slot available"},
+        ):
+            response = self.client.post(f"/bookings/{booking.id}/checkin/")
+
+        assert response.status_code == 409
+        assert response.json()["error"] == "No slot available"
+
+
+@pytest.mark.django_db
+def test_should_return_conflict_when_slot_lock_retries_exhausted(monkeypatch):
+    booking = create_booking(
+        check_in_status="not_checked_in",
+        payment_status="completed",
+    )
+    now = timezone.now()
+    checkin_plan = {
+        "arrival_time": now,
+        "start_time": now,
+        "end_time": now + timedelta(hours=2),
+        "hourly_start": now,
+        "hourly_end": now + timedelta(hours=2),
+        "slot_id": booking.slot_id,
+        "slot_code": booking.slot_code,
+    }
+
+    plan_calls = {"count": 0}
+
+    def fixed_plan(_booking: Booking):
+        plan_calls["count"] += 1
+        return {"ok": True, "plan": checkin_plan}
+
+    monkeypatch.setattr(services, "build_checkin_reallocation_plan", fixed_plan)
+
+    attempts = {"count": 0}
+
+    class AlwaysFailLock:
+        def __enter__(self):
+            attempts["count"] += 1
+            raise RuntimeError("Unable to acquire slot lock")
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            return False
+
+    monkeypatch.setattr(
+        services,
+        "_acquire_slot_assignment_lock",
+        lambda _slot_id: AlwaysFailLock(),
+    )
+
+    result = services.perform_checkin_with_reallocation(booking)
+
+    assert result["ok"] is False
+    assert result["status_code"] == 409
+    assert "concurrent revalidation" in result["error"]
+    assert attempts["count"] == services.CHECKIN_REALLOCATION_RETRIES
+    assert plan_calls["count"] == services.CHECKIN_REALLOCATION_RETRIES
+
+    booking.refresh_from_db()
+    assert booking.check_in_status == "not_checked_in"
+    assert booking.checked_in_at is None
+    assert OutboxEvent.objects.count() == 0
 
 
 # ═══════════════════════════════════════════════════

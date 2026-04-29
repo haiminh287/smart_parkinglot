@@ -90,7 +90,11 @@ export const parkingService = {
     lng: number;
     vehicleType?: "Car" | "Motorbike";
     limit?: number;
-  }): Promise<DjangoPaginatedResponse<ParkingLot & { distance?: number; availableSlots?: number }>> {
+  }): Promise<
+    DjangoPaginatedResponse<
+      ParkingLot & { distance?: number; availableSlots?: number }
+    >
+  > {
     return parkingApi.getNearestLots(params);
   },
 

@@ -24,6 +24,8 @@ namespace ParkingSim.Core.Flow
         private readonly BarrierController _exitBarrier;
         private readonly MonoBehaviour _coroutineHost;
 
+        private bool CanStartCoroutine => _coroutineHost != null && _coroutineHost.gameObject.activeInHierarchy;
+
         // === State ===
         private readonly List<VehicleController> _vehiclesWaitingAtGate = new List<VehicleController>();
 
@@ -71,7 +73,7 @@ namespace ParkingSim.Core.Flow
         {
             if (vehicle.alreadyCheckedIn)
             {
-                _coroutineHost.StartCoroutine(CheckInWithANPR(vehicle));
+                if (CanStartCoroutine) _coroutineHost.StartCoroutine(CheckInWithANPR(vehicle));
                 return;
             }
             _vehiclesWaitingAtGate.Add(vehicle);
@@ -94,7 +96,7 @@ namespace ParkingSim.Core.Flow
             }
 
             _vehiclesWaitingAtGate.Remove(vehicle);
-            _coroutineHost.StartCoroutine(CheckInWithANPR(vehicle));
+            if (CanStartCoroutine) _coroutineHost.StartCoroutine(CheckInWithANPR(vehicle));
             return true;
         }
 
@@ -103,12 +105,12 @@ namespace ParkingSim.Core.Flow
         {
             if (_config.useMockData)
             {
-                _coroutineHost.StartCoroutine(_exitBarrier.OpenThenClose(3f));
+                if (CanStartCoroutine) _coroutineHost.StartCoroutine(_exitBarrier.OpenThenClose(3f));
                 vehicle.ProceedFromExit();
             }
             else
             {
-                _coroutineHost.StartCoroutine(ESP32CheckOutFlow(vehicle));
+                if (CanStartCoroutine) _coroutineHost.StartCoroutine(ESP32CheckOutFlow(vehicle));
             }
         }
 
@@ -133,8 +135,9 @@ namespace ParkingSim.Core.Flow
 
             if (match)
             {
+                var shortId = string.IsNullOrEmpty(vehicle.bookingId) ? "none" : vehicle.bookingId.Substring(0, Math.Min(8, vehicle.bookingId.Length));
                 Debug.Log($"[GateFlowController] ✅ SLOT VERIFIED: {vehicle.plateNumber} at {actualSlot} " +
-                          $"(matches booking {vehicle.bookingId.Substring(0, Math.Min(8, vehicle.bookingId.Length))})");
+                          $"(matches booking {shortId})");
             }
             else
             {
@@ -142,7 +145,7 @@ namespace ParkingSim.Core.Flow
             }
 
             if (!_config.useMockData)
-                _coroutineHost.StartCoroutine(VerifySlotFlow(vehicle, actualSlot, booking));
+                if (CanStartCoroutine) _coroutineHost.StartCoroutine(VerifySlotFlow(vehicle, actualSlot, booking));
         }
 
         /// <summary>Parse WS check-in success data for spawning. Called from ParkingManager.</summary>
@@ -188,8 +191,9 @@ namespace ParkingSim.Core.Flow
                 {
                     bool anprDone = false;
                     ApiResponse<PlateScanResult> scanResult = null;
-                    _coroutineHost.StartCoroutine(_apiService.AIRecognizePlate(snapshot,
-                        r => { scanResult = r; anprDone = true; }));
+                    if (CanStartCoroutine)
+                        _coroutineHost.StartCoroutine(_apiService.AIRecognizePlate(snapshot,
+                            r => { scanResult = r; anprDone = true; }));
 
                     yield return CoroutineHelpers.WaitUntilOrTimeout(
                         () => anprDone, 5f, null, "ANPR");
@@ -216,7 +220,7 @@ namespace ParkingSim.Core.Flow
             bool shouldOpen = plateMatch || string.IsNullOrEmpty(detectedPlate);
             if (shouldOpen)
             {
-                _coroutineHost.StartCoroutine(_entryBarrier.OpenThenClose(3f));
+                if (CanStartCoroutine) _coroutineHost.StartCoroutine(_entryBarrier.OpenThenClose(3f));
                 vehicle.ProceedFromGate();
                 Debug.Log($"[GateFlowController] ✅ Gate opened for {vehicle.plateNumber}" +
                           (plateMatch ? " (ANPR verified)" : " (ANPR unverified)"));
@@ -237,8 +241,9 @@ namespace ParkingSim.Core.Flow
                 GateId = MockIds.GATE_OUT,
                 QrData = vehicle.qrData
             };
-            _coroutineHost.StartCoroutine(_apiService.ESP32CheckOut(request,
-                r => { result = r; done = true; }));
+            if (CanStartCoroutine)
+                _coroutineHost.StartCoroutine(_apiService.ESP32CheckOut(request,
+                    r => { result = r; done = true; }));
 
             yield return CoroutineHelpers.WaitUntilOrTimeout(
                 () => done, 10f, null, "ESP32CheckOut");
@@ -252,7 +257,7 @@ namespace ParkingSim.Core.Flow
             if (result?.IsSuccess == true && result.Data?.Success == true)
             {
                 Debug.Log($"[GateFlowController] Check-out OK: {vehicle.plateNumber}");
-                _coroutineHost.StartCoroutine(_exitBarrier.OpenThenClose(3f));
+                if (CanStartCoroutine) _coroutineHost.StartCoroutine(_exitBarrier.OpenThenClose(3f));
                 yield return new WaitForSeconds(1f);
                 vehicle.ProceedFromExit();
                 OnVehicleCheckedOut?.Invoke(vehicle);
@@ -283,8 +288,9 @@ namespace ParkingSim.Core.Flow
                 GateId = MockIds.GATE_IN,
                 QrData = qrData
             };
-            _coroutineHost.StartCoroutine(_apiService.ESP32VerifySlot(request,
-                r => { result = r; done = true; }));
+            if (CanStartCoroutine)
+                _coroutineHost.StartCoroutine(_apiService.ESP32VerifySlot(request,
+                    r => { result = r; done = true; }));
 
             yield return CoroutineHelpers.WaitUntilOrTimeout(
                 () => done, 10f, null, "VerifySlot");

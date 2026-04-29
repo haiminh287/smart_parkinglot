@@ -90,7 +90,9 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => {
     const cfg = response.config;
-    const duration = cfg.metadata?.startTime ? Date.now() - cfg.metadata.startTime : 0;
+    const duration = cfg.metadata?.startTime
+      ? Date.now() - cfg.metadata.startTime
+      : 0;
     webLogger.apiRes(
       cfg.method ?? "GET",
       cfg.url ?? "",
@@ -102,7 +104,9 @@ apiClient.interceptors.response.use(
   },
   async (error: AxiosError) => {
     const cfg = error.config ?? ({} as InternalAxiosRequestConfig);
-    const duration = cfg.metadata?.startTime ? Date.now() - cfg.metadata.startTime : 0;
+    const duration = cfg.metadata?.startTime
+      ? Date.now() - cfg.metadata.startTime
+      : 0;
 
     if (error.response) {
       webLogger.apiErr(

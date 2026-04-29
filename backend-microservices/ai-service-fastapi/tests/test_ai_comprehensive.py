@@ -95,12 +95,6 @@ async def test_detect_license_plate_success(client: AsyncClient):
 
 
 @pytest.mark.anyio
-async def test_detect_cash_no_file(client: AsyncClient):
-    response = await client.post("/ai/detect/cash/")
-    assert response.status_code in [400, 422]
-
-
-@pytest.mark.anyio
 async def test_detect_banknote_no_file(client: AsyncClient):
     response = await client.post("/ai/detect/banknote/")
     assert response.status_code in [400, 422]

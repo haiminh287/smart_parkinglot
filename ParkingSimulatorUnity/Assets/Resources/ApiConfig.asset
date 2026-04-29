@@ -16,7 +16,8 @@ MonoBehaviour:
   aiServiceUrl: http://localhost:8009
   realtimeWsUrl: ws://localhost:8006/ws/parking
   gatewaySecret: gw-prod-wnMbXWEHc49KXVjhae4IGU7TZfoj4HHEDTOtzYvE
-  testEmail: chattest@parksmart.com
+  esp32DeviceToken: esp32-device-secret-token-local
+  testEmail: testdriver@parksmart.com
   testPassword: Test@1234
   lightPollInterval: 2
   deltaPollInterval: 5

@@ -104,7 +104,9 @@ class BookingWizard:
         # Floor matched — execute zone selection step
         floor_id = str(matched_floor.get("id", ""))
         action_result = await self.action_svc.book_slot_select_floor(
-            user_id, wizard, floor_id,
+            user_id,
+            wizard,
+            floor_id,
         )
 
         if action_result.get("status") == "error":
@@ -128,7 +130,7 @@ class BookingWizard:
             name = zone.get("name", f"Zone {i}")
             avail = zone.get("availableSlots", 0)
             text += f"**{i}. {name}** — {avail} chỗ trống\n"
-        text += "\n💡 Hãy chọn khu vực (ví dụ: \"Zone A\" hoặc \"1\")"
+        text += '\n💡 Hãy chọn khu vực (ví dụ: "Zone A" hoặc "1")'
 
         # Update wizard state
         new_wizard = {
@@ -179,7 +181,9 @@ class BookingWizard:
         # Zone matched — create booking immediately
         zone_id = str(matched_zone.get("id", ""))
         result = await self.action_svc.book_slot_select_zone(
-            user_id, wizard, zone_id,
+            user_id,
+            wizard,
+            zone_id,
         )
 
         if result.get("status") == "error":
@@ -240,7 +244,7 @@ class BookingWizard:
                 return floor
 
             # "tầng X" where X matches level
-            match = re.search(r'tầng\s*(-?\d+)', normalized)
+            match = re.search(r"tầng\s*(-?\d+)", normalized)
             if match and int(match.group(1)) == level:
                 return floor
 
@@ -284,7 +288,7 @@ class BookingWizard:
                 return zone
 
             # "zone X" pattern
-            match = re.search(r'zone\s+(\w+)', normalized)
+            match = re.search(r"zone\s+(\w+)", normalized)
             if match and f"zone {match.group(1)}" == name:
                 return zone
 
@@ -309,13 +313,42 @@ class BookingWizard:
         """
         msg = message.strip().lower()
         yes_words = [
-            "xác nhận", "xac nhan", "đồng ý", "dong y", "ok", "có", "co",
-            "yes", "ừ", "uh", "đúng", "dung", "confirm", "chắc chắn",
-            "chac chan", "được", "duoc", "oke", "yep", "yeah",
+            "xác nhận",
+            "xac nhan",
+            "đồng ý",
+            "dong y",
+            "ok",
+            "có",
+            "co",
+            "yes",
+            "ừ",
+            "uh",
+            "đúng",
+            "dung",
+            "confirm",
+            "chắc chắn",
+            "chac chan",
+            "được",
+            "duoc",
+            "oke",
+            "yep",
+            "yeah",
         ]
         no_words = [
-            "hủy", "huy", "hủy bỏ", "huy bo", "không", "khong", "no",
-            "cancel", "thôi", "thoi", "bỏ", "bo", "dừng", "dung lai",
+            "hủy",
+            "huy",
+            "hủy bỏ",
+            "huy bo",
+            "không",
+            "khong",
+            "no",
+            "cancel",
+            "thôi",
+            "thoi",
+            "bỏ",
+            "bo",
+            "dừng",
+            "dung lai",
         ]
 
         for word in yes_words:

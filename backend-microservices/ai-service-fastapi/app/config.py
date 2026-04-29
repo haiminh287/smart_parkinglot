@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     BOOKING_SERVICE_URL: str = "http://booking-service:8000"
     REALTIME_SERVICE_URL: str = "http://realtime-service-go:8006"
     PLATE_MODEL_PATH: str = "/app/app/models/license-plate-finetune-v1m.pt"
+    BANKNOTE_MODEL_PATH: str = ""
     YOLO_PARKING_MODEL_PATH: str = "/app/ml/models/yolo11n.pt"
     YOLO_PARKING_IOU_THRESHOLD: float = 0.15
     YOLO_PARKING_CONF_THRESHOLD: float = 0.25

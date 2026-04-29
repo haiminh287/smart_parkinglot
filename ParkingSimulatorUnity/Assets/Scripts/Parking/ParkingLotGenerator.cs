@@ -335,30 +335,34 @@ namespace ParkingSim.Parking
             // Shared divider lines: only left side + top/bottom per slot
             // Adjacent slots share borders (left of slot N+1 = right of slot N)
             float hw = slotWidth * 0.5f, hd = slotDepth * 0.5f;
-            float bW = 0.08f;   // thin line width
-            float bH = 0.02f;   // flat
-            float yOff = bH * 0.5f + 0.005f;
+            float bW = 0.18f;   // dày hơn để camera overview bắt được >=5px/viền
+            float bH = 0.03f;
+            float yOff = bH * 0.5f + 0.01f;   // nâng nhẹ để không bị Z-fight với sàn
 
             // West divider (every slot gets its left edge)
-            CreateCube(slotGo.transform, "Divider_W",
+            var dW = CreateCube(slotGo.transform, "Divider_W",
                 pos + new Vector3(-hw, yOff, 0f),
                 new Vector3(bW, bH, slotDepth), OrangeLineColor);
+            SetFlatOrange(dW, OrangeLineColor);
 
             // If last slot in row, also draw East edge
             if (isLastInRow)
             {
-                CreateCube(slotGo.transform, "Divider_E",
+                var dE = CreateCube(slotGo.transform, "Divider_E",
                     pos + new Vector3(hw, yOff, 0f),
                     new Vector3(bW, bH, slotDepth), OrangeLineColor);
+                SetFlatOrange(dE, OrangeLineColor);
             }
 
             // North/South horizontal cap lines
-            CreateCube(slotGo.transform, "Cap_N",
+            var cN = CreateCube(slotGo.transform, "Cap_N",
                 pos + new Vector3(0f, yOff, hd),
                 new Vector3(slotWidth, bH, bW), OrangeLineColor);
-            CreateCube(slotGo.transform, "Cap_S",
+            SetFlatOrange(cN, OrangeLineColor);
+            var cS = CreateCube(slotGo.transform, "Cap_S",
                 pos + new Vector3(0f, yOff, -hd),
                 new Vector3(slotWidth, bH, bW), OrangeLineColor);
+            SetFlatOrange(cS, OrangeLineColor);
 
             // Barrier ở phía cổng aisle (entrance side). Slot entrance waypoint đặt tại
             // pos.z + (pos.z < 0 ? +hd+1 : -hd-1) → slots z<0 vào từ NORTH, slots z>0 vào từ SOUTH.
@@ -998,6 +1002,31 @@ namespace ParkingSim.Parking
             var mat = r.material;
             if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", color);
             else mat.color = color;
+        }
+
+        private static Material _unlitOrangeShared;
+
+        /// <summary>
+        /// Gán material Unlit (không bị lighting/shadow ảnh hưởng) cho
+        /// divider slot — đảm bảo tất cả viền cam trên camera overview có
+        /// màu đồng nhất cho AI detection.
+        /// </summary>
+        private static void SetFlatOrange(GameObject go, Color color)
+        {
+            var r = go.GetComponent<Renderer>();
+            if (r == null) return;
+            if (_unlitOrangeShared == null)
+            {
+                var shader = Shader.Find("Universal Render Pipeline/Unlit")
+                             ?? Shader.Find("Unlit/Color")
+                             ?? Shader.Find("Standard");
+                _unlitOrangeShared = new Material(shader);
+                if (_unlitOrangeShared.HasProperty("_BaseColor"))
+                    _unlitOrangeShared.SetColor("_BaseColor", color);
+                else
+                    _unlitOrangeShared.color = color;
+            }
+            r.sharedMaterial = _unlitOrangeShared;
         }
 
         private static void SetEmissiveColor(GameObject go, Color baseColor, Color emissiveColor, float intensity = 2f)

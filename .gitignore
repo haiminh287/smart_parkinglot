@@ -55,6 +55,36 @@ dist-ssr/
 *.tflite
 *.pb
 
+# === AI Datasets / training images (quá lớn cho git) ===
+**/ml/datasets/
+**/ml/models/split/
+**/ml/models/split_v2/
+**/banknote_v1/
+**/banknote_v2/
+**/cash_dataset/
+**/input_banknotes_video/
+
+# === Video / Audio media ===
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.wmv
+
+# === Debug / temp images ở root ai-service ===
+backend-microservices/ai-service-fastapi/debug_*.jpg
+backend-microservices/ai-service-fastapi/debug_*.png
+backend-microservices/ai-service-fastapi/temp_*.jpg
+backend-microservices/ai-service-fastapi/temp_*.png
+
+# === Test session artifacts ===
+backend-microservices/ai-service-fastapi/test_session_*/
+
+# === Runtime debug dumps / overview snapshots ===
+*.stackdump
+current_*.jpg
+current_*.png
+
 # === Logs ===
 *.log
 logs/

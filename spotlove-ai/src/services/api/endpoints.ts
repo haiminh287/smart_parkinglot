@@ -135,5 +135,4 @@ export const ENDPOINTS = {
     ESP32_VERIFY_SLOT: "/ai/parking/esp32/verify-slot/",
     ESP32_CASH_PAYMENT: "/ai/parking/esp32/cash-payment/",
   },
-
 } as const;

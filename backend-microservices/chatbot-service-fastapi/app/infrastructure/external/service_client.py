@@ -318,15 +318,23 @@ class ServiceClient:
         self,
         vehicle_type: Optional[str] = None,
         lot_id: Optional[str] = None,
+        user_id: Optional[str] = None,
     ) -> dict:
-        """Get available parking slots."""
-        params: dict[str, Any] = {"status": "available"}
+        """Get available parking slots.
+
+        user_id cần để parking-service's IsGatewayAuthenticated permission
+        pass (middleware set request.user_id từ X-User-ID header).
+        """
+        params: dict[str, Any] = {"status": "available", "limit": 500}
         if vehicle_type:
             params["vehicle_type"] = vehicle_type
         if lot_id:
-            params["lotId"] = lot_id
+            # Parking-service dùng snake_case query param (lot_id), không phải lotId
+            params["lot_id"] = lot_id
 
-        result = await self._get(self.parking_url, "/parking/slots/", params=params)
+        result = await self._get(
+            self.parking_url, "/parking/slots/", params=params, user_id=user_id,
+        )
         slots = result if isinstance(result, list) else result.get("results", result.get("slots", []))
         return {"status": "ok", "slots": slots, "totalAvailable": len(slots)}
 

@@ -18,6 +18,7 @@ namespace ParkingSim.UI
 
         private VehicleQueue vehicleQueue;
         private CameraMonitorUI cameraMonitorUI;
+        private ParkingLotGenerator cachedGenerator;
 
         private Rect windowRect;
         private bool showDashboard = true;
@@ -45,6 +46,7 @@ namespace ParkingSim.UI
 
             vehicleQueue = FindObjectOfType<VehicleQueue>();
             cameraMonitorUI = FindObjectOfType<CameraMonitorUI>();
+            cachedGenerator = FindObjectOfType<ParkingLotGenerator>();
 
             eventLogPanel = new EventLogPanel();
             statsPanel = new StatsPanel();
@@ -69,6 +71,7 @@ namespace ParkingSim.UI
 
         private void Update()
         {
+            if (statsPanel == null) return;
             statsPanel.Update(Time.deltaTime, Time.unscaledDeltaTime, parkingManager);
         }
 
@@ -98,12 +101,13 @@ namespace ParkingSim.UI
             };
             sectionStyle.normal.textColor = new Color(0.6f, 0.7f, 0.85f);
 
-            eventLogPanel.EnsureStyles();
-            statsPanel.EnsureStyles();
+            eventLogPanel?.EnsureStyles();
+            statsPanel?.EnsureStyles();
         }
 
         private void OnGUI()
         {
+            if (statsPanel == null || eventLogPanel == null) return;
             EnsureStyles();
 
             var btnStyle = new GUIStyle(GUI.skin.button) { fontSize = 12, fontStyle = FontStyle.Bold };
@@ -203,9 +207,14 @@ namespace ParkingSim.UI
 
         private int GetFloorCount()
         {
-            var gen = floorManager.GetComponentInParent<ParkingLotGenerator>();
-            if (gen == null) gen = FindObjectOfType<ParkingLotGenerator>();
-            return gen != null ? gen.numberOfFloors : 2;
+            if (cachedGenerator == null)
+            {
+                if (floorManager != null)
+                    cachedGenerator = floorManager.GetComponentInParent<ParkingLotGenerator>();
+                if (cachedGenerator == null)
+                    cachedGenerator = FindObjectOfType<ParkingLotGenerator>();
+            }
+            return cachedGenerator != null ? cachedGenerator.numberOfFloors : 2;
         }
 
         private void DrawControlsRow()

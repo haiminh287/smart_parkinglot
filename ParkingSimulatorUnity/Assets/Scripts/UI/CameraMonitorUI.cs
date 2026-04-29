@@ -198,6 +198,7 @@ namespace ParkingSim.UI
             string bookingId = System.Guid.NewGuid().ToString();
             string qrData = $"{{\"booking_id\":\"{bookingId}\",\"user_id\":\"demo-user\"}}";
 
+            if (ParkingManager.Instance == null) { isDemoRunning = false; yield break; }
             ParkingManager.Instance.SpawnVehicle(plate, bookingId, qrData, "A-01", "Car");
             yield return new WaitForSeconds(1f);
 

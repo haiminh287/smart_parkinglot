@@ -243,7 +243,11 @@ export const authService = {
    * For use by Redux async thunks
    * Note: Uses auth/me endpoint directly since no dedicated profile endpoint exists
    */
-  async updateProfileRaw(data: { username?: string; phone?: string; address?: string }) {
+  async updateProfileRaw(data: {
+    username?: string;
+    phone?: string;
+    address?: string;
+  }) {
     // Import apiClient dynamically to avoid circular deps
     const { default: apiClient } = await import("@/services/api/axios.client");
     const response = await apiClient.patch("/auth/me/", data);

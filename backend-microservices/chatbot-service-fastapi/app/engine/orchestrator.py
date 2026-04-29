@@ -4,20 +4,19 @@ import logging
 import time
 from typing import Any, Dict, Optional
 
-from sqlalchemy.orm import Session
-
 from app.application.dto import IntentDecision
-from app.application.services.intent_service import IntentService
-from app.application.services.safety_service import SafetyService
 from app.application.services.action_service import ActionService
-from app.application.services.response_service import ResponseService
+from app.application.services.intent_service import IntentService
 from app.application.services.memory_service import MemoryService
 from app.application.services.observability_service import AIMetricsCollector
-from app.domain.value_objects.intent import Intent
-from app.domain.value_objects.confidence import ConfidenceGate
+from app.application.services.response_service import ResponseService
+from app.application.services.safety_service import SafetyService
 from app.domain.policies.handoff import should_handoff
 from app.domain.value_objects.ai_metrics import AIMetricType
+from app.domain.value_objects.confidence import ConfidenceGate
+from app.domain.value_objects.intent import Intent
 from app.engine.booking_wizard import BookingWizard
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +54,9 @@ class ChatbotOrchestrator:
         conversation_id = context.get("conversationId", "")
 
         try:
-            wizard_result = await self.wizard.try_booking_wizard(message, context, self.user_id)
+            wizard_result = await self.wizard.try_booking_wizard(
+                message, context, self.user_id
+            )
             if wizard_result is not None:
                 elapsed = int((time.time() - start_time) * 1000)
                 wizard_result["processingTimeMs"] = elapsed
@@ -80,7 +81,9 @@ class ChatbotOrchestrator:
                         reasoning="user_confirmed",
                     )
 
-                    safety_result = await self.safety_svc.validate(decision, self.user_id)
+                    safety_result = await self.safety_svc.validate(
+                        decision, self.user_id
+                    )
                     if not safety_result.ok:
                         elapsed = int((time.time() - start_time) * 1000)
                         resp = await self.response_svc.generate_safety_error(
@@ -93,14 +96,18 @@ class ChatbotOrchestrator:
                         resp["safetyHint"] = safety_result.hint
                         return resp
 
-                    action_result = await self.action_svc.execute(self.user_id, decision)
+                    action_result = await self.action_svc.execute(
+                        self.user_id, decision, user_message=message
+                    )
                     user_style = self.memory_svc.get_style() if self.memory_svc else {}
                     response = await self.response_svc.generate_response(
                         decision, action_result, user_style
                     )
                     elapsed = int((time.time() - start_time) * 1000)
                     response["processingTimeMs"] = elapsed
-                    response["confidenceBreakdown"] = self._confidence_breakdown(decision)
+                    response["confidenceBreakdown"] = self._confidence_breakdown(
+                        decision
+                    )
 
                     if self.memory_svc:
                         await self.memory_svc.update_after_action(
@@ -116,7 +123,12 @@ class ChatbotOrchestrator:
                         "response": "Đã hủy bỏ. Bạn cần tôi giúp gì khác không?",
                         "intent": "cancelled",
                         "entities": {},
-                        "suggestions": ["Xem chỗ trống", "Đặt chỗ", "Xem booking", "Trợ giúp"],
+                        "suggestions": [
+                            "Xem chỗ trống",
+                            "Đặt chỗ",
+                            "Xem booking",
+                            "Trợ giúp",
+                        ],
                         "data": {},
                         "confidence": 1.0,
                         "processingTimeMs": elapsed,
@@ -138,7 +150,9 @@ class ChatbotOrchestrator:
                         new_intent=decision.primary_intent,
                     )
             # ─── Handoff Check ───
-            frustration = user_style.get("frustration_score", 0.0) if user_style else 0.0
+            frustration = (
+                user_style.get("frustration_score", 0.0) if user_style else 0.0
+            )
             clarification_count = context.get("clarificationCount", 0)
             if should_handoff(frustration, clarification_count, message):
                 elapsed = int((time.time() - start_time) * 1000)
@@ -225,7 +239,7 @@ class ChatbotOrchestrator:
                 resp["safetyHint"] = safety_result.hint
                 return resp
 
-            action_result = await self.action_svc.execute(self.user_id, decision)
+            action_result = await self.action_svc.execute(self.user_id, decision, user_message=message)
 
             response = await self.response_svc.generate_response(
                 decision, action_result, user_style

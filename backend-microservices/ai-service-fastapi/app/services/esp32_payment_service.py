@@ -68,65 +68,58 @@ async def process_cash_payment(
 
     amount_due = float(booking.get("price", 0))
 
-    # Capture or decode cash image
-    capture = get_camera_capture()
-    cash_image_bytes: Optional[bytes] = None
+    # ─── Source of denomination ───────────────────────────────
+    # Ưu tiên thứ tự:
+    #   1. payload.denomination (user đã chọn mệnh giá trên UI) → dùng trực tiếp
+    #   2. ảnh (base64/camera_url) → AI scan phân loại
+    #   3. Không có gì → final confirm: mark paid full amount_due (Unity/FE đã
+    #      xác nhận user thanh toán đủ client-side, không cần scan thêm)
+    denomination: int = 0
 
-    if payload.camera_url:
-        try:
-            cash_image_bytes = await capture.capture_frame_bytes(payload.camera_url)
-        except CameraCaptureError as exc:
-            return ESP32Response(
-                success=False,
-                event=GateEvent.CHECK_OUT_FAILED,
-                barrier_action=BarrierAction.CLOSE,
-                message=f"❌ Lỗi camera tiền: {exc}",
-                gate_id=gate_id,
-                booking_id=booking_id,
-                processing_time_ms=(time.time() - t0) * 1000,
-            )
-    elif payload.image_base64:
-        try:
-            cash_image_bytes = base64.b64decode(payload.image_base64)
-        except Exception:
-            return ESP32Response(
-                success=False,
-                event=GateEvent.CHECK_OUT_FAILED,
-                barrier_action=BarrierAction.CLOSE,
-                message="❌ Base64 ảnh không hợp lệ.",
-                gate_id=gate_id,
-                booking_id=booking_id,
-                processing_time_ms=(time.time() - t0) * 1000,
-            )
-
-    if not cash_image_bytes:
-        return ESP32Response(
-            success=False,
-            event=GateEvent.CHECK_OUT_FAILED,
-            barrier_action=BarrierAction.CLOSE,
-            message="❌ Không có ảnh tiền mặt.",
-            gate_id=gate_id,
-            booking_id=booking_id,
-            processing_time_ms=(time.time() - t0) * 1000,
+    if payload.denomination and payload.denomination > 0:
+        denomination = int(payload.denomination)
+        logger.info(
+            "CASH: Direct denomination from user selection: %d", denomination
         )
+    else:
+        # Capture or decode cash image (optional)
+        capture = get_camera_capture()
+        cash_image_bytes: Optional[bytes] = None
+        if payload.camera_url:
+            try:
+                cash_image_bytes = await capture.capture_frame_bytes(payload.camera_url)
+            except CameraCaptureError as exc:
+                logger.warning("CASH: camera fail %s — skip AI", exc)
+        elif payload.image_base64:
+            try:
+                cash_image_bytes = base64.b64decode(payload.image_base64)
+            except Exception:
+                logger.warning("CASH: invalid base64 — skip AI")
 
-    # Detect denomination using banknote pipeline
-    try:
-        nparr = np.frombuffer(cash_image_bytes, np.uint8)
-        cash_img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        if cash_img is None:
-            raise ValueError("Cannot decode cash image bytes")
-
-        bnk_pipeline = get_banknote_pipeline()
-        result = bnk_pipeline.process(cash_img)
-        denomination = (
-            int(result.denomination)
-            if result.denomination and result.decision == PipelineDecision.ACCEPT
-            else 0
-        )
-    except Exception as exc:
-        logger.warning("Cash detection failed: %s", exc)
-        denomination = 0
+        if cash_image_bytes:
+            try:
+                nparr = np.frombuffer(cash_image_bytes, np.uint8)
+                cash_img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+                if cash_img is None:
+                    raise ValueError("Cannot decode cash image bytes")
+                bnk_pipeline = get_banknote_pipeline()
+                result = bnk_pipeline.process(cash_img)
+                denomination = (
+                    int(result.denomination)
+                    if result.denomination and result.decision == PipelineDecision.ACCEPT
+                    else 0
+                )
+            except Exception as exc:
+                logger.warning("CASH: detection failed %s", exc)
+                denomination = 0
+        else:
+            # Final-confirm path: Unity/FE đã track total client-side, chỉ
+            # cần 1 call này để đánh dấu booking paid full + mở barrier.
+            logger.info(
+                "CASH: No image/denomination → final-confirm mark paid full for %s",
+                booking_id,
+            )
+            denomination = int(amount_due)
 
     if denomination <= 0:
         return ESP32Response(
