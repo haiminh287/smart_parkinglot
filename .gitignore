@@ -193,3 +193,8 @@ backend-microservices/ai-service-fastapi/run_local.bat
 ~$*.docx
 # Slide build backups
 docs/slides/ParkSmart_KLTN_Slides_v*.pptx
+
+# AI agent instruction files (local-only, không push lên remote)
+AGENTS.md
+CLAUDE.md
+.github/AGENTS.md
