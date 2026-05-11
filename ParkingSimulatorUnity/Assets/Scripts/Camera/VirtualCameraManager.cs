@@ -21,6 +21,9 @@ namespace ParkingSim.Camera
         {
             if (Instance != null && Instance != this) { Destroy(gameObject); return; }
             Instance = this;
+
+            if (config == null)
+                config = Resources.Load<ApiConfig>("ApiConfig");
         }
 
         public VirtualCameraConfig[] GetCameraConfigs()
@@ -73,9 +76,12 @@ namespace ParkingSim.Camera
                 {
                     cameraId = "virtual-f1-overview",
                     displayName = "Floor 1 Overview",
-                    position = new Vector3(0, 22, 0),
+                    // Hạ Y=13 + FOV 120° → 2*13*tan(60°)=45m đúng width 4 hàng V1
+                    // (-27 đến 18.5). Rất gần, mỗi slot lớn ~4× so với y=25.
+                    // AI HSV mask bắt green interior chuẩn từng ô.
+                    position = new Vector3(-4, 13, 0),
                     rotation = new Vector3(90, 0, 0),
-                    fieldOfView = 75f,
+                    fieldOfView = 120f,
                     renderWidth = config.cameraResWidth,
                     renderHeight = config.cameraResHeight,
                     jpegQuality = config.cameraJpegQuality,
@@ -134,6 +140,25 @@ namespace ParkingSim.Camera
                     position = new Vector3(-42f, 0.4f, 0f),
                     rotation = new Vector3(0f, 90f, 0f),
                     fieldOfView = 25f,
+                    renderWidth = config.cameraResWidth,
+                    renderHeight = config.cameraResHeight,
+                    jpegQuality = config.cameraJpegQuality,
+                    captureFps = config.cameraFps,
+                    monitoredSlotCodes = new string[0]
+                },
+                // Garage row G-01..G-05 opens NORTH (aisle at Z≈-22); camera stands
+                // at the aisle side looking south toward the open entrances so parked
+                // cars' fronts face the camera.
+                new VirtualCameraConfig
+                {
+                    cameraId = "virtual-zone-garage",
+                    displayName = "Garage Zone Monitor",
+                    // Garage row: X=12..27 (rộng 15m), Z≈-22..-28.
+                    // Camera xa hơn (Z=-10) + cao hơn (Y=5) + FOV 75° để đủ 5 slots
+                    // (trước đây FOV 55° + Z=-14 chỉ thấy 4 ô, G-01 ở X=13.5 bị clip).
+                    position = new Vector3(19.5f, 5f, -10f),
+                    rotation = new Vector3(22f, 180f, 0f),
+                    fieldOfView = 75f,
                     renderWidth = config.cameraResWidth,
                     renderHeight = config.cameraResHeight,
                     jpegQuality = config.cameraJpegQuality,

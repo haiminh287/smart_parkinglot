@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Wireframe mockup: Booking History | Design phase artifact for thesis report -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" width="1200" height="800" font-family="Inter, sans-serif">
+  <rect x="0" y="0" width="1200" height="800" fill="#ffffff"/>
+
+  <!-- Sidebar -->
+  <rect x="20" y="20" width="200" height="760" rx="6" fill="#f5f5f5" stroke="#333" stroke-width="1.5"/>
+  <rect x="35" y="35" width="170" height="36" rx="4" fill="#e0e0e0" stroke="#333" stroke-width="1"/>
+  <text x="120" y="58" font-size="13" fill="#222" text-anchor="middle">ParkSmart Logo</text>
+
+  <rect x="35" y="85" width="170" height="50" rx="6" fill="#ffffff" stroke="#333" stroke-width="1"/>
+  <text x="120" y="115" font-size="12" fill="#222" text-anchor="middle">e2e_playwright</text>
+
+  <rect x="35" y="150" width="170" height="32" rx="4" fill="none" stroke="#333" stroke-width="1"/>
+  <text x="50" y="171" font-size="12" fill="#222">Dashboard</text>
+  <rect x="35" y="186" width="170" height="32" rx="4" fill="none" stroke="#333" stroke-width="1"/>
+  <text x="50" y="207" font-size="12" fill="#222">Dat cho</text>
+  <rect x="35" y="222" width="170" height="32" rx="4" fill="#e0e0e0" stroke="#333" stroke-width="1"/>
+  <text x="50" y="243" font-size="12" fill="#222">Lich su</text>
+  <rect x="35" y="258" width="170" height="32" rx="4" fill="none" stroke="#333" stroke-width="1"/>
+  <text x="50" y="279" font-size="12" fill="#222">Ban do</text>
+  <rect x="35" y="294" width="170" height="32" rx="4" fill="none" stroke="#333" stroke-width="1"/>
+  <text x="50" y="315" font-size="12" fill="#222">Camera</text>
+  <rect x="35" y="330" width="170" height="32" rx="4" fill="none" stroke="#333" stroke-width="1"/>
+  <text x="50" y="351" font-size="12" fill="#222">Nhan dien tien</text>
+  <rect x="35" y="366" width="170" height="32" rx="4" fill="none" stroke="#333" stroke-width="1"/>
+  <text x="50" y="387" font-size="12" fill="#222">Ho tro</text>
+  <rect x="35" y="402" width="170" height="32" rx="4" fill="none" stroke="#333" stroke-width="1"/>
+  <text x="50" y="423" font-size="12" fill="#222">Cai dat</text>
+  <text x="35" y="455" font-size="11" fill="#666" font-style="italic">Sidebar nav</text>
+
+  <!-- Page Header -->
+  <text x="250" y="50" font-size="18" fill="#222" font-weight="bold">Lich su &amp; Thong ke</text>
+  <text x="250" y="72" font-size="13" fill="#666">Xem lich su dat cho va thong ke chi tieu</text>
+
+  <!-- KPI Tiles -->
+  <rect x="250" y="90" width="220" height="70" rx="6" fill="#ffffff" stroke="#333" stroke-width="1"/>
+  <text x="265" y="112" font-size="11" fill="#666">Tong chi tieu</text>
+  <text x="265" y="142" font-size="16" fill="#222" font-weight="bold">0.1M</text>
+
+  <rect x="480" y="90" width="220" height="70" rx="6" fill="#ffffff" stroke="#333" stroke-width="1"/>
+  <text x="495" y="112" font-size="11" fill="#666">Thang nay</text>
+  <text x="495" y="142" font-size="16" fill="#222" font-weight="bold">0.1M</text>
+
+  <rect x="710" y="90" width="220" height="70" rx="6" fill="#ffffff" stroke="#333" stroke-width="1"/>
+  <text x="725" y="112" font-size="11" fill="#666">So lan dat</text>
+  <text x="725" y="142" font-size="16" fill="#222" font-weight="bold">4</text>
+
+  <rect x="940" y="90" width="220" height="70" rx="6" fill="#ffffff" stroke="#333" stroke-width="1"/>
+  <text x="955" y="112" font-size="11" fill="#666">Vi pham</text>
+  <text x="955" y="142" font-size="16" fill="#222" font-weight="bold">0</text>
+
+  <text x="1160" y="178" font-size="11" fill="#666" font-style="italic" text-anchor="end">KPI tiles</text>
+
+  <!-- Chart -->
+  <rect x="250" y="190" width="910" height="180" rx="6" fill="#f5f5f5" stroke="#333" stroke-width="1.5"/>
+  <text x="270" y="215" font-size="14" fill="#222" font-weight="bold">Chi tieu theo thang</text>
+  <rect x="270" y="225" width="870" height="130" rx="4" fill="#ffffff" stroke="#333" stroke-width="1"/>
+  <line x1="270" y1="225" x2="1140" y2="355" stroke="#ccc" stroke-width="1"/>
+  <line x1="1140" y1="225" x2="270" y2="355" stroke="#ccc" stroke-width="1"/>
+  <text x="705" y="295" font-size="12" fill="#666" text-anchor="middle">[Bar chart placeholder]</text>
+  <text x="1160" y="385" font-size="11" fill="#666" font-style="italic" text-anchor="end">Monthly spending chart</text>
+
+  <!-- Search + Filter chips -->
+  <rect x="250" y="395" width="380" height="36" rx="4" fill="#ffffff" stroke="#333" stroke-width="1"/>
+  <text x="265" y="418" font-size="12" fill="#666">Tim theo bien so...</text>
+
+  <rect x="800" y="395" width="80" height="36" rx="4" fill="#e0e0e0" stroke="#333" stroke-width="1"/>
+  <text x="840" y="418" font-size="11" fill="#222" text-anchor="middle">Tat ca</text>
+
+  <rect x="888" y="395" width="90" height="36" rx="4" fill="none" stroke="#333" stroke-width="1"/>
+  <text x="933" y="418" font-size="11" fill="#222" text-anchor="middle">Dang dau</text>
+
+  <rect x="986" y="395" width="90" height="36" rx="4" fill="none" stroke="#333" stroke-width="1"/>
+  <text x="1031" y="418" font-size="11" fill="#222" text-anchor="middle">Da xac nhan</text>
+
+  <rect x="1084" y="395" width="76" height="36" rx="4" fill="none" stroke="#333" stroke-width="1"/>
+  <text x="1122" y="418" font-size="11" fill="#222" text-anchor="middle">Hoan thanh</text>
+
+  <text x="1160" y="448" font-size="11" fill="#666" font-style="italic" text-anchor="end">Search + filter chips</text>
+
+  <!-- Booking history rows -->
+  <rect x="250" y="460" width="910" height="75" rx="6" fill="#ffffff" stroke="#333" stroke-width="1.5"/>
+  <rect x="270" y="478" width="40" height="40" rx="4" fill="#e0e0e0" stroke="#333" stroke-width="1"/>
+  <text x="325" y="495" font-size="13" fill="#222" font-weight="bold">51A-999.88</text>
+  <text x="325" y="513" font-size="11" fill="#666">Zone B - B2 - B-07 | 23/4/2026</text>
+  <text x="600" y="500" font-size="14" fill="#222" font-weight="bold">50.000d</text>
+  <rect x="970" y="486" width="80" height="28" rx="4" fill="none" stroke="#333" stroke-width="1"/>
+  <text x="1010" y="504" font-size="11" fill="#222" text-anchor="middle">Xem QR</text>
+  <rect x="1060" y="486" width="80" height="28" rx="4" fill="none" stroke="#333" stroke-width="1"/>
+  <text x="1100" y="504" font-size="11" fill="#222" text-anchor="middle">Huy</text>
+
+  <rect x="250" y="545" width="910" height="75" rx="6" fill="#ffffff" stroke="#333" stroke-width="1.5"/>
+  <rect x="270" y="563" width="40" height="40" rx="4" fill="#e0e0e0" stroke="#333" stroke-width="1"/>
+  <text x="325" y="580" font-size="13" fill="#222" font-weight="bold">51A-999.88</text>
+  <text x="325" y="598" font-size="11" fill="#666">Zone B - B2 - B-04 | 24/4/2026</text>
+  <text x="600" y="585" font-size="14" fill="#222" font-weight="bold">15.000d</text>
+  <rect x="880" y="571" width="80" height="28" rx="4" fill="#e0e0e0" stroke="#333" stroke-width="1"/>
+  <text x="920" y="589" font-size="11" fill="#222" text-anchor="middle">TT</text>
+  <rect x="970" y="571" width="80" height="28" rx="4" fill="none" stroke="#333" stroke-width="1"/>
+  <text x="1010" y="589" font-size="11" fill="#222" text-anchor="middle">Xem QR</text>
+  <rect x="1060" y="571" width="80" height="28" rx="4" fill="none" stroke="#333" stroke-width="1"/>
+  <text x="1100" y="589" font-size="11" fill="#222" text-anchor="middle">Chi duong</text>
+
+  <rect x="250" y="630" width="910" height="75" rx="6" fill="#ffffff" stroke="#333" stroke-width="1.5"/>
+  <rect x="270" y="648" width="40" height="40" rx="4" fill="#e0e0e0" stroke="#333" stroke-width="1"/>
+  <text x="325" y="665" font-size="13" fill="#222" font-weight="bold">51A-999.88</text>
+  <text x="325" y="683" font-size="11" fill="#666">Zone B - B2 - B-06 | 26/4/2026</text>
+  <text x="600" y="670" font-size="14" fill="#222" font-weight="bold">10.000d</text>
+  <rect x="970" y="656" width="80" height="28" rx="4" fill="none" stroke="#333" stroke-width="1"/>
+  <text x="1010" y="674" font-size="11" fill="#222" text-anchor="middle">Xem QR</text>
+  <rect x="1060" y="656" width="80" height="28" rx="4" fill="none" stroke="#333" stroke-width="1"/>
+  <text x="1100" y="674" font-size="11" fill="#222" text-anchor="middle">Huy</text>
+
+  <rect x="250" y="715" width="910" height="65" rx="6" fill="#ffffff" stroke="#333" stroke-width="1.5"/>
+  <rect x="270" y="728" width="40" height="40" rx="4" fill="#e0e0e0" stroke="#333" stroke-width="1"/>
+  <text x="325" y="745" font-size="13" fill="#222" font-weight="bold">51A-999.88</text>
+  <text x="325" y="763" font-size="11" fill="#666">Zone B - B2 - B-05 | 25/4/2026</text>
+  <text x="600" y="750" font-size="14" fill="#222" font-weight="bold">30.000d</text>
+  <rect x="970" y="736" width="80" height="28" rx="4" fill="none" stroke="#333" stroke-width="1"/>
+  <text x="1010" y="754" font-size="11" fill="#222" text-anchor="middle">Xem QR</text>
+  <rect x="1060" y="736" width="80" height="28" rx="4" fill="none" stroke="#333" stroke-width="1"/>
+  <text x="1100" y="754" font-size="11" fill="#222" text-anchor="middle">Huy</text>
+</svg>

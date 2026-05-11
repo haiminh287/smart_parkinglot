@@ -1,9 +1,9 @@
 import asyncio
 import json
-
-from httpx import ASGITransport, AsyncClient
+import os
 
 from app.main import app
+from httpx import ASGITransport, AsyncClient
 
 
 def fake_jpeg_bytes() -> bytes:
@@ -14,8 +14,12 @@ def fake_jpeg_bytes() -> bytes:
 async def main() -> None:
     results = {}
 
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        client.headers["X-Gateway-Secret"] = "gateway-internal-secret-key"
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        client.headers["X-Gateway-Secret"] = os.environ.get(
+            "GATEWAY_SECRET", "test-secret-for-ci"
+        )
         client.headers["X-User-ID"] = "qa-user"
         client.headers["X-User-Email"] = "qa@example.com"
 
@@ -39,22 +43,26 @@ async def main() -> None:
         }
 
         # Valid form shape (business may still fail due model/decode/runtime dependencies)
-        valid_slots = json.dumps([
-            {
-                "slot_id": "slot-1",
-                "slot_code": "A1",
-                "zone_id": "z1",
-                "x1": 0,
-                "y1": 0,
-                "x2": 10,
-                "y2": 10,
-            }
-        ])
+        valid_slots = json.dumps(
+            [
+                {
+                    "slot_id": "slot-1",
+                    "slot_code": "A1",
+                    "zone_id": "z1",
+                    "x1": 0,
+                    "y1": 0,
+                    "x2": 10,
+                    "y2": 10,
+                }
+            ]
+        )
         data_valid = {
             "camera_id": "cam-1",
             "slots": valid_slots,
         }
-        r3 = await client.post("/ai/parking/detect-occupancy/", files=files, data=data_valid)
+        r3 = await client.post(
+            "/ai/parking/detect-occupancy/", files=files, data=data_valid
+        )
         body = r3.text
         try:
             parsed = r3.json()
@@ -64,7 +72,9 @@ async def main() -> None:
         results["valid_form"] = {
             "status": r3.status_code,
             "body": body,
-            "json_keys": sorted(list(parsed.keys())) if isinstance(parsed, dict) else None,
+            "json_keys": (
+                sorted(list(parsed.keys())) if isinstance(parsed, dict) else None
+            ),
         }
 
     print(json.dumps(results, ensure_ascii=False))

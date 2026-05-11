@@ -16,8 +16,6 @@ import {
   Shield,
   AlertTriangle,
   Banknote,
-  ScanLine,
-  ScanSearch,
   Cpu,
   DollarSign,
 } from "lucide-react";
@@ -32,11 +30,9 @@ import { useNavigate } from "react-router-dom";
 const userNavItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
   { icon: CalendarPlus, label: "Đặt chỗ", path: "/booking" },
-  { icon: ScanLine, label: "Check In/Out", path: "/check-in-out" },
   { icon: History, label: "Lịch sử", path: "/history" },
   { icon: MapPin, label: "Bản đồ", path: "/map" },
   { icon: Camera, label: "Camera", path: "/cameras" },
-  { icon: ScanSearch, label: "Nhận diện BS", path: "/detection-history" },
   { icon: AlertTriangle, label: "Panic", path: "/panic" },
   { icon: Banknote, label: "Nhận diện tiền", path: "/banknote-detection" },
   { icon: MessageCircle, label: "Hỗ trợ", path: "/support" },

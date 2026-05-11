@@ -142,7 +142,7 @@ func (c *Config) GetServiceRoute(path string) *ServiceRoute {
 		route  ServiceRoute
 	}{
 		{"auth/admin/", ServiceRoute{"auth", c.AuthServiceURL, false}}, // admin endpoints require authentication
-		{"auth/me", ServiceRoute{"auth", c.AuthServiceURL, false}},      // /auth/me requires authentication
+		{"auth/me", ServiceRoute{"auth", c.AuthServiceURL, false}},     // /auth/me requires authentication
 		{"auth/change-password/", ServiceRoute{"auth", c.AuthServiceURL, false}},
 		{"auth/", ServiceRoute{"auth", c.AuthServiceURL, true}},
 		{"parking/", ServiceRoute{"parking", c.ParkingServiceURL, false}},
@@ -224,4 +224,19 @@ func parseCSVEnv(key string, defaultValue []string) []string {
 	}
 
 	return allowed
+}
+
+// ServiceURLs returns a map of all configured upstream service URLs.
+func (c *Config) ServiceURLs() map[string]string {
+	return map[string]string{
+		"auth":         c.AuthServiceURL,
+		"parking":      c.ParkingServiceURL,
+		"vehicle":      c.VehicleServiceURL,
+		"booking":      c.BookingServiceURL,
+		"notification": c.NotificationServiceURL,
+		"realtime":     c.RealtimeServiceURL,
+		"payment":      c.PaymentServiceURL,
+		"ai":           c.AIServiceURL,
+		"chatbot":      c.ChatbotServiceURL,
+	}
 }

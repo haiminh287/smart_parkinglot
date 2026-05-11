@@ -34,7 +34,7 @@ import {
   Filter,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { incidentApi } from "@/services/api/incident.api";
+import { adminService, incidentService } from "@/services/business";
 import { useToast } from "@/hooks/use-toast";
 
 interface Incident {
@@ -89,7 +89,7 @@ export default function AdminViolationsPage() {
   const fetchIncidents = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await incidentApi.getIncidents();
+      const response = await adminService.getIncidents();
       const rawResults = (response.results || []) as unknown as Array<
         Record<string, unknown>
       >;
@@ -155,7 +155,11 @@ export default function AdminViolationsPage() {
     if (!selectedIncident || !resolution.trim()) return;
     setIsSubmitting(true);
     try {
-      await incidentApi.resolveIncident(selectedIncident.id, { resolution });
+      await adminService.updateIncidentStatus(
+        selectedIncident.id,
+        "resolved",
+        resolution,
+      );
       toast({ title: "Thành công", description: "Đã xử lý vi phạm" });
       setShowResolveDialog(false);
       setResolution("");
@@ -174,7 +178,7 @@ export default function AdminViolationsPage() {
 
   const handleCancel = async (incident: Incident) => {
     try {
-      await incidentApi.cancelIncident(incident.id);
+      await incidentService.cancel(incident.id);
       toast({ title: "Thành công", description: "Đã hủy vi phạm" });
       await fetchIncidents();
     } catch (error) {

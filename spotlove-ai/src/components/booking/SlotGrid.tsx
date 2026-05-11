@@ -37,8 +37,8 @@ export function SlotGrid({
       setError(null);
 
       try {
-        const { parkingApi } = await import("@/services");
-        const response = await parkingApi.getSlots({ zone_id: zoneId });
+        const { parkingService } = await import("@/services/business");
+        const response = await parkingService.getSlots({ zoneId });
 
         const transformedSlots = response.results.map(
           (apiSlot: ParkingSlot) => ({

@@ -42,7 +42,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useParking, useBooking } from "@/hooks";
 import { useWebSocketConnection } from "@/hooks/useWebSocketConnection";
 import type { ParkingLot, VehicleType, CarSlot } from "@/types/parking";
-import type { Floor } from "@/services/api/parking.api";
+import type { Floor } from "@/services/business";
 import type { Booking } from "@/store/slices/bookingSlice";
 
 type Step = 1 | 2 | 3 | 4 | 5;
@@ -104,7 +104,7 @@ export default function BookingPage() {
   const [selectedSlot, setSelectedSlot] = useState<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any -- TODO: Integrate with Redux slots
   const [packageType, setPackageType] = useState<
     "monthly" | "weekly" | "custom" | "hourly"
-  >("monthly");
+  >("hourly");
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [hourlyDate, setHourlyDate] = useState<Date>(new Date());
   const [hourlyStartTime, setHourlyStartTime] = useState<string>("08:00");
@@ -114,6 +114,9 @@ export default function BookingPage() {
   );
   const [showQRDialog, setShowQRDialog] = useState(false);
   const [bookingId, setBookingId] = useState<string>("");
+  // Local submitting state — đảm bảo spinner luôn hiện khi đang gọi API
+  // kể cả khi Redux isLoading flash quá nhanh.
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [userVehicles, setUserVehicles] = useState<SavedVehicle[]>([]);
   const [floors, setFloors] = useState<Floor[]>([]);
@@ -128,8 +131,8 @@ export default function BookingPage() {
     const loadVehicles = async () => {
       setLoadingVehicles(true);
       try {
-        const { vehicleApi } = await import("@/services");
-        const response = await vehicleApi.getVehicles();
+        const { vehicleService } = await import("@/services/business");
+        const response = await vehicleService.getAll();
         const vehicles: SavedVehicle[] = response.results.map((v) => ({
           id: v.id,
           licensePlate: v.licensePlate,
@@ -160,10 +163,10 @@ export default function BookingPage() {
       const loadFloorsData = async () => {
         setLoadingFloors(true);
         try {
-          const { parkingApi } = await import("@/services");
-          const response = await parkingApi.getFloors({
-            lot_id: selectedParkingLot.id,
-          });
+          const { parkingService } = await import("@/services/business");
+          const response = await parkingService.getFloors(
+            selectedParkingLot.id,
+          );
           setFloors(response.results);
         } catch {
           return;
@@ -264,6 +267,8 @@ export default function BookingPage() {
   };
 
   const handleSubmit = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     try {
       // Validate required fields
       if (!selectedParkingLot) {
@@ -412,11 +417,27 @@ export default function BookingPage() {
         description: err.message || "Không thể đặt chỗ. Vui lòng thử lại.",
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
     <MainLayout>
+      {/* Full-screen loading overlay khi đang submit booking */}
+      {(isSubmitting || bookingLoading) && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-3 rounded-2xl bg-card border border-border p-6 shadow-xl">
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            <p className="text-sm font-medium text-foreground">
+              Đang tạo booking…
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Vui lòng không tắt trang
+            </p>
+          </div>
+        </div>
+      )}
       <div className="mx-auto max-w-5xl space-y-6">
         {/* Header */}
         <div className="animate-fade-in">
@@ -1091,7 +1112,7 @@ export default function BookingPage() {
                             {floors
                               .find((f) => f.id === selectedFloor)
                               ?.zones.find((z) => z.id === selectedZone)
-                              ?.name || `Zone ${selectedZone}`}
+                              ?.name || "Khu vực chung"}
                             {selectedSlot && ` - ${selectedSlot.code}`}
                           </span>
                         </div>
@@ -1201,7 +1222,14 @@ export default function BookingPage() {
                     vehicleType={vehicleType}
                     packageType={packageType}
                     selectedDates={selectedDates}
-                    zone={selectedZone ? `Zone ${selectedZone}` : undefined}
+                    zone={
+                      selectedZone
+                        ? (floors
+                            .find((f) => f.id === selectedFloor)
+                            ?.zones.find((z) => z.id === selectedZone)
+                            ?.name || "Khu vực")
+                        : undefined
+                    }
                     slot={isMotorbike ? undefined : selectedSlot?.code}
                     parkingLot={selectedParkingLot?.name}
                     hourlyStartTime={
@@ -1235,22 +1263,25 @@ export default function BookingPage() {
                     handleSubmit();
                   }
                 }}
-                disabled={!canProceed()}
+                disabled={!canProceed() || (currentStep === 5 && (bookingLoading || isSubmitting))}
               >
                 {currentStep === 5 ? (
-                  <>
-                    {paymentMethod === "online" ? (
-                      <>
-                        <CreditCard className="h-4 w-4 mr-2" />
-                        Thanh toán ngay
-                      </>
-                    ) : (
-                      <>
-                        <QrCode className="h-4 w-4 mr-2" />
-                        Xác nhận đặt chỗ
-                      </>
-                    )}
-                  </>
+                  (bookingLoading || isSubmitting) ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Đang xử lý...
+                    </>
+                  ) : paymentMethod === "online" ? (
+                    <>
+                      <CreditCard className="h-4 w-4 mr-2" />
+                      Thanh toán ngay
+                    </>
+                  ) : (
+                    <>
+                      <QrCode className="h-4 w-4 mr-2" />
+                      Xác nhận đặt chỗ
+                    </>
+                  )
                 ) : (
                   <>
                     Tiếp tục
@@ -1293,7 +1324,12 @@ export default function BookingPage() {
             bookingId={bookingId}
             vehicleType={vehicleType}
             licensePlate={licensePlate}
-            zone={`Zone ${selectedZone}`}
+            zone={
+              floors
+                .find((f) => f.id === selectedFloor)
+                ?.zones.find((z) => z.id === selectedZone)
+                ?.name || "Khu vực"
+            }
             slot={isMotorbike ? "Tự chọn trong zone" : selectedSlot?.code || ""}
             dates={packageType === "custom" ? selectedDates : [new Date()]}
             status="pending"

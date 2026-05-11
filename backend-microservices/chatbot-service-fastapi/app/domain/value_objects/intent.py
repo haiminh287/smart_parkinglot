@@ -24,6 +24,7 @@ class Intent(str, Enum):
     HANDOFF = "handoff"
     UNKNOWN = "unknown"
     OPERATING_HOURS = "operating_hours"
+    FAQ = "faq"  # RAG — trả câu hỏi về chính sách, quy định, bãi xe
 
     @property
     def is_high_stakes(self) -> bool:
@@ -49,7 +50,7 @@ class Intent(str, Enum):
             "cancel_booking": [],
             "check_in": [],
             "check_out": [],
-            "check_availability": ["vehicle_type"],
+            "check_availability": ["vehicle_type", "lot_name"],
             "my_bookings": [],
             "current_parking": [],
             "pricing": [],
@@ -59,5 +60,7 @@ class Intent(str, Enum):
             "feedback": [],
             "handoff": [],
             "unknown": [],
+            "operating_hours": [],
+            "faq": [],  # FAQ dùng raw message cho RAG, không cần extract entity
         }
         return mapping.get(self.value, [])

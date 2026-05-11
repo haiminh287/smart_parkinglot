@@ -1,17 +1,41 @@
 project:
   name: "smartparkinglot"
-  phase: "deploying"
+  phase: "sprint-2-3-execution"
   started_at: "2026-03-13T00:00:00Z"
-  updated_at: "2026-03-16T09:10:00+07:00"
+  updated_at: "2026-04-16T10:00:00+07:00"
 
+# Primary active task
 task:
+  id: "FIX-PIPELINE-SPRINT-1-2-3-2026-04-15"
+  title: "Full remediation after 2026-04-15 code review"
+  pipeline: "FULL"
+  state: "done"
+  prev_task: "SECURITY-BLOCKERS-2026-03-13"
+  source_plan: "docs/plans/FULL-REVIEW-FIX-PLAN-2026-04-15.md"
+  started_at: "2026-04-15T00:00:00Z"
+  updated_at: "2026-04-16T14:00:00+07:00"
+  completed_at: "2026-04-16T14:00:00+07:00"
+  progress:
+    sprint_1: "done (12/12 Critical committed)"
+    sprint_2: "done (IMP-1..9 + IMP-13 committed)"
+    sprint_3: "done (dead code sweep, docs sync, Unity minor cluster)"
+
+# Previous blocker (closed)
+task_resolved:
   id: "SECURITY-BLOCKERS-2026-03-13"
   title: "Remediation backend Python vulnerabilities + Cloudflare security controls evidence"
   pipeline: "FULL"
-  state: "blocked"
+  state: "resolved"
+  resolved_at: "2026-04-16T10:00:00+07:00"
+  resolution: "Cloudflare tunnel config fixed in S3-DEAD-D17 (env-driven); pip-audit JSON refreshed via CI workflow S2-IMP-13; hardcoded GATEWAY_SECRET purged in S1-CRIT-2a"
   prev_state: "qc_gate"
   started_at: "2026-03-13T05:30:00Z"
-  updated_at: "2026-03-16T09:10:00+07:00"
+  closed_in_commits:
+    - "18cd78f fix(parking): remove duplicate block in views.py"
+    - "e3152be fix(security): remove hardcoded GATEWAY_SECRET fallback"
+    - "c020d9e ci(security): add weekly pip-audit + govulncheck (S2-IMP-13)"
+    - "10492b1 chore(cleanup): Sprint 3 dead code sweep + gitignore hardening"
+  legacy_updated_at: "2026-03-16T09:10:00+07:00"
   stack:
     language: "Python + TypeScript"
     package_manager: "pip + npm"

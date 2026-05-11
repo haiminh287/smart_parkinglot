@@ -12,10 +12,10 @@ Post-processing:
   - Confidence scoring with uncertainty warnings
 """
 
-import re
 import logging
+import re
 from dataclasses import dataclass, field
-from typing import Optional, List, Tuple
+from typing import List, Optional, Tuple
 
 import cv2
 import numpy as np
@@ -30,11 +30,11 @@ logger = logging.getLogger(__name__)
 # Motorbike: same pattern on two rows
 PLATE_PATTERNS = [
     # Full standard: 51A-224.56
-    re.compile(r'^(\d{2}[A-Z]\d?)[.\-\s]?(\d{3}[.\-]\d{2})$'),
+    re.compile(r"^(\d{2}[A-Z]\d?)[.\-\s]?(\d{3}[.\-]\d{2})$"),
     # Without separator: 51A22456
-    re.compile(r'^(\d{2}[A-Z]\d?)(\d{5})$'),
+    re.compile(r"^(\d{2}[A-Z]\d?)(\d{5})$"),
     # Special series: 51A-12345
-    re.compile(r'^(\d{2}[A-Z]\d?)[.\-\s]?(\d{5})$'),
+    re.compile(r"^(\d{2}[A-Z]\d?)[.\-\s]?(\d{5})$"),
 ]
 
 
@@ -42,33 +42,46 @@ def _normalize_plate(raw: str) -> str:
     """Clean OCR artifacts and normalize to standard format."""
     # Remove spaces, lowercase O→0, I→1, common OCR errors
     text = raw.upper().strip()
-    text = text.replace(' ', '').replace('\n', '').replace('\t', '')
+    text = text.replace(" ", "").replace("\n", "").replace("\t", "")
     # Strip leading non-alphanumeric chars (TrOCR sometimes prepends : ; , etc.)
-    text = re.sub(r'^[^A-Z0-9]+', '', text)
+    text = re.sub(r"^[^A-Z0-9]+", "", text)
     # Normalize OCR misread of separator (* is never valid, must be -)
-    text = text.replace('*', '-')
+    text = text.replace("*", "-")
     # Normalize digit-lookalike letters in province code (first 2 chars only)
     if len(text) >= 2:
-        prov_digit_map = {'O': '0', 'Q': '0', 'I': '1', 'L': '1', 'Z': '2', 'S': '5', 'G': '6', 'B': '8'}
-        province = ''.join(prov_digit_map.get(c, c) for c in text[:2])
+        prov_digit_map = {
+            "O": "0",
+            "Q": "0",
+            "I": "1",
+            "L": "1",
+            "Z": "2",
+            "S": "5",
+            "G": "6",
+            "B": "8",
+        }
+        province = "".join(prov_digit_map.get(c, c) for c in text[:2])
         text = province + text[2:]
     # OCR common substitutions on plates
     ocr_map = {
-        'O': '0', 'Q': '0', 'D': '0',
-        'I': '1', 'L': '1',
-        'Z': '2',
-        'S': '5', '$': '5',
-        'G': '6',
-        'B': '8',
+        "O": "0",
+        "Q": "0",
+        "D": "0",
+        "I": "1",
+        "L": "1",
+        "Z": "2",
+        "S": "5",
+        "$": "5",
+        "G": "6",
+        "B": "8",
     }
     # Only apply digit-area substitutions (after the letter portion)
     # Find letter prefix (2 digits + 1-2 letters)
-    m = re.match(r'^(\d{2}[A-Z]{1,2}\d?)', text)
+    m = re.match(r"^(\d{2}[A-Z]{1,2}\d?)", text)
     if m:
         prefix = m.group(1)
-        rest = text[len(prefix):]
+        rest = text[len(prefix) :]
         # In the number area, apply OCR map
-        cleaned_rest = ''
+        cleaned_rest = ""
         for ch in rest:
             cleaned_rest += ocr_map.get(ch, ch)
         text = prefix + cleaned_rest
@@ -86,7 +99,7 @@ def _validate_plate(text: str) -> Tuple[bool, str]:
         if m:
             prefix, number = m.group(1), m.group(2)
             # Reformat number: ensure xxx.xx
-            number_clean = re.sub(r'[.\-]', '', number)
+            number_clean = re.sub(r"[.\-]", "", number)
             if len(number_clean) == 5:
                 formatted = f"{prefix}-{number_clean[:3]}.{number_clean[3:]}"
                 return True, formatted
@@ -144,13 +157,13 @@ def _scale_for_trocr(img: np.ndarray) -> np.ndarray:
 # --------------------------------------------------------------------------- #
 @dataclass
 class OCRResult:
-    text: str                        # e.g. "51A-224.56"
-    raw_texts: List[str]             # all candidate texts from OCR
-    confidence: float                # 0.0 – 1.0
+    text: str  # e.g. "51A-224.56"
+    raw_texts: List[str]  # all candidate texts from OCR
+    confidence: float  # 0.0 – 1.0
     is_valid_format: bool
     is_blurry: bool
-    blur_score: float                # Laplacian variance (higher = sharper)
-    method: str                      # "trocr" / "easyocr" / "tesseract" / "none"
+    blur_score: float  # Laplacian variance (higher = sharper)
+    method: str  # "trocr" / "easyocr" / "tesseract" / "none"
     warning: Optional[str] = None
     candidates: List[dict] = field(default_factory=list)
 
@@ -170,13 +183,14 @@ def _get_trocr():
         try:
             import torch  # noqa: F401
             from transformers import TrOCRProcessor, VisionEncoderDecoderModel
+
             logger.info("Loading TrOCR model...")
             _trocr_processor = TrOCRProcessor.from_pretrained(
-                'microsoft/trocr-base-printed',
+                "microsoft/trocr-base-printed",
                 use_fast=True,
             )
             _trocr_model = VisionEncoderDecoderModel.from_pretrained(
-                'microsoft/trocr-base-printed'
+                "microsoft/trocr-base-printed"
             )
             _trocr_model.eval()
             logger.info("✅ TrOCR loaded")
@@ -203,10 +217,12 @@ def _run_trocr(img_bgr: np.ndarray) -> List[Tuple[str, float]]:
         rgb = cv2.cvtColor(img_scaled, cv2.COLOR_BGR2RGB)
         pil_img = Image.fromarray(rgb)
 
-        pixel_values = processor(images=pil_img, return_tensors='pt').pixel_values
+        pixel_values = processor(images=pil_img, return_tensors="pt").pixel_values
         with torch.no_grad():
             generated_ids = model.generate(pixel_values, max_new_tokens=20)
-        text = processor.batch_decode(generated_ids, skip_special_tokens=True)[0].strip()
+        text = processor.batch_decode(generated_ids, skip_special_tokens=True)[
+            0
+        ].strip()
 
         if text:
             logger.debug(f"TrOCR raw: {text!r}")
@@ -222,7 +238,8 @@ def _get_easy_ocr():
     if _easy_ocr is None:
         try:
             import easyocr
-            _easy_ocr = easyocr.Reader(['en'], gpu=False, verbose=False)
+
+            _easy_ocr = easyocr.Reader(["en"], gpu=False, verbose=False)
             logger.info("✅ EasyOCR loaded")
         except ImportError:
             logger.warning("⚠️  EasyOCR not installed")
@@ -244,7 +261,8 @@ def _run_easyocr(img_bgr: np.ndarray) -> List[Tuple[str, float]]:
 def _run_tesseract(img_binary: np.ndarray) -> List[Tuple[str, float]]:
     try:
         import pytesseract
-        config = '--oem 3 --psm 7 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-'
+
+        config = "--oem 3 --psm 7 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-"
         text = pytesseract.image_to_string(img_binary, config=config).strip()
         if text:
             return [(text, 0.5)]
@@ -298,21 +316,27 @@ def read_plate_text(plate_img: np.ndarray) -> OCRResult:
     if not all_candidates:
         warning = "Không thể đọc biển số xe. "
         if is_blurry_flag:
-            warning += f"Ảnh quá mờ (blur_score={blur_score:.1f}). Vui lòng chụp lại rõ hơn."
+            warning += (
+                f"Ảnh quá mờ (blur_score={blur_score:.1f}). Vui lòng chụp lại rõ hơn."
+            )
         else:
             warning += "Không tìm thấy ký tự nào trên biển số."
         return OCRResult(
-            text="", raw_texts=[], confidence=0.0,
-            is_valid_format=False, is_blurry=is_blurry_flag,
-            blur_score=blur_score, method="none",
-            warning=warning
+            text="",
+            raw_texts=[],
+            confidence=0.0,
+            is_valid_format=False,
+            is_blurry=is_blurry_flag,
+            blur_score=blur_score,
+            method="none",
+            warning=warning,
         )
 
     # ---- Validate ----
     raw_texts = [c[0] for c in all_candidates]
 
     # Try combined text first
-    combined_text = ''.join(raw_texts).upper().strip()
+    combined_text = "".join(raw_texts).upper().strip()
     is_valid, formatted = _validate_plate(combined_text)
 
     # If combined fails, try each candidate individually
@@ -325,7 +349,11 @@ def read_plate_text(plate_img: np.ndarray) -> OCRResult:
                 best_conf = conf
                 break
 
-    avg_conf = best_conf if best_conf > 0 else (sum(c[1] for c in all_candidates) / len(all_candidates))
+    avg_conf = (
+        best_conf
+        if best_conf > 0
+        else (sum(c[1] for c in all_candidates) / len(all_candidates))
+    )
 
     # ---- Build warning ----
     warning = None
@@ -335,7 +363,11 @@ def read_plate_text(plate_img: np.ndarray) -> OCRResult:
         warning = f"Độ tin cậy thấp ({avg_conf:.0%}) — vui lòng xác nhận lại biển số."
     if not is_valid:
         note = f" Định dạng biển số không hợp lệ: '{formatted}'"
-        warning = (warning + note) if warning else f"Định dạng biển số không nhận ra: '{formatted}'. Vui lòng nhập thủ công."
+        warning = (
+            (warning + note)
+            if warning
+            else f"Định dạng biển số không nhận ra: '{formatted}'. Vui lòng nhập thủ công."
+        )
 
     return OCRResult(
         text=formatted,

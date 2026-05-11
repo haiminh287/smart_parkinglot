@@ -22,8 +22,7 @@ import {
   MapPin,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { adminApi } from "@/services/api/admin.api";
-import { parkingApi } from "@/services/api/parking.api";
+import { adminService, parkingService } from "@/services/business";
 import { useToast } from "@/hooks/use-toast";
 
 interface CameraDevice {
@@ -41,6 +40,18 @@ interface CameraDevice {
 }
 
 // ── Hardcoded monitoring cameras (AI service) ─────────────────────────── //
+const mkVirtual = (id: string, name: string, zone: string): CameraDevice => ({
+  id, name,
+  ipAddress: "Unity Sim",
+  port: 8009,
+  zoneId: "",
+  zoneName: zone,
+  status: "online",
+  streamUrl: `/ai/cameras/stream?camera_id=${id}&fps=5`,
+  isActive: true,
+  isSystem: true,
+});
+
 const SYSTEM_CAMERAS: CameraDevice[] = [
   {
     id: "plate-camera-ezviz",
@@ -66,6 +77,14 @@ const SYSTEM_CAMERAS: CameraDevice[] = [
     isActive: true,
     isSystem: true,
   },
+  mkVirtual("virtual-f1-overview", "Tổng quan Tầng 1 (Sim)", "Floor 1"),
+  mkVirtual("virtual-gate-in", "Cổng Vào (Sim)", "Cổng vào"),
+  mkVirtual("virtual-gate-out", "Cổng Ra (Sim)", "Cổng ra"),
+  mkVirtual("virtual-anpr-entry", "ANPR Entry (Sim)", "Cổng vào"),
+  mkVirtual("virtual-anpr-exit", "ANPR Exit (Sim)", "Cổng ra"),
+  mkVirtual("virtual-zone-garage", "Khu Garage G (Sim)", "Garage G"),
+  mkVirtual("virtual-zone-south", "Zone South (Sim)", "South V1"),
+  mkVirtual("virtual-zone-north", "Zone North (Sim)", "North V1"),
 ];
 
 interface ZoneOption {
@@ -105,9 +124,9 @@ export default function AdminCamerasPage() {
   useEffect(() => {
     const fetchZones = async () => {
       try {
-        const lotsResponse = await parkingApi.getLots();
+        const lotsResponse = await parkingService.getLots();
         if (lotsResponse.results.length > 0) {
-          const zonesResponse = await parkingApi.getZones({
+          const zonesResponse = await parkingService.getZones({
             lot_id: lotsResponse.results[0].id,
           });
           setZones(
@@ -126,7 +145,7 @@ export default function AdminCamerasPage() {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await adminApi.getCameras();
+      const response = await adminService.getCameras();
 
       const mappedCameras: CameraDevice[] = response.results.map((cam) => ({
         id: cam.id,
@@ -173,7 +192,7 @@ export default function AdminCamerasPage() {
     }
     try {
       setIsSubmitting(true);
-      await adminApi.createCamera({
+      await adminService.createCamera({
         name: addForm.name,
         ipAddress: addForm.ipAddress,
         port: addForm.port,
@@ -201,7 +220,7 @@ export default function AdminCamerasPage() {
     if (!selectedCamera) return;
     try {
       setIsSubmitting(true);
-      await adminApi.updateCamera(selectedCamera.id, {
+      await adminService.updateCamera(selectedCamera.id, {
         name: editForm.name,
         ipAddress: editForm.ipAddress,
         port: editForm.port,
@@ -228,7 +247,7 @@ export default function AdminCamerasPage() {
     if (!selectedCamera) return;
     try {
       setIsSubmitting(true);
-      await adminApi.deleteCamera(selectedCamera.id);
+      await adminService.deleteCamera(selectedCamera.id);
       toast({ title: "Thành công", description: "Đã xóa camera" });
       await fetchCameras();
       setShowDeleteDialog(false);

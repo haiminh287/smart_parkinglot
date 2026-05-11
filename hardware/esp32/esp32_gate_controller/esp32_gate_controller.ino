@@ -30,9 +30,6 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
-#include <Wire.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
 
 // ═══════════════════════════════════════════════════════════════
 //  CẤU HÌNH — THAY ĐỔI THEO MẠNG CỦA BẠN
@@ -46,11 +43,11 @@ const char* WIFI_PASSWORD = "2462576d";   // ← Đổi mật khẩu WiFi
 // Thay IP bằng IP máy tính chạy AI service
 const char* AI_SERVICE_BASE_URL = "http://192.168.100.194:8009";
 
-// Gateway Secret — phải trùng với server
-const char* GATEWAY_SECRET = "gateway-internal-secret-key";
+// Gateway Secret — phải trùng với GATEWAY_SECRET trong ai-service-fastapi/.env
+const char* GATEWAY_SECRET = "gw-prod-wnMbXWEHc49KXVjhae4IGU7TZfoj4HHEDTOtzYvE";
 
-// Device Token — phải trùng với ESP32_DEVICE_TOKEN trên server
-const char* DEVICE_TOKEN = "your-device-token-here";
+// Device Token — phải trùng với ESP32_DEVICE_TOKEN trong ai-service-fastapi/.env
+const char* DEVICE_TOKEN = "esp32-device-secret-token-local";
 
 // Gate IDs
 const char* GATE_IN_ID  = "GATE-IN-01";
@@ -73,13 +70,6 @@ const char* FIRMWARE_VERSION = "v1.0.0-parksmart";
 
 // Status LED (built-in on most ESP32 dev boards)
 #define LED_PIN 2
-
-// OLED I2C
-#define SCREEN_WIDTH 128
-#define SCREEN_HEIGHT 64
-#define OLED_ADDR 0x3D
-
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
 // ═══════════════════════════════════════════════════════════════
 //  CONSTANTS
@@ -156,22 +146,6 @@ void setup() {
 
   // Connect WiFi
   connectWiFi();
-
-  // OLED INIT
-  Wire.begin(21, 22); // SDA, SCL
-
-  if(!display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR)) {
-    Serial.println("OLED Fail");
-    while(1);
-  }
-  Serial.println("OLED Done");
-
-  display.clearDisplay();
-  display.setTextSize(2);
-  display.setTextColor(WHITE);
-  display.setCursor(0,10);
-  display.println("ParkSmart");
-  display.display();
 
   // Register both gate devices with AI Service
   registerDevice(GATE_IN_ID);
@@ -373,17 +347,60 @@ void sendLog(const char* deviceId, const char* level, String message) {
 //  CHECK-IN HANDLER
 // ═══════════════════════════════════════════════════════════════
 
+/**
+ * Fetch QR data của booking pending gần nhất từ backend.
+ * Dùng cho ESP32 vật lý không có QR scanner — giống Unity sim pull bookings.
+ * Trả về empty string nếu không có booking hoặc lỗi.
+ */
+String fetchPendingQr(const char* status) {
+  String url = String(AI_SERVICE_BASE_URL) + "/ai/parking/esp32/pending-qr/?status=" + String(status);
+
+  HTTPClient http;
+  http.begin(url);
+  http.addHeader("X-Gateway-Secret", GATEWAY_SECRET);
+  http.addHeader("X-Device-Token", DEVICE_TOKEN);
+  http.setTimeout(5000);
+
+  int code = http.GET();
+  String body = (code == 200) ? http.getString() : "";
+  http.end();
+
+  if (code != 200) {
+    Serial.print("⚠️ fetchPendingQr HTTP "); Serial.println(code);
+    return "";
+  }
+  JsonDocument doc;
+  if (deserializeJson(doc, body)) return "";
+  String qr = doc["qr_data"] | "";
+  const char* plate = doc["license_plate"] | "";
+  const char* bkId = doc["booking_id"] | "";
+  if (qr.length() > 0) {
+    Serial.print("📋 QR pending: plate="); Serial.print(plate);
+    Serial.print(" booking="); Serial.println(String(bkId).substring(0, 8));
+  }
+  return qr;
+}
+
 void handleCheckIn() {
   Serial.println("📡 Calling AI service: /check-in/ ...");
-  Serial.println("   (Server sẽ mở camera QR, quét mã QR, đọc biển số...)");
-  sendLog(GATE_IN_ID, "info", "Calling AI service /check-in/ — waiting for QR scan & plate recognition...");
+  sendLog(GATE_IN_ID, "info", "Fetching latest pending QR then calling /check-in/ ...");
+
+  // Lấy QR của booking not_checked_in mới nhất (tương đương Unity sim auto-sync)
+  String qrData = fetchPendingQr("not_checked_in");
+  if (qrData.length() == 0) {
+    Serial.println("❌ Không có booking pending nào — tạo booking qua web trước");
+    sendLog(GATE_IN_ID, "warn", "No pending booking — create via web first");
+    blinkLED(5);
+    return;
+  }
 
   // Build URL
   String url = String(AI_SERVICE_BASE_URL) + "/ai/parking/esp32/check-in/";
 
-  // Build JSON body
+  // Build JSON body — kèm qr_data
   JsonDocument doc;
   doc["gate_id"] = GATE_IN_ID;
+  doc["qr_data"] = qrData;
 
   String jsonBody;
   serializeJson(doc, jsonBody);
@@ -409,15 +426,24 @@ void handleCheckIn() {
 
 void handleCheckOut() {
   Serial.println("📡 Calling AI service: /check-out/ ...");
-  Serial.println("   (Server sẽ mở camera QR, quét mã QR, xác nhận thanh toán...)");
-  sendLog(GATE_OUT_ID, "info", "Calling AI service /check-out/ — waiting for QR scan & payment check...");
+  sendLog(GATE_OUT_ID, "info", "Fetching latest checked-in QR then calling /check-out/ ...");
+
+  // Lấy QR của booking đã checked_in (đang đậu) gần nhất
+  String qrData = fetchPendingQr("checked_in");
+  if (qrData.length() == 0) {
+    Serial.println("❌ Không có xe nào đang đậu");
+    sendLog(GATE_OUT_ID, "warn", "No checked-in booking — check-in first");
+    blinkLED(5);
+    return;
+  }
 
   // Build URL
   String url = String(AI_SERVICE_BASE_URL) + "/ai/parking/esp32/check-out/";
 
-  // Build JSON body
+  // Build JSON body — kèm qr_data
   JsonDocument doc;
   doc["gate_id"] = GATE_OUT_ID;
+  doc["qr_data"] = qrData;
 
   String jsonBody;
   serializeJson(doc, jsonBody);
@@ -479,12 +505,6 @@ void parseAndActOnResponse(String& response, const char* actionType) {
   if (strlen(plateText) > 0) {
     Serial.print("│ Plate:   ");
     Serial.println(plateText);
-
-    if (strcmp(actionType, "check_in") == 0) {
-      showPlateOnOLED(plateText, "IN");
-    } else {
-      showPlateOnOLED(plateText, "OUT");
-    }
   }
   Serial.print("│ Time:    ");
   Serial.print(processingTime, 0);
@@ -638,21 +658,3 @@ void blinkLED(int times) {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════
-//  OLED DISPLAY
-// ═══════════════════════════════════════════════════════════════
-
-void showPlateOnOLED(const char* plate, const char* gate) {
-  display.clearDisplay();
-
-  display.setTextSize(1);
-  display.setCursor(0,0);
-  display.print("Gate: ");
-  display.println(gate);
-
-  display.setTextSize(2);
-  display.setCursor(0,20);
-  display.println(plate);
-
-  display.display();
-}

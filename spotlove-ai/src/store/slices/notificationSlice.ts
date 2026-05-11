@@ -4,7 +4,7 @@
  */
 
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
-import { notificationApi } from "@/services/api/notification.api";
+import { notificationService } from "@/services/business";
 
 export type NotificationType =
   | "booking"
@@ -66,7 +66,7 @@ export const fetchNotifications = createAsyncThunk(
   "notification/fetchNotifications",
   async (params: { page?: number } | undefined, { rejectWithValue }) => {
     try {
-      const response = await notificationApi.getNotifications(params);
+      const response = await notificationService.getAll(params);
       return {
         results: response.results,
         count: response.count,
@@ -83,7 +83,7 @@ export const markAsRead = createAsyncThunk(
   "notification/markAsRead",
   async (notificationId: string, { rejectWithValue }) => {
     try {
-      await notificationApi.markAsRead(notificationId);
+      await notificationService.markAsRead(notificationId);
       return notificationId;
     } catch (error: unknown) {
       return rejectWithValue(
@@ -97,7 +97,7 @@ export const markAllAsRead = createAsyncThunk(
   "notification/markAllAsRead",
   async (_, { rejectWithValue }) => {
     try {
-      await notificationApi.markAllAsRead();
+      await notificationService.markAllAsRead();
     } catch (error: unknown) {
       return rejectWithValue(
         getErrorMessage(error, "Không thể đánh dấu tất cả đã đọc"),

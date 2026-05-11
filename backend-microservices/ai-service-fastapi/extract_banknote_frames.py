@@ -52,8 +52,15 @@ import numpy as np
 
 # ── Vietnamese Denominations ─────────────────────────────────────────────
 DENOMINATIONS: list[str] = [
-    "1000", "2000", "5000", "10000", "20000",
-    "50000", "100000", "200000", "500000",
+    "1000",
+    "2000",
+    "5000",
+    "10000",
+    "20000",
+    "50000",
+    "100000",
+    "200000",
+    "500000",
 ]
 
 VIDEO_EXTENSIONS: set[str] = {".mp4", ".avi", ".mov", ".mkv", ".webm", ".m4v", ".flv"}
@@ -202,8 +209,12 @@ def extract_frames_from_video(
     side = detect_side_from_filename(Path(video_path).stem)
     side_label = {"front": "mặt trước", "back": "mặt sau", "mix": ""}.get(side, "")
 
-    print(f"  📹 Video: {Path(video_path).name} {'(' + side_label + ')' if side_label else ''}")
-    print(f"     FPS: {fps:.1f}, Duration: {duration:.1f}s, Total frames: {total_frames}")
+    print(
+        f"  📹 Video: {Path(video_path).name} {'(' + side_label + ')' if side_label else ''}"
+    )
+    print(
+        f"     FPS: {fps:.1f}, Duration: {duration:.1f}s, Total frames: {total_frames}"
+    )
 
     real_dir = Path(output_dir) / "real" / denomination
     real_dir.mkdir(parents=True, exist_ok=True)
@@ -278,8 +289,12 @@ def extract_frames_from_video(
 
     cap.release()
 
-    print(f"     ✅ Extracted: {stats['saved']} images (incl. {stats['augmented']} augmented)")
-    print(f"     ⏩ Skipped: {stats['skipped_blur']} blur, {stats['skipped_brightness']} brightness")
+    print(
+        f"     ✅ Extracted: {stats['saved']} images (incl. {stats['augmented']} augmented)"
+    )
+    print(
+        f"     ⏩ Skipped: {stats['skipped_blur']} blur, {stats['skipped_brightness']} brightness"
+    )
 
     return stats
 
@@ -353,6 +368,7 @@ def extract_all_videos(
                 ts = datetime.now().strftime("%Y%m%d_%H%M%S")
                 out_name = f"{denom}_real_{ts}_{f.name}"
                 import shutil
+
                 shutil.copy2(str(f), str(real_dir / out_name))
 
     if not video_tasks:
@@ -384,7 +400,9 @@ def extract_all_videos(
         print("📊 Existing images in dataset:")
         for denom in DENOMINATIONS:
             if existing_counts[denom] > 0:
-                print(f"   {denom:>7s} VND: {existing_counts[denom]} images (will ADD more)")
+                print(
+                    f"   {denom:>7s} VND: {existing_counts[denom]} images (will ADD more)"
+                )
         print()
 
     # Process each video
@@ -484,37 +502,50 @@ Examples:
         """,
     )
     parser.add_argument(
-        "--input", "-i",
+        "--input",
+        "-i",
         default="./input_banknotes_video",
         help="Input directory with banknote videos (default: ./input_banknotes_video)",
     )
     parser.add_argument(
-        "--output", "-o",
+        "--output",
+        "-o",
         default="./ml/datasets/banknote_v1",
         help="Output dataset directory (default: ./ml/datasets/banknote_v1)",
     )
     parser.add_argument(
-        "--interval", type=int, default=3,
+        "--interval",
+        type=int,
+        default=3,
         help="Extract every N-th frame (default: 3, higher = fewer frames)",
     )
     parser.add_argument(
-        "--max-frames", type=int, default=300,
+        "--max-frames",
+        type=int,
+        default=300,
         help="Max frames to extract per video before augmentation (default: 300)",
     )
     parser.add_argument(
-        "--no-augment", action="store_true",
+        "--no-augment",
+        action="store_true",
         help="Disable data augmentation (no flip/rotate/brightness variants)",
     )
     parser.add_argument(
-        "--width", type=int, default=640,
+        "--width",
+        type=int,
+        default=640,
         help="Target frame width (default: 640)",
     )
     parser.add_argument(
-        "--height", type=int, default=480,
+        "--height",
+        type=int,
+        default=480,
         help="Target frame height (default: 480)",
     )
     parser.add_argument(
-        "--min-blur", type=float, default=30.0,
+        "--min-blur",
+        type=float,
+        default=30.0,
         help="Minimum blur score — frames below this are skipped (default: 30.0)",
     )
 

@@ -16,10 +16,16 @@
 import { test, expect } from "@playwright/test";
 import fs from "fs";
 import path from "path";
+import * as dotenv from "dotenv";
+
+dotenv.config({ path: ".env.test" });
 
 const RESULTS_DIR = "test-results";
 const AI_SERVICE_URL = "http://localhost:8009";
-const GATEWAY_SECRET = "gw-prod-wnMbXWEHc49KXVjhae4IGU7TZfoj4HHEDTOtzYvE";
+const GATEWAY_SECRET = process.env.E2E_GATEWAY_SECRET;
+if (!GATEWAY_SECRET) {
+  throw new Error("E2E_GATEWAY_SECRET must be set in .env.test or environment");
+}
 const PLATE_IMAGE_PATH = path.resolve(
   "../backend-microservices/test_images/license_plate.jpg",
 );

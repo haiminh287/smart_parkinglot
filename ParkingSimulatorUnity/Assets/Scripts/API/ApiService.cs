@@ -23,6 +23,8 @@ namespace ParkingSim.API
 
         public event Action<SlotStatusUpdate> OnSlotStatusUpdate;
         public event Action<CheckinSuccessData> OnCheckinSuccess;
+        public event Action<string> OnDepartVehicle;  // arg = plate
+        public event Action<string, string, double> OnAwaitingPayment;  // bookingId, plate, amountDue
         public event Action<string> OnWsError;
         public event Action OnWsConnected;
         public event Action OnWsDisconnected;
@@ -33,6 +35,11 @@ namespace ParkingSim.API
             Instance = this;
             if (transform.parent == null)
                 DontDestroyOnLoad(gameObject);
+
+            if (config == null)
+                config = Resources.Load<ApiConfig>("ApiConfig");
+            if (authManager == null)
+                authManager = FindObjectOfType<AuthManager>();
         }
 
         private void Update()
@@ -51,6 +58,14 @@ namespace ParkingSim.API
         private PaginatedResponse<T> Paginated<T>(List<T> items) =>
             new PaginatedResponse<T> { Count = items.Count, Results = items };
 
+        private const int MAX_LOG_BODY = 500;
+
+        private static string TruncateBody(string body)
+        {
+            if (string.IsNullOrEmpty(body) || body.Length <= MAX_LOG_BODY) return body;
+            return body.Substring(0, MAX_LOG_BODY) + $"…[truncated {body.Length - MAX_LOG_BODY} chars]";
+        }
+
         private UnityWebRequest BuildGet(string url)
         {
             var req = UnityWebRequest.Get(url);
@@ -64,6 +79,7 @@ namespace ParkingSim.API
             var req = new UnityWebRequest(url, "POST");
             req.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(json));
             req.downloadHandler = new DownloadHandlerBuffer();
+            req.SetRequestHeader("Content-Type", "application/json");
             return req;
         }
 
@@ -73,6 +89,7 @@ namespace ParkingSim.API
             var req = new UnityWebRequest(url, "PATCH");
             req.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(json));
             req.downloadHandler = new DownloadHandlerBuffer();
+            req.SetRequestHeader("Content-Type", "application/json");
             return req;
         }
 
@@ -84,7 +101,7 @@ namespace ParkingSim.API
             if (isAi && req.uploadHandler != null)
             {
                 string reqBody = Encoding.UTF8.GetString(req.uploadHandler.data);
-                Debug.Log($"[ApiService] REQ→ {req.method} {req.url}\n{reqBody}");
+                Debug.Log($"[ApiService] REQ→ {req.method} {req.url}\n{TruncateBody(reqBody)}");
             }
 
             float start = Time.realtimeSinceStartup;
@@ -98,7 +115,7 @@ namespace ParkingSim.API
                 {
                     Debug.Log($"[ApiService] {req.method} {req.url} → {status} ({elapsed:F0}ms)");
                     if (isAi)
-                        Debug.Log($"[ApiService] RSP← {req.downloadHandler.text}");
+                        Debug.Log($"[ApiService] RSP← {TruncateBody(req.downloadHandler.text)}");
                     var data = JsonConvert.DeserializeObject<T>(req.downloadHandler.text);
                     cb?.Invoke(new ApiResponse<T> { IsSuccess = true, Data = data, StatusCode = status });
                 }
@@ -109,7 +126,7 @@ namespace ParkingSim.API
                     string errCode = TryParseErrorCode(errBody);
                     Debug.LogWarning($"[ApiService] {req.method} {req.url} → {status} ({elapsed:F0}ms): {errMsg}");
                     if (isAi && !string.IsNullOrEmpty(errBody))
-                        Debug.LogWarning($"[ApiService] ERR← {errBody}");
+                        Debug.LogWarning($"[ApiService] ERR← {TruncateBody(errBody)}");
                     cb?.Invoke(new ApiResponse<T>
                     {
                         IsSuccess = false,
@@ -421,6 +438,33 @@ namespace ParkingSim.API
             }
         }
 
+        public IEnumerator DetectBanknote(byte[] imageBytes, Action<ApiResponse<BanknoteResult>> cb)
+        {
+            string url = AiUrl("ai/detect/banknote/?mode=full");
+            var form = new List<IMultipartFormSection>
+            {
+                new MultipartFormFileSection("image", imageBytes, "banknote.jpg", "image/jpeg")
+            };
+            using (var req = UnityWebRequest.Post(url, form))
+            {
+                req.SetRequestHeader("X-Gateway-Secret", config.gatewaySecret);
+                yield return req.SendWebRequest();
+                int status = (int)req.responseCode;
+                if (req.result == UnityWebRequest.Result.Success)
+                {
+                    var data = JsonConvert.DeserializeObject<BanknoteResult>(req.downloadHandler.text);
+                    cb?.Invoke(new ApiResponse<BanknoteResult>
+                        { IsSuccess = true, Data = data, StatusCode = status });
+                }
+                else
+                {
+                    string errMsg = ParseError(req.downloadHandler?.text, status);
+                    cb?.Invoke(new ApiResponse<BanknoteResult>
+                        { IsSuccess = false, ErrorMessage = errMsg, StatusCode = status });
+                }
+            }
+        }
+
         public IEnumerator ScanQr(string cameraId, Action<ApiResponse<QrScanResult>> cb)
         {
             string url = AiUrl($"ai/cameras/scan-qr?camera_id={UnityWebRequest.EscapeURL(cameraId)}");
@@ -538,6 +582,22 @@ namespace ParkingSim.API
                 {
                     var data = obj["data"]?.ToObject<CheckinSuccessData>();
                     if (data != null) OnCheckinSuccess?.Invoke(data);
+                }
+                else if (type == "unity.depart_vehicle")
+                {
+                    string plate = obj["data"]?["plate"]?.ToString();
+                    if (!string.IsNullOrEmpty(plate)) OnDepartVehicle?.Invoke(plate);
+                }
+                else if (type == "unity.awaiting_payment")
+                {
+                    var d = obj["data"];
+                    if (d != null)
+                    {
+                        string bookingId = d["booking_id"]?.ToString();
+                        string plate = d["plate"]?.ToString();
+                        double amount = d["amount_due"]?.ToObject<double>() ?? 0;
+                        OnAwaitingPayment?.Invoke(bookingId, plate, amount);
+                    }
                 }
             }
             catch (Exception ex)

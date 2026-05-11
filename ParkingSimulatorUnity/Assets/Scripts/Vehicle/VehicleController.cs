@@ -61,6 +61,11 @@ namespace ParkingSim.Vehicle
 
         public void Initialize(WaypointGraph graph, ParkingSlot slot, string plate, string qr, string vType)
         {
+            if (slot == null)
+            {
+                Debug.LogWarning($"[VehicleController] {plate} — slot is null, skipping init");
+                return;
+            }
             waypointGraph = graph;
             targetSlot = slot;
             plateNumber = plate;

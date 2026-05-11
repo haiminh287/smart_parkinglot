@@ -19,7 +19,8 @@ import { Button } from "@/components/ui/button";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { SlotOverview } from "@/components/dashboard/SlotOverview";
 import { RecentBookings } from "@/components/dashboard/RecentBookings";
-import { adminApi } from "@/services";
+import { AILiveOccupancyCard } from "@/components/dashboard/AILiveOccupancyCard";
+import { adminService } from "@/services/business";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 
@@ -55,8 +56,8 @@ export default function AdminDashboard() {
       try {
         setLoading(true);
         const [statsData, activitiesData] = await Promise.all([
-          adminApi.getDashboardStats(),
-          adminApi.getRecentActivities(8),
+          adminService.getDashboardStats(),
+          adminService.getRecentActivities(8),
         ]);
         setStats(statsData as unknown as DashboardData);
         setActivities(activitiesData);
@@ -235,6 +236,9 @@ export default function AdminDashboard() {
                 <span>100%</span>
               </div>
             </div>
+
+            {/* AI Live Occupancy — realtime từ camera tổng */}
+            <AILiveOccupancyCard totalSlots={stats?.activeParkings ?? undefined} />
 
             {/* Main Content Grid */}
             <div className="grid gap-6 lg:grid-cols-3">

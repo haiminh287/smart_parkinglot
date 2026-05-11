@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { adminApi } from "@/services";
+import { adminService } from "@/services/business";
 import { toast } from "sonner";
 
 interface PricingConfig {
@@ -124,7 +124,7 @@ export default function AdminConfigPage() {
     const loadConfig = async () => {
       setIsLoading(true);
       try {
-        const config = (await adminApi.getConfig()) as RawAdminConfig;
+        const config = (await adminService.getConfig()) as RawAdminConfig;
 
         // Map API response to local state - handle both flat and nested formats
         const carPerHour =
@@ -186,7 +186,7 @@ export default function AdminConfigPage() {
         },
       };
 
-      await adminApi.updateConfig(payload);
+      await adminService.updateConfig(payload);
 
       toast.success("Đã lưu cấu hình hệ thống");
       toastHook({

@@ -13,6 +13,15 @@ namespace ParkingSim.Parking
 
         public bool isEntry;
 
+        /// <summary>
+        /// Public accessor để ParkingManager wire barrier arm mà không cần reflection.
+        /// </summary>
+        public Transform Arm
+        {
+            get => barrierArm;
+            set => barrierArm = value;
+        }
+
         private bool isOpen;
         private float targetAngle;
         private bool eventFired = true;

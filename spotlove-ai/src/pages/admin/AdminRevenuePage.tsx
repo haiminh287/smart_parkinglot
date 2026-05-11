@@ -34,12 +34,12 @@ import {
   AreaChart,
 } from "recharts";
 import { toast } from "sonner";
-import { bookingApi } from "@/services/api/booking.api";
-import type {
-  RevenueSummary,
-  DailyRevenueItem,
-  HourlyRevenueItem,
-} from "@/services/api/booking.api";
+import {
+  bookingService,
+  type RevenueSummary,
+  type DailyRevenueItem,
+  type HourlyRevenueItem,
+} from "@/services/business";
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -231,8 +231,8 @@ export default function AdminRevenuePage() {
   // Fetch summary + hourly (independent of dailyDays)
   const fetchCore = useCallback(async () => {
     const [summaryRes, hourlyRes] = await Promise.all([
-      bookingApi.getRevenueSummary(),
-      bookingApi.getHourlyRevenue(), // today by default
+      bookingService.getRevenueSummary(),
+      bookingService.getHourlyRevenue(), // today by default
     ]);
     setSummary(summaryRes);
     setHourlyData(hourlyRes);
@@ -240,7 +240,7 @@ export default function AdminRevenuePage() {
 
   // Fetch daily data (depends on dailyDays)
   const fetchDaily = useCallback(async (days: DailyDays) => {
-    const dailyRes = await bookingApi.getDailyRevenue(days);
+    const dailyRes = await bookingService.getDailyRevenue(days);
     setDailyData(dailyRes);
   }, []);
 

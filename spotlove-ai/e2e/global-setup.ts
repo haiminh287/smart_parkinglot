@@ -9,11 +9,17 @@ import { test as setup, expect } from "@playwright/test";
 import type { APIRequestContext } from "@playwright/test";
 import fs from "fs";
 import path from "path";
+import * as dotenv from "dotenv";
+
+dotenv.config({ path: ".env.test" });
 
 const AUTH_DIR = path.resolve("e2e", ".auth");
 
-const GATEWAY_URL = "http://localhost:8000";
-const GATEWAY_SECRET = "gw-prod-wnMbXWEHc49KXVjhae4IGU7TZfoj4HHEDTOtzYvE";
+const GATEWAY_URL = process.env.E2E_GATEWAY_URL || "http://localhost:8000";
+const GATEWAY_SECRET = process.env.E2E_GATEWAY_SECRET;
+if (!GATEWAY_SECRET) {
+  throw new Error("E2E_GATEWAY_SECRET must be set in .env.test or environment");
+}
 
 const USER_CREDENTIALS = {
   email: "e2e_playwright@parksmart.com",

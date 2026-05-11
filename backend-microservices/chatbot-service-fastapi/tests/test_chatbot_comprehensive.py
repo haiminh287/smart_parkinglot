@@ -4,14 +4,14 @@ Tests: Chat, conversations CRUD, quick-actions, feedback,
        notifications, actions, preferences.
 """
 
+import os
 import uuid
+
 import pytest
-from httpx import AsyncClient, ASGITransport
-
 from app.main import app
+from httpx import ASGITransport, AsyncClient
 
-
-GATEWAY_SECRET = "gateway-internal-secret-key"
+GATEWAY_SECRET = os.environ.get("GATEWAY_SECRET", "test-secret-for-ci")
 TEST_USER_ID = "test-user-uuid-chatbot"
 
 
@@ -35,6 +35,7 @@ async def anon_client():
 # HEALTH
 # ═══════════════════════════════════════════════════
 
+
 @pytest.mark.anyio
 async def test_health(client: AsyncClient):
     response = await client.get("/health/")
@@ -45,11 +46,15 @@ async def test_health(client: AsyncClient):
 # CHAT ENDPOINT
 # ═══════════════════════════════════════════════════
 
+
 @pytest.mark.anyio
 async def test_chat_send_message(client: AsyncClient):
-    response = await client.post("/chatbot/chat/", json={
-        "message": "Xin chào, tôi muốn đặt chỗ đậu xe",
-    })
+    response = await client.post(
+        "/chatbot/chat/",
+        json={
+            "message": "Xin chào, tôi muốn đặt chỗ đậu xe",
+        },
+    )
     assert response.status_code in [200, 201]
     data = response.json()
     assert "response" in data or "message" in data or "reply" in data
@@ -57,25 +62,32 @@ async def test_chat_send_message(client: AsyncClient):
 
 @pytest.mark.anyio
 async def test_chat_empty_message(client: AsyncClient):
-    response = await client.post("/chatbot/chat/", json={
-        "message": "",
-    })
+    response = await client.post(
+        "/chatbot/chat/",
+        json={
+            "message": "",
+        },
+    )
     assert response.status_code in [200, 400, 422]
 
 
 @pytest.mark.anyio
 async def test_chat_with_conversation_id(client: AsyncClient):
     conv_id = str(uuid.uuid4())
-    response = await client.post("/chatbot/chat/", json={
-        "message": "Tôi muốn hủy booking",
-        "conversation_id": conv_id,
-    })
+    response = await client.post(
+        "/chatbot/chat/",
+        json={
+            "message": "Tôi muốn hủy booking",
+            "conversation_id": conv_id,
+        },
+    )
     assert response.status_code in [200, 201, 404]
 
 
 # ═══════════════════════════════════════════════════
 # QUICK ACTIONS
 # ═══════════════════════════════════════════════════
+
 
 @pytest.mark.anyio
 async def test_quick_actions(client: AsyncClient):
@@ -89,19 +101,24 @@ async def test_quick_actions(client: AsyncClient):
 # FEEDBACK
 # ═══════════════════════════════════════════════════
 
+
 @pytest.mark.anyio
 async def test_feedback_submit(client: AsyncClient):
-    response = await client.post("/chatbot/feedback/", json={
-        "conversationId": str(uuid.uuid4()),
-        "rating": 5,
-        "comment": "Very helpful!",
-    })
+    response = await client.post(
+        "/chatbot/feedback/",
+        json={
+            "conversationId": str(uuid.uuid4()),
+            "rating": 5,
+            "comment": "Very helpful!",
+        },
+    )
     assert response.status_code in [200, 201, 404, 422]
 
 
 # ═══════════════════════════════════════════════════
 # CONVERSATIONS
 # ═══════════════════════════════════════════════════
+
 
 @pytest.mark.anyio
 async def test_list_conversations(client: AsyncClient):
@@ -145,6 +162,7 @@ async def test_latest_history(client: AsyncClient):
 # ACTIONS
 # ═══════════════════════════════════════════════════
 
+
 @pytest.mark.anyio
 async def test_list_actions(client: AsyncClient):
     response = await client.get("/chatbot/actions/")
@@ -155,6 +173,7 @@ async def test_list_actions(client: AsyncClient):
 # PREFERENCES
 # ═══════════════════════════════════════════════════
 
+
 @pytest.mark.anyio
 async def test_get_preferences(client: AsyncClient):
     response = await client.get("/chatbot/preferences/")
@@ -163,15 +182,19 @@ async def test_get_preferences(client: AsyncClient):
 
 @pytest.mark.anyio
 async def test_update_preferences(client: AsyncClient):
-    response = await client.put("/chatbot/preferences/", json={
-        "favorite_lot_id": str(uuid.uuid4()),
-    })
+    response = await client.put(
+        "/chatbot/preferences/",
+        json={
+            "favorite_lot_id": str(uuid.uuid4()),
+        },
+    )
     assert response.status_code in [200, 422]
 
 
 # ═══════════════════════════════════════════════════
 # CHATBOT NOTIFICATIONS
 # ═══════════════════════════════════════════════════
+
 
 @pytest.mark.anyio
 async def test_list_chatbot_notifications(client: AsyncClient):
@@ -182,15 +205,19 @@ async def test_list_chatbot_notifications(client: AsyncClient):
 @pytest.mark.anyio
 async def test_action_on_notification(client: AsyncClient):
     fake_id = str(uuid.uuid4())
-    response = await client.post(f"/chatbot/notifications/{fake_id}/", json={
-        "action": "acknowledge",
-    })
+    response = await client.post(
+        f"/chatbot/notifications/{fake_id}/",
+        json={
+            "action": "acknowledge",
+        },
+    )
     assert response.status_code in [200, 404]
 
 
 # ═══════════════════════════════════════════════════
 # AUTH ENFORCEMENT
 # ═══════════════════════════════════════════════════
+
 
 @pytest.mark.anyio
 async def test_protected_without_auth(anon_client: AsyncClient):

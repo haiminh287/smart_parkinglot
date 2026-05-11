@@ -67,13 +67,17 @@ class ActionService:
     - Converts relative times to ISO
     """
 
-    def __init__(self, service_client: Optional[Any] = None):
+    def __init__(self, service_client: Optional[Any] = None, llm_client: Optional[Any] = None):
         self.service_client = service_client
+        self.llm_client = llm_client  # Optional, used by FAQ handler to summarize RAG hits
 
     async def execute(
-        self, user_id: str, decision: IntentDecision
+        self, user_id: str, decision: IntentDecision, user_message: str = ""
     ) -> dict[str, Any]:
-        """Execute the appropriate action for the intent."""
+        """Execute the appropriate action for the intent.
+
+        user_message: raw message from user, dùng cho FAQ RAG retrieval.
+        """
         try:
             intent = Intent(decision.primary_intent)
         except ValueError:
@@ -93,6 +97,11 @@ class ActionService:
         }
 
         dispatcher = dispatchers.get(intent)
+
+        # FAQ intent xử lý riêng — cần user_message cho RAG retrieval
+        if intent == Intent.FAQ:
+            return await self._handle_faq(user_id, decision.entities, user_message)
+
         if not dispatcher:
             return {"status": "no_action", "intent": intent.value}
 
@@ -103,12 +112,67 @@ class ActionService:
             return {"status": "error", "error": str(e), "intent": intent.value}
 
     async def _check_availability(self, user_id: str, entities: dict) -> dict:
-        if self.service_client:
-            return await self.service_client.get_available_slots(
-                vehicle_type=self._map_vehicle_type(entities.get("vehicle_type")),
-                lot_id=entities.get("lot_id"),
-            )
-        return {"status": "ok", "message": "Service client not configured"}
+        """Check availability với 3 bước enhancement so với phiên bản cũ:
+
+        1. Resolve `lot_name` → `lot_id` (LLM thường trả tên "Vincom..." chứ
+           không có UUID). Match fuzzy theo tên.
+        2. Query slots với status=available + lot_id filter.
+        3. Group slot theo zone → trả danh sách mã slot cụ thể đầu mỗi zone.
+           Time-window filter để sau (cần booking-service support `?available_at=`).
+        """
+        if not self.service_client:
+            return {"status": "ok", "message": "Service client not configured"}
+
+        vehicle_type = self._map_vehicle_type(entities.get("vehicle_type"))
+        lot_id = entities.get("lot_id")
+        lot_name = entities.get("lot_name") or entities.get("parking_lot")
+
+        # ── Resolve lot_name → lot_id nếu thiếu ID ──
+        if not lot_id and lot_name:
+            try:
+                lots = await self.service_client.get_parking_lots(user_id=user_id)
+                target = (lot_name or "").lower().strip()
+                for lot in lots or []:
+                    name = (lot.get("name") or "").lower()
+                    # Fuzzy: tên lot chứa từ khoá user nói hoặc ngược lại
+                    if target in name or any(t in name for t in target.split() if len(t) > 2):
+                        lot_id = lot.get("id")
+                        logger.info("Resolved lot_name '%s' → lot_id %s", lot_name, lot_id)
+                        break
+            except Exception as e:
+                logger.warning("Failed to resolve lot_name: %s", e)
+
+        result = await self.service_client.get_available_slots(
+            vehicle_type=vehicle_type,
+            lot_id=lot_id,
+            user_id=user_id,
+        )
+
+        # ── Enrich: group slot theo zone + limit codes để FE/LLM dễ format ──
+        slots = result.get("slots", []) if isinstance(result, dict) else []
+        zones_grouped: dict[str, list[str]] = {}
+        for s in slots:
+            # Zone name có thể null (seed cũ) — fallback zone code prefix
+            zone_name = s.get("zoneName") or s.get("zone_name") or ""
+            code = s.get("code", "")
+            if not zone_name and code and "-" in code:
+                zone_name = f"Zone {code.split('-')[0]}"
+            zone_name = zone_name or "Khu vực chung"
+            zones_grouped.setdefault(zone_name, []).append(code)
+
+        # Limit mỗi zone lấy 5 slot đầu để câu trả lời ngắn gọn
+        zones_summary = [
+            {
+                "zone": zone,
+                "count": len(codes),
+                "sample_codes": sorted(c for c in codes if c)[:5],
+            }
+            for zone, codes in sorted(zones_grouped.items(), key=lambda kv: -len(kv[1]))
+        ]
+        result["zones"] = zones_summary
+        result["lot_id_resolved"] = lot_id
+        result["lot_name_query"] = lot_name
+        return result
 
     async def _book_slot(self, user_id: str, entities: dict) -> dict:
         """Smart booking wizard — Step 1: Show available floors.
@@ -423,6 +487,74 @@ class ActionService:
                 "weekends": "06:00 - 23:00",
                 "note": "Mở cửa 7 ngày/tuần"
             }
+        }
+
+    async def _handle_faq(self, user_id: str, entities: dict, user_message: str) -> dict:
+        """FAQ handler — dùng RAG retrieve docs + LLM sinh câu trả lời có citation.
+
+        Nếu RAG không available → fallback message.
+        Nếu retrieve rỗng → "chưa biết" thành thật.
+        """
+        from app.infrastructure.rag import get_rag_store
+
+        rag = get_rag_store()
+        if not rag:
+            return {
+                "status": "error",
+                "error": "Tôi chưa kết nối được knowledge base. Vui lòng liên hệ hotline 1900-PARKSMART.",
+            }
+
+        docs = rag.retrieve(user_message, top_k=3)
+        if not docs:
+            return {
+                "status": "no_match",
+                "message": (
+                    "Tôi chưa tìm được thông tin phù hợp với câu hỏi của bạn. "
+                    "Bạn có thể mô tả rõ hơn hoặc liên hệ support@parksmart.com."
+                ),
+            }
+
+        # Build context cho LLM — đính kèm citation
+        context_blocks = [
+            f"[Nguồn {i+1}: {doc.metadata.get('source', '?')}]\n{doc.content}"
+            for i, doc in enumerate(docs)
+        ]
+        context = "\n\n".join(context_blocks)
+
+        if not self.llm_client:
+            # Fallback: trả raw chunk đầu
+            return {
+                "status": "ok",
+                "answer": docs[0].content[:500],
+                "sources": [d.metadata.get("source", "?") for d in docs],
+                "num_docs": len(docs),
+            }
+
+        system_prompt = (
+            "Bạn là trợ lý ParkSmart. Trả lời câu hỏi người dùng CHỈ DỰA VÀO "
+            "context được cung cấp. Nếu context không đủ thông tin để trả lời, "
+            "hãy nói thành thật là bạn chưa có thông tin đó. "
+            "Trích dẫn nguồn [Nguồn N] khi đưa ra mỗi thông tin cụ thể. "
+            "Trả lời ngắn gọn, rõ ràng bằng tiếng Việt."
+        )
+        user_prompt = (
+            f"Context:\n{context}\n\n"
+            f"Câu hỏi người dùng: {user_message}\n\n"
+            f"Trả lời ngắn gọn, kèm trích dẫn nguồn:"
+        )
+
+        try:
+            answer = await self.llm_client.generate(system_prompt, user_prompt)
+        except Exception as e:
+            logger.error(f"FAQ LLM generate failed: {e}")
+            answer = docs[0].content[:500]
+
+        return {
+            "status": "ok",
+            "answer": answer,
+            "sources": [d.metadata.get("source", "?") for d in docs],
+            "num_docs": len(docs),
+            "top_score": docs[0].score if docs else 0.0,
         }
 
     @staticmethod

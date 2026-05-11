@@ -64,9 +64,11 @@ namespace ParkingSim.Camera
             renderTexture.Create();
             cam.targetTexture = renderTexture;
 
+            // RGBA32 matches AsyncGPUReadback R8G8B8A8_UNorm stride (4 bytes/pixel).
+            // Using RGB24 here corrupts LoadRawTextureData — moiré + ghosted output.
             readbackTexture = new Texture2D(
                 config.renderWidth, config.renderHeight,
-                TextureFormat.RGB24, false
+                TextureFormat.RGBA32, false
             );
         }
 
@@ -153,7 +155,11 @@ namespace ParkingSim.Camera
                     continue;
                 }
 
-                byte[] jpegData = CaptureFrame();
+                // S2-IMP-12: Use AsyncGPUReadback to avoid blocking main thread
+                // during ReadPixels (GPU→CPU stall of several ms per frame).
+                byte[] jpegData = null;
+                yield return StartCoroutine(CaptureFrameAsync(bytes => jpegData = bytes));
+
                 if (jpegData != null)
                 {
                     // Back off when endpoint is unreachable (MOCK mode or server down)
@@ -173,6 +179,9 @@ namespace ParkingSim.Camera
             }
         }
 
+        // Legacy synchronous snapshot — kept for external callers that cannot
+        // yield. Uses ReadPixels which blocks main thread. Prefer the async
+        // path in CaptureLoop for real-time streaming.
         public byte[] SnapshotJpeg() => CaptureFrame();
 
         private byte[] CaptureFrame()
@@ -190,6 +199,40 @@ namespace ParkingSim.Camera
             RenderTexture.active = prev;
 
             return readbackTexture.EncodeToJPG(config.jpegQuality);
+        }
+
+        // S2-IMP-12: Async GPU readback variant used by CaptureLoop.
+        // Uses UnityEngine.Rendering.AsyncGPUReadback.Request to move the
+        // GPU→CPU copy off the main thread. Adds ~1 frame latency but frees
+        // the main thread for physics/AI.
+        private IEnumerator CaptureFrameAsync(System.Action<byte[]> onComplete)
+        {
+            if (renderTexture == null || readbackTexture == null)
+            {
+                onComplete(null);
+                yield break;
+            }
+
+            var request = UnityEngine.Rendering.AsyncGPUReadback.Request(
+                renderTexture,
+                0,
+                UnityEngine.Experimental.Rendering.GraphicsFormat.R8G8B8A8_UNorm
+            );
+
+            while (!request.done)
+                yield return null;
+
+            if (request.hasError)
+            {
+                onComplete(null);
+                yield break;
+            }
+
+            var raw = request.GetData<byte>();
+            readbackTexture.LoadRawTextureData(raw);
+            readbackTexture.Apply();
+
+            onComplete(readbackTexture.EncodeToJPG(config.jpegQuality));
         }
 
         private IEnumerator SendFrame(byte[] jpegData)

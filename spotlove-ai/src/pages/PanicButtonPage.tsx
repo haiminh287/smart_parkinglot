@@ -29,12 +29,12 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/use-auth";
 import { toast } from "sonner";
-import { incidentApi, bookingApi } from "@/services";
+import { incidentService, bookingService } from "@/services/business";
 import { mapBookingResponse } from "@/store/slices/bookingSlice";
 import type {
   Incident,
   IncidentType as ApiIncidentType,
-} from "@/services/api/incident.api";
+} from "@/services/business";
 
 interface IncidentLog {
   id: string;
@@ -140,7 +140,7 @@ export default function PanicButtonPage() {
     const loadCurrentParking = async () => {
       setIsLoadingParking(true);
       try {
-        const response = await bookingApi.getCurrentParking();
+        const response = await bookingService.getCurrentParking();
 
         if (response && response.booking) {
           const mapped = mapBookingResponse(response.booking);
@@ -173,7 +173,7 @@ export default function PanicButtonPage() {
     const loadIncidents = async () => {
       setIsLoadingIncidents(true);
       try {
-        const response = await incidentApi.getMyIncidents({
+        const response = await incidentService.getMyIncidents({
           page: 1,
           pageSize: 10,
         });
@@ -230,14 +230,12 @@ export default function PanicButtonPage() {
       await new Promise((resolve) => setTimeout(resolve, 500));
 
       // Call the API to report incident
-      const response = await incidentApi.reportIncident({
+      const response = await incidentService.report({
         type: mapLocalTypeToApi(selectedType!),
         description: incidentNote || undefined,
         bookingId: userParkingInfo?.bookingId,
-        location: {
-          zoneId: userParkingInfo?.zoneId,
-          slotId: userParkingInfo?.slotId,
-        },
+        zoneId: userParkingInfo?.zoneId,
+        slotId: userParkingInfo?.slotId,
       });
 
       toast.info("📞 Đang thông báo bảo vệ...", { duration: 2000 });
@@ -305,11 +303,13 @@ export default function PanicButtonPage() {
     }
 
     try {
-      const cameraInfo = await incidentApi.getNearbyCamera({
-        zoneId: userParkingInfo.zoneId,
-        slotId: userParkingInfo.slotId,
-      });
-      setCameraStream(cameraInfo.streamUrl);
+      const cameraInfo = await incidentService.getNearbyCamera(
+        userParkingInfo.zoneId,
+        userParkingInfo.slotId,
+      );
+      if (cameraInfo) {
+        setCameraStream(cameraInfo.streamUrl);
+      }
     } catch {
       setCameraStream((prev) => prev);
     }
@@ -319,7 +319,7 @@ export default function PanicButtonPage() {
   const refreshIncidents = async () => {
     setIsLoadingIncidents(true);
     try {
-      const response = await incidentApi.getMyIncidents({
+      const response = await incidentService.getMyIncidents({
         page: 1,
         pageSize: 10,
       });

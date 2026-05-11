@@ -16,11 +16,19 @@ namespace ParkingSim.Core
 
         private void Start()
         {
+            if (generator == null)
+                generator = FindObjectOfType<ParkingLotGenerator>();
+            if (generator == null)
+            {
+                Debug.LogError("[FloorVisibilityManager] ParkingLotGenerator not found!");
+                return;
+            }
             totalFloors = generator.numberOfFloors;
         }
 
         public void ShowFloor(int floorIndex)
         {
+            if (generator == null) return;
             for (int i = 0; i < totalFloors; i++)
             {
                 var floor = generator.transform.Find($"Floor_{i + 1}");
@@ -33,6 +41,7 @@ namespace ParkingSim.Core
 
         public void ShowAllFloors()
         {
+            if (generator == null) return;
             for (int i = 0; i < totalFloors; i++)
             {
                 var floor = generator.transform.Find($"Floor_{i + 1}");
@@ -53,6 +62,7 @@ namespace ParkingSim.Core
 
         public void ToggleFloorTransparency(int floorIndex, float alpha)
         {
+            if (generator == null) return;
             var floor = generator.transform.Find($"Floor_{floorIndex + 1}");
             if (floor == null) return;
 

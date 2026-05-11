@@ -15,6 +15,9 @@ namespace ParkingSim.API
         [Header("Internal Auth")]
         public string gatewaySecret = "gateway-internal-secret-key";
 
+        [Header("ESP32 Device Auth")]
+        public string esp32DeviceToken = "";
+
         [Header("Test Credentials")]
         public string testEmail = "test@example.com";
         public string testPassword = "password";

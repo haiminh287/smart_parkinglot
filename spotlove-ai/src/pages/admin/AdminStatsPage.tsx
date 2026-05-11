@@ -32,7 +32,7 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import { adminApi } from "@/services";
+import { adminService } from "@/services/business";
 import { toast } from "sonner";
 
 interface StatsCard {
@@ -152,7 +152,7 @@ export default function AdminStatsPage() {
   // Load dashboard stats
   const loadDashboardStats = async () => {
     try {
-      const stats = await adminApi.getDashboardStats();
+      const stats = await adminService.getDashboardStats();
 
       setStatsCards([
         {
@@ -205,7 +205,7 @@ export default function AdminStatsPage() {
         .split("T")[0];
       const endDate = now.toISOString().split("T")[0];
 
-      const reports = await adminApi.getRevenueReport({
+      const reports = await adminService.getRevenueReport({
         startDate,
         endDate,
         groupBy: "month",

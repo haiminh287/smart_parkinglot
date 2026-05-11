@@ -7,13 +7,13 @@ namespace ParkingSim.Vehicle
     /// Static helper to create realistic 3D Vietnamese license plates (rear only).
     /// 2-line format: Line1 = province+series, Line2 = numbers.
     /// White background, black border, black bold text.
-    /// Modeled after real VN 2-row plate (20.5cm × 17.5cm) scaled ×3.5 for visibility.
+    /// Modeled after real VN 2-row plate (20.5cm × 17.5cm) scaled ×4.0 for visibility.
     /// </summary>
     public static class LicensePlateCreator
     {
-        // Real VN 2-row plate ≈ 20.5×17.5cm → scaled ×3.5 for sim visibility
-        private const float PlateWidth = 0.72f;
-        private const float PlateHeight = 0.46f;
+        // Real VN 2-row plate ≈ 20.5×17.5cm → scaled ×4.0 for sim visibility
+        private const float PlateWidth = 0.85f;
+        private const float PlateHeight = 0.55f;
         private const float PlateDepth = 0.015f;
         private const float BorderThickness = 0.012f;
 
@@ -39,7 +39,7 @@ namespace ParkingSim.Vehicle
             bg.transform.localScale = new Vector3(PlateWidth, PlateHeight, PlateDepth);
             bg.transform.localRotation = Quaternion.identity;
             var bgMat = new Material(urpShader) { color = new Color(0.95f, 0.95f, 0.93f) };
-            bgMat.SetFloat("_Smoothness", 0.2f);
+            bgMat.SetFloat("_Smoothness", 0.4f);
             bg.GetComponent<Renderer>().sharedMaterial = bgMat;
             RemoveCollider(bg);
 
@@ -66,15 +66,8 @@ namespace ParkingSim.Vehicle
                 new Vector3(0f, 0f, faceZ),
                 new Vector3(PlateWidth * 0.85f, BorderThickness * 0.6f, BorderThickness));
 
-            // 3. Parse plate text into 2 lines
-            string line1Text = plateText;
-            string line2Text = "";
-            int dashIndex = plateText.IndexOf('-');
-            if (dashIndex >= 0)
-            {
-                line1Text = plateText.Substring(0, dashIndex);
-                line2Text = plateText.Substring(dashIndex + 1);
-            }
+            // 3. Parse plate text into 2 lines (Vietnamese formats)
+            ParsePlateText(plateText, out string line1Text, out string line2Text);
 
             // Text rect dimensions
             float textW = PlateWidth - 0.08f;   // 0.64
@@ -93,9 +86,9 @@ namespace ParkingSim.Vehicle
             line1Tmp.rectTransform.sizeDelta = new Vector2(textW, textH);
             line1Tmp.enableAutoSizing = true;
             line1Tmp.fontSizeMin = 0.5f;
-            line1Tmp.fontSizeMax = 3.0f;
+            line1Tmp.fontSizeMax = 5.0f;
             line1Tmp.overflowMode = TextOverflowModes.Truncate;
-            line1Tmp.outlineWidth = 0.15f;
+            line1Tmp.outlineWidth = 0.25f;
             line1Tmp.outlineColor = new Color32(0, 0, 0, 255);
 
             // 5. Line 2 (bottom) — numbers e.g. "999.88"
@@ -113,9 +106,9 @@ namespace ParkingSim.Vehicle
                 line2Tmp.rectTransform.sizeDelta = new Vector2(textW, textH);
                 line2Tmp.enableAutoSizing = true;
                 line2Tmp.fontSizeMin = 0.5f;
-                line2Tmp.fontSizeMax = 3.0f;
+                line2Tmp.fontSizeMax = 5.0f;
                 line2Tmp.overflowMode = TextOverflowModes.Truncate;
-                line2Tmp.outlineWidth = 0.15f;
+                line2Tmp.outlineWidth = 0.25f;
                 line2Tmp.outlineColor = new Color32(0, 0, 0, 255);
             }
 
@@ -129,14 +122,7 @@ namespace ParkingSim.Vehicle
         {
             if (plateObject == null) return;
 
-            string line1Text = newText;
-            string line2Text = "";
-            int dashIndex = newText.IndexOf('-');
-            if (dashIndex >= 0)
-            {
-                line1Text = newText.Substring(0, dashIndex);
-                line2Text = newText.Substring(dashIndex + 1);
-            }
+            ParsePlateText(newText, out string line1Text, out string line2Text);
 
             var line1Transform = plateObject.transform.Find("PlateTextLine1");
             if (line1Transform != null)
@@ -163,6 +149,34 @@ namespace ParkingSim.Vehicle
             strip.transform.localRotation = Quaternion.identity;
             strip.GetComponent<Renderer>().sharedMaterial = new Material(shader) { color = Color.black };
             RemoveCollider(strip);
+        }
+
+        /// <summary>
+        /// Parses Vietnamese plate text into 2 lines.
+        /// Motorbike space-separated: "98-K1 028.97" → "98-K1" / "028.97"
+        /// Car dash-separated: "51G-888.88" → "51G" / "888.88"
+        /// Mock plates: "MOCK-V1-01" → "MOCK" / "V1-01"
+        /// </summary>
+        private static void ParsePlateText(string plateText, out string line1, out string line2)
+        {
+            line1 = plateText;
+            line2 = "";
+
+            int spaceIndex = plateText.IndexOf(' ');
+            int dashIndex = plateText.IndexOf('-');
+
+            if (spaceIndex > 0 && dashIndex >= 0 && dashIndex < spaceIndex)
+            {
+                // Motorbike-style with space separator: "98-K1 028.97"
+                line1 = plateText.Substring(0, spaceIndex);
+                line2 = plateText.Substring(spaceIndex + 1);
+            }
+            else if (dashIndex >= 0)
+            {
+                // Standard car or mock plate: split at first dash
+                line1 = plateText.Substring(0, dashIndex);
+                line2 = plateText.Substring(dashIndex + 1);
+            }
         }
 
         private static void RemoveCollider(GameObject go)

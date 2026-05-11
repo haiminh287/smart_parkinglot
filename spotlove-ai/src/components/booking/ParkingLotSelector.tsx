@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { ParkingLot } from "@/types/parking";
-import { parkingApi } from "@/services/api/parking.api";
+import { parkingService } from "@/services/business/parking.service";
 
 interface ParkingLotSelectorProps {
   onSelect: (parkingLot: ParkingLot) => void;
@@ -47,7 +47,7 @@ export function ParkingLotSelector({
     const fetchParkingLots = async () => {
       try {
         setIsLoading(true);
-        const response = await parkingApi.getLots();
+        const response = await parkingService.getLots();
         const lots = response.results || [];
         setSortedLots(lots);
       } catch {
@@ -72,7 +72,7 @@ export function ParkingLotSelector({
 
           // Use nearest lots API for more accurate results
           try {
-            const nearestData = await parkingApi.getNearestLots({
+            const nearestData = await parkingService.getNearestLots({
               lat: latitude,
               lng: longitude,
               vehicleType: "Car",
@@ -108,7 +108,7 @@ export function ParkingLotSelector({
           // Try to fetch nearest lots using API
           (async () => {
             try {
-              const nearestData = await parkingApi.getNearestLots({
+              const nearestData = await parkingService.getNearestLots({
                 lat: defaultLat,
                 lng: defaultLng,
                 vehicleType: "Car",

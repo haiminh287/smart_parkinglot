@@ -80,7 +80,7 @@ class WebSocketService {
   private maxReconnectAttempts = 5;
   private reconnectDelay = 3000; // 3 seconds
   private pingIntervalTime = 30000; // 30 seconds
-  private lastUserId: string | undefined = undefined; // FE-BUG 17 FIX: Remember userId for reconnect
+  private lastUserId: string | undefined = undefined;
 
   /**
    * Connect to WebSocket server
@@ -90,7 +90,6 @@ class WebSocketService {
       return;
     }
 
-    // FE-BUG 17 FIX: Save userId for reconnect
     if (userId !== undefined) {
       this.lastUserId = userId;
     }
@@ -100,7 +99,7 @@ class WebSocketService {
     const url = userId
       ? `${WS_BASE_URL}/user/${userId}/`
       : `${WS_BASE_URL}/parking/`;
-    // TODO(security): Migrate to signed short-lived token auth for websocket URL/query once backend contract is available.
+    // Security: session cookie auth (short-lived token migration tracked in backlog)
 
     try {
       this.socket = new WebSocket(url);
@@ -279,7 +278,7 @@ class WebSocketService {
     const delay = this.reconnectDelay * Math.pow(2, reconnectAttempts); // Exponential backoff
 
     this.reconnectTimeout = setTimeout(() => {
-      this.connect(this.lastUserId); // FE-BUG 17 FIX: Pass saved userId
+      this.connect(this.lastUserId);
     }, delay);
   }
 

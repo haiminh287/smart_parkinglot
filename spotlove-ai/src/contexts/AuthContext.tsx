@@ -9,7 +9,6 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   login as loginAction,
   loginWithGoogle as loginWithGoogleAction,
-  loginWithFacebook as loginWithFacebookAction,
   register as registerAction,
   logout as logoutAction,
   updateProfile as updateProfileAction,
@@ -50,13 +49,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const loginWithFacebook = async () => {
-    const result = await dispatch(loginWithFacebookAction());
-    if (loginWithFacebookAction.rejected.match(result)) {
-      throw new Error(result.payload as string);
-    }
-  };
-
   const register = async (
     email: string,
     password: string,
@@ -89,7 +81,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         login,
         loginWithGoogle,
-        loginWithFacebook,
         register,
         logout,
         updateProfile,

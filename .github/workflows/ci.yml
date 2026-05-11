@@ -5,6 +5,10 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+  schedule:
+    # Weekly security audit every Monday at 02:00 UTC (S2-IMP-13)
+    - cron: "0 2 * * 1"
+  workflow_dispatch: {}
 
 env:
   PYTHON_VERSION: "3.12"
@@ -91,3 +95,89 @@ jobs:
           VITE_WS_URL: wss://api.example.com/ws
           VITE_GATEWAY_SECRET: ci-placeholder-gateway-secret
       - run: npm audit --audit-level=high
+
+  # ── Security Audit (S2-IMP-13) ──────────────────────────────────────
+  # Runs pip-audit against each backend service to detect HIGH/CRITICAL
+  # vulnerabilities in Python dependencies.
+  security-audit-python:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - auth-service
+          - parking-service
+          - booking-service
+          - vehicle-service
+          - ai-service-fastapi
+          - chatbot-service-fastapi
+          - notification-service-fastapi
+          - payment-service-fastapi
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "${{ env.PYTHON_VERSION }}"
+      - name: Install pip-audit
+        run: pip install pip-audit
+      - name: Run pip-audit on ${{ matrix.service }}
+        working-directory: backend-microservices/${{ matrix.service }}
+        run: |
+          pip-audit -r requirements.txt \
+            --format json \
+            --output /tmp/${{ matrix.service }}-pipaudit.json || true
+      - name: Upload audit artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipaudit-${{ matrix.service }}
+          path: /tmp/${{ matrix.service }}-pipaudit.json
+          retention-days: 30
+      - name: Fail on HIGH / CRITICAL vulnerabilities
+        run: |
+          python - <<'PY'
+          import json, sys, pathlib
+          path = pathlib.Path("/tmp/${{ matrix.service }}-pipaudit.json")
+          if not path.exists():
+              print("No audit output found — skipping gate")
+              sys.exit(0)
+          data = json.loads(path.read_text() or "{}")
+          deps = data.get("dependencies", [])
+          critical = []
+          for dep in deps:
+              for vuln in dep.get("vulns", []):
+                  severity = (vuln.get("severity") or "").upper()
+                  if severity in ("HIGH", "CRITICAL"):
+                      critical.append({
+                          "package": dep.get("name"),
+                          "version": dep.get("version"),
+                          "id": vuln.get("id"),
+                          "severity": severity,
+                          "fix_versions": vuln.get("fix_versions"),
+                      })
+          if critical:
+              print(f"FAIL: Found {len(critical)} HIGH/CRITICAL vulns:")
+              for c in critical:
+                  print(f"   {c}")
+              sys.exit(1)
+          print("PASS: No HIGH/CRITICAL vulnerabilities found")
+          PY
+
+  # Go modules vulnerability scan via govulncheck
+  security-audit-go:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - gateway-service-go
+          - realtime-service-go
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+      - name: Run govulncheck on ${{ matrix.service }}
+        working-directory: backend-microservices/${{ matrix.service }}
+        run: govulncheck ./...

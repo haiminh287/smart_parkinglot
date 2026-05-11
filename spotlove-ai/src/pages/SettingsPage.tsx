@@ -20,7 +20,11 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/contexts/use-theme";
-import { vehicleApi, notificationApi, authApi } from "@/services";
+import {
+  vehicleService,
+  notificationService,
+  authService,
+} from "@/services/business";
 import { useAuth } from "@/contexts/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { AddVehicleDialog } from "@/components/settings/AddVehicleDialog";
@@ -80,7 +84,7 @@ export default function SettingsPage() {
     const fetchVehicles = async () => {
       setLoadingVehicles(true);
       try {
-        const response = await vehicleApi.getVehicles();
+        const response = await vehicleService.getAll();
         setVehicles(response.results);
       } catch (error) {
         console.error("Failed to fetch vehicles:", error);
@@ -102,7 +106,7 @@ export default function SettingsPage() {
     const fetchPreferences = async () => {
       setLoadingPreferences(true);
       try {
-        const prefs = await notificationApi.getPreferences();
+        const prefs = await notificationService.getPreferences();
         setNotifications({
           email: prefs.emailEnabled,
           push: prefs.pushEnabled,
@@ -124,7 +128,7 @@ export default function SettingsPage() {
 
   const handleDeleteVehicle = async (vehicleId: string) => {
     try {
-      await vehicleApi.deleteVehicle(vehicleId);
+      await vehicleService.delete(vehicleId);
       setVehicles(vehicles.filter((v) => v.id !== vehicleId));
       toast({
         title: "Thành công",
@@ -142,17 +146,19 @@ export default function SettingsPage() {
 
   const handleSetDefaultVehicle = async (vehicleId: string) => {
     try {
-      const updatedVehicle = await vehicleApi.setAsDefault(vehicleId);
-      setVehicles(
-        vehicles.map((v) => ({
-          ...v,
-          isDefault: v.id === updatedVehicle.id,
-        })),
-      );
-      toast({
-        title: "Thành công",
-        description: "Đã đặt làm phương tiện mặc định",
-      });
+      const result = await vehicleService.setDefault(vehicleId);
+      if (result.success && result.vehicle) {
+        setVehicles(
+          vehicles.map((v) => ({
+            ...v,
+            isDefault: v.id === result.vehicle!.id,
+          })),
+        );
+        toast({
+          title: "Thành công",
+          description: "Đã đặt làm phương tiện mặc định",
+        });
+      }
     } catch (error) {
       console.error("Failed to set default:", error);
       toast({
@@ -174,7 +180,7 @@ export default function SettingsPage() {
       if (notifications.bookingReminder) types.push("booking");
       if (notifications.promotions) types.push("promotion");
 
-      await notificationApi.updatePreferences({
+      await notificationService.updatePreferences({
         pushEnabled: key === "push" ? value : notifications.push,
         emailEnabled: key === "email" ? value : notifications.email,
         types: types as NotificationType[],
@@ -215,10 +221,7 @@ export default function SettingsPage() {
 
     setChangingPassword(true);
     try {
-      await authApi.changePassword({
-        current_password: currentPassword,
-        new_password: newPassword,
-      });
+      await authService.changePassword(currentPassword, newPassword);
 
       toast({
         title: "Thành công",

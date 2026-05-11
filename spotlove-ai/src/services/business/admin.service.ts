@@ -8,19 +8,28 @@
 
 import { adminApi } from "@/services/api/admin.api";
 import type {
-  User,
-  DashboardStats,
+  User as ApiUser,
+  DashboardStats as ApiDashboardStats,
   RevenueReport,
   IncidentReport,
   SystemConfig,
   ParkingLotInput,
   ZoneInput,
   CameraInput,
+  CreateUserData as ApiCreateUserData,
 } from "@/services/api/admin.api";
 import type {
   DjangoPaginatedResponse,
   PaginationParams,
 } from "@/services/api/axios.client";
+
+// =====================
+// Re-export Types for consumers
+// =====================
+
+export type User = ApiUser;
+export type DashboardStats = ApiDashboardStats;
+export type CreateUserData = ApiCreateUserData;
 
 // =====================
 // Types
@@ -323,9 +332,132 @@ export const adminService = {
   },
 
   /**
+   * Create camera
+   */
+  async createCamera(data: CameraInput) {
+    return adminApi.createCamera(data);
+  },
+
+  /**
    * Update camera
    */
   async updateCamera(cameraId: string, data: Partial<CameraInput>) {
     return adminApi.updateCamera(cameraId, data);
+  },
+
+  /**
+   * Delete camera
+   */
+  async deleteCamera(cameraId: string): Promise<OperationResult> {
+    try {
+      await adminApi.deleteCamera(cameraId);
+      return { success: true, message: "Đã xóa camera" };
+    } catch (error: unknown) {
+      return {
+        success: false,
+        message: getApiErrorMessage(error, "Lỗi xóa camera"),
+      };
+    }
+  },
+
+  /**
+   * Create user
+   */
+  async createUser(data: CreateUserData): Promise<User> {
+    return adminApi.createUser(data);
+  },
+
+  /**
+   * Delete parking lot
+   */
+  async deleteLot(lotId: string): Promise<OperationResult> {
+    try {
+      await adminApi.deleteLot(lotId);
+      return { success: true, message: "Đã xóa bãi đỗ" };
+    } catch (error: unknown) {
+      return {
+        success: false,
+        message: getApiErrorMessage(error, "Lỗi xóa bãi đỗ"),
+      };
+    }
+  },
+
+  /**
+   * Delete zone
+   */
+  async deleteZone(zoneId: string): Promise<OperationResult> {
+    try {
+      await adminApi.deleteZone(zoneId);
+      return { success: true, message: "Đã xóa khu vực" };
+    } catch (error: unknown) {
+      return {
+        success: false,
+        message: getApiErrorMessage(error, "Lỗi xóa khu vực"),
+      };
+    }
+  },
+
+  /**
+   * Create slot
+   */
+  async createSlot(data: { zone: string; code: string; status?: string }) {
+    return adminApi.createSlot(data);
+  },
+
+  /**
+   * Update slot
+   */
+  async updateSlot(
+    slotId: string,
+    data: Partial<{ code: string; zone: string; status: string }>,
+  ) {
+    return adminApi.updateSlot(slotId, data);
+  },
+
+  /**
+   * Delete slot
+   */
+  async deleteSlot(slotId: string): Promise<OperationResult> {
+    try {
+      await adminApi.deleteSlot(slotId);
+      return { success: true, message: "Đã xóa slot" };
+    } catch (error: unknown) {
+      return {
+        success: false,
+        message: getApiErrorMessage(error, "Lỗi xóa slot"),
+      };
+    }
+  },
+
+  /**
+   * Create floor
+   */
+  async createFloor(data: { parkingLot: string; level: number; name: string }) {
+    return adminApi.createFloor(data);
+  },
+
+  /**
+   * Update floor
+   */
+  async updateFloor(
+    floorId: string,
+    data: Partial<{ level: number; name: string }>,
+  ) {
+    return adminApi.updateFloor(floorId, data);
+  },
+
+  /**
+   * Delete floor
+   */
+  async deleteFloor(floorId: string): Promise<OperationResult> {
+    try {
+      await adminApi.deleteFloor(floorId);
+      return { success: true, message: "Đã xóa tầng" };
+    } catch (error: unknown) {
+      return {
+        success: false,
+        message: getApiErrorMessage(error, "Lỗi xóa tầng"),
+      };
+    }
   },
 };

@@ -67,6 +67,21 @@ async def lifespan(app: FastAPI):
     get_llm_client()
     logger.info("✅ Infrastructure clients initialised")
 
+    # Init RAG knowledge base (chạy trong thread để không block startup)
+    try:
+        from pathlib import Path
+        from app.infrastructure.rag import init_rag_store
+        kb_dir = Path("/app/knowledge")
+        persist_dir = Path("/app/chroma_db")
+        if kb_dir.exists():
+            rag = init_rag_store(kb_dir, persist_dir, re_ingest=False)
+            if rag:
+                logger.info("✅ RAG store initialised — %d chunks", rag.collection.count())
+        else:
+            logger.warning("⚠️ Knowledge dir not found: %s", kb_dir)
+    except Exception as e:
+        logger.warning("⚠️ RAG init failed: %s — chatbot runs without FAQ", e)
+
     # 🔥 2.5: Start RabbitMQ consumer for proactive events (non-blocking)
     global _rabbitmq_consumer, _rabbitmq_task
     try:

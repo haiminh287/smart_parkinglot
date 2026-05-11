@@ -3,12 +3,13 @@ Comprehensive tests for vehicle-service.
 Tests: Vehicle model, CRUD API, set-default, user isolation.
 """
 
+import os
 import uuid
+
 import pytest
 from django.test import TestCase
 from rest_framework.test import APIClient
 from vehicles.models import Vehicle
-
 
 # ═══════════════════════════════════════════════════
 # FIXTURE HELPERS
@@ -20,7 +21,7 @@ OTHER_USER_ID = "00000000-0000-0000-0000-000000000002"
 
 def gateway_headers(user_id=USER_ID, email="test@parksmart.com"):
     return {
-        "HTTP_X_GATEWAY_SECRET": "gateway-internal-secret-key",
+        "HTTP_X_GATEWAY_SECRET": os.environ.get("GATEWAY_SECRET", "test-secret-for-ci"),
         "HTTP_X_USER_ID": str(user_id),
         "HTTP_X_USER_EMAIL": email,
     }
@@ -43,6 +44,7 @@ def create_vehicle(user_id=USER_ID, **kwargs):
 # ═══════════════════════════════════════════════════
 # MODEL TESTS
 # ═══════════════════════════════════════════════════
+
 
 class TestVehicleModel(TestCase):
     def test_create_vehicle(self):
@@ -75,6 +77,7 @@ class TestVehicleModel(TestCase):
 # API TESTS — CRUD
 # ═══════════════════════════════════════════════════
 
+
 class TestVehicleCRUD(TestCase):
     def setUp(self):
         self.client = APIClient()
@@ -86,13 +89,17 @@ class TestVehicleCRUD(TestCase):
         assert response.status_code == 200
 
     def test_create_vehicle(self):
-        response = self.client.post("/vehicles/", {
-            "license_plate": "51A-888.88",
-            "vehicle_type": "Car",
-            "brand": "Honda",
-            "model": "Civic",
-            "color": "Black",
-        }, format="json")
+        response = self.client.post(
+            "/vehicles/",
+            {
+                "license_plate": "51A-888.88",
+                "vehicle_type": "Car",
+                "brand": "Honda",
+                "model": "Civic",
+                "color": "Black",
+            },
+            format="json",
+        )
         assert response.status_code in [201, 200]
         assert Vehicle.objects.filter(license_plate="51A-888.88").exists()
 
@@ -101,13 +108,20 @@ class TestVehicleCRUD(TestCase):
         response = self.client.get(f"/vehicles/{v.id}/")
         assert response.status_code == 200
         data = response.json()
-        assert data.get("license_plate") == "51A-020.20" or data.get("licensePlate") == "51A-020.20"
+        assert (
+            data.get("license_plate") == "51A-020.20"
+            or data.get("licensePlate") == "51A-020.20"
+        )
 
     def test_update_vehicle(self):
         v = create_vehicle(user_id=USER_ID, license_plate="51A-030.30")
-        response = self.client.patch(f"/vehicles/{v.id}/", {
-            "color": "Red",
-        }, format="json")
+        response = self.client.patch(
+            f"/vehicles/{v.id}/",
+            {
+                "color": "Red",
+            },
+            format="json",
+        )
         assert response.status_code == 200
         v.refresh_from_db()
         assert v.color == "Red"
@@ -120,10 +134,14 @@ class TestVehicleCRUD(TestCase):
 
     def test_create_duplicate_plate_fails(self):
         create_vehicle(user_id=USER_ID, license_plate="51A-050.50")
-        response = self.client.post("/vehicles/", {
-            "license_plate": "51A-050.50",
-            "vehicle_type": "Car",
-        }, format="json")
+        response = self.client.post(
+            "/vehicles/",
+            {
+                "license_plate": "51A-050.50",
+                "vehicle_type": "Car",
+            },
+            format="json",
+        )
         assert response.status_code == 400
 
 
@@ -131,14 +149,19 @@ class TestVehicleCRUD(TestCase):
 # SET DEFAULT TESTS
 # ═══════════════════════════════════════════════════
 
+
 class TestSetDefaultVehicle(TestCase):
     def setUp(self):
         self.client = APIClient()
         self.client.credentials(**gateway_headers(USER_ID))
 
     def test_set_default(self):
-        v1 = create_vehicle(user_id=USER_ID, license_plate="51A-060.60", is_default=True)
-        v2 = create_vehicle(user_id=USER_ID, license_plate="51A-070.70", is_default=False)
+        v1 = create_vehicle(
+            user_id=USER_ID, license_plate="51A-060.60", is_default=True
+        )
+        v2 = create_vehicle(
+            user_id=USER_ID, license_plate="51A-070.70", is_default=False
+        )
         response = self.client.post(f"/vehicles/{v2.id}/set-default/")
         assert response.status_code == 200
         v2.refresh_from_db()
@@ -151,6 +174,7 @@ class TestSetDefaultVehicle(TestCase):
 # USER ISOLATION TESTS
 # ═══════════════════════════════════════════════════
 
+
 class TestUserIsolation(TestCase):
     def test_cannot_see_other_users_vehicles(self):
         create_vehicle(user_id=OTHER_USER_ID, license_plate="51A-080.80")
@@ -159,7 +183,11 @@ class TestUserIsolation(TestCase):
         response = client.get("/vehicles/")
         data = response.json()
         results = data if isinstance(data, list) else data.get("results", [])
-        plates = [v.get("license_plate") for v in results] if isinstance(results, list) else []
+        plates = (
+            [v.get("license_plate") for v in results]
+            if isinstance(results, list)
+            else []
+        )
         assert "51A-080.80" not in plates
 
     def test_cannot_access_other_users_vehicle(self):

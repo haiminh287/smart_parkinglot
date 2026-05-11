@@ -72,5 +72,3 @@ func AuthMiddleware(cfg *config.Config, store *session.RedisStore) gin.HandlerFu
 		c.Next()
 	}
 }
-
-

@@ -14,7 +14,7 @@ import {
   clearError,
   updateBookingStatus,
 } from "@/store/slices/bookingSlice";
-import { bookingApi } from "@/services/api/booking.api";
+import { bookingService } from "@/services/business/booking.service";
 import type { Booking, BookingStatus } from "@/store/slices/bookingSlice";
 
 interface CreateBookingParams {
@@ -125,7 +125,7 @@ export function useBooking() {
   // Get booking stats from API
   const getBookingStats = useCallback(async () => {
     try {
-      const stats = await bookingApi.getBookingStats();
+      const stats = await bookingService.getStats();
       return stats;
     } catch (error) {
       console.error("Failed to get booking stats:", error);
@@ -136,7 +136,7 @@ export function useBooking() {
   // Get upcoming bookings from API
   const getUpcomingBookings = useCallback(async () => {
     try {
-      const bookings = await bookingApi.getUpcomingBookings();
+      const bookings = await bookingService.getUpcoming();
       return bookings;
     } catch (error) {
       console.error("Failed to get upcoming bookings:", error);

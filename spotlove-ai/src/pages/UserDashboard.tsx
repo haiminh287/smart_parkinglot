@@ -60,8 +60,8 @@ export default function UserDashboard() {
     // Fetch vehicle count
     const loadVehicles = async () => {
       try {
-        const { vehicleApi } = await import("@/services");
-        const response = await vehicleApi.getVehicles();
+        const { vehicleService } = await import("@/services/business");
+        const response = await vehicleService.getAll();
         setVehicleCount(response.results?.length ?? 0);
       } catch {
         setVehicleCount(0);

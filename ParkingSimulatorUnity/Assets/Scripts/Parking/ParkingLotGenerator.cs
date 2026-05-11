@@ -335,38 +335,39 @@ namespace ParkingSim.Parking
             // Shared divider lines: only left side + top/bottom per slot
             // Adjacent slots share borders (left of slot N+1 = right of slot N)
             float hw = slotWidth * 0.5f, hd = slotDepth * 0.5f;
-            float bW = 0.08f;   // thin line width
-            float bH = 0.02f;   // flat
-            float yOff = bH * 0.5f + 0.005f;
+            float bW = 0.18f;   // dày hơn để camera overview bắt được >=5px/viền
+            float bH = 0.03f;
+            float yOff = bH * 0.5f + 0.01f;   // nâng nhẹ để không bị Z-fight với sàn
 
             // West divider (every slot gets its left edge)
-            CreateCube(slotGo.transform, "Divider_W",
+            var dW = CreateCube(slotGo.transform, "Divider_W",
                 pos + new Vector3(-hw, yOff, 0f),
                 new Vector3(bW, bH, slotDepth), OrangeLineColor);
+            SetFlatOrange(dW, OrangeLineColor);
 
             // If last slot in row, also draw East edge
             if (isLastInRow)
             {
-                CreateCube(slotGo.transform, "Divider_E",
+                var dE = CreateCube(slotGo.transform, "Divider_E",
                     pos + new Vector3(hw, yOff, 0f),
                     new Vector3(bW, bH, slotDepth), OrangeLineColor);
+                SetFlatOrange(dE, OrangeLineColor);
             }
 
             // North/South horizontal cap lines
-            CreateCube(slotGo.transform, "Cap_N",
+            var cN = CreateCube(slotGo.transform, "Cap_N",
                 pos + new Vector3(0f, yOff, hd),
                 new Vector3(slotWidth, bH, bW), OrangeLineColor);
-            CreateCube(slotGo.transform, "Cap_S",
+            SetFlatOrange(cN, OrangeLineColor);
+            var cS = CreateCube(slotGo.transform, "Cap_S",
                 pos + new Vector3(0f, yOff, -hd),
                 new Vector3(slotWidth, bH, bW), OrangeLineColor);
+            SetFlatOrange(cS, OrangeLineColor);
 
-            // Mini barrier gate at slot entrance (south side)
-            CreateCube(slotGo.transform, "SlotBarrierPost",
-                pos + new Vector3(-hw + 0.15f, 0.15f, -hd),
-                new Vector3(0.1f, 0.3f, 0.1f), BlackColor);
-            CreateCube(slotGo.transform, "SlotBarrierArm",
-                pos + new Vector3(0f, 0.28f, -hd),
-                new Vector3(slotWidth * 0.8f, 0.05f, 0.05f), SignRed);
+            // Barrier ở phía cổng aisle (entrance side). Slot entrance waypoint đặt tại
+            // pos.z + (pos.z < 0 ? +hd+1 : -hd-1) → slots z<0 vào từ NORTH, slots z>0 vào từ SOUTH.
+            float entranceZ = pos.z < 0f ? hd : -hd;
+            BuildSlotBarrier(slotGo.transform, pos, slotWidth, -hw, entranceZ);
 
             var slot = slotGo.AddComponent<ParkingSlot>();
             slot.Initialize(code, vType);
@@ -389,6 +390,9 @@ namespace ParkingSim.Parking
                 new Vector3(garageWidth / 2f, hy, 0f), new Vector3(wt, garageHeight, garageDepth), sideColor);
             CreateQuadLocal(slotGo.transform, "FloorMark",
                 new Vector3(0f, 0.02f, 0f), new Vector3(garageWidth * 0.9f, garageDepth * 0.9f, 1f));
+            // Garage slot mở về NORTH (+Z) — Wall_Back ở -Z, entrance ở +Z.
+            // Barrier ở entrance side để chắn cửa vào.
+            BuildSlotBarrier(slotGo.transform, pos, garageWidth, -garageWidth / 2f, garageDepth / 2f);
             // Light fixture sphere on back wall
             var light = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             light.name = "LightFixture";
@@ -827,7 +831,9 @@ namespace ParkingSim.Parking
                 var slot = kvp.Value;
                 if (slot == null) continue;
                 var ep = slot.transform.position + new Vector3(0f, 0.1f, 0f);
-                ep.z += (slot.transform.position.z < 0f ? 1f : -1f) * (slotDepth / 2f + 1f);
+                // Đẩy entrance waypoint ra xa slot edge thêm ~2m để mũi xe (dài ~4m)
+                // dừng TRƯỚC barrier (barrier tại slot.z ± hd), không đâm xuyên qua.
+                ep.z += (slot.transform.position.z < 0f ? 1f : -1f) * (slotDepth / 2f + 2.5f);
                 var sn = CreateWaypointNode(slot.transform.parent, ep, WaypointNode.NodeType.SlotEntrance, kvp.Key);
                 var near = waypointGraph.GetNearestLaneNode(ep);
                 if (near != null)
@@ -903,6 +909,49 @@ namespace ParkingSim.Parking
             return go;
         }
 
+        /// <summary>
+        /// Build a mini boom-gate barrier at the slot entrance.
+        /// Post is a vertical cube at (postLocalX, 0, entranceLocalZ). Arm is an empty
+        /// "SlotBarrierArm" pivot at post top with a child cube offset +X; ParkingManager
+        /// rotates the pivot around Y so the arm swings sideways like a real parking lock.
+        /// slotWidth is local X span, postLocalX is -hw (left edge), entranceLocalZ is -hd (south).
+        /// </summary>
+        private static void BuildSlotBarrier(Transform slotRoot, Vector3 slotWorldPos,
+            float slotWidth, float postLocalX, float entranceLocalZ)
+        {
+            Vector3 postBase = slotWorldPos + new Vector3(postLocalX + 0.2f, 0f, entranceLocalZ);
+            const float postHeight = 0.6f;
+            const float postThickness = 0.15f;
+
+            // Post (visible vertical marker)
+            CreateCube(slotRoot, "SlotBarrierPost",
+                postBase + new Vector3(0f, postHeight * 0.5f, 0f),
+                new Vector3(postThickness, postHeight, postThickness), BlackColor);
+
+            // Arm pivot at post top — empty GameObject so ParkingManager can rotate localRotation
+            var armPivot = new GameObject("SlotBarrierArm");
+            armPivot.transform.SetParent(slotRoot);
+            armPivot.transform.position = postBase + new Vector3(0f, postHeight - 0.05f, 0f);
+            armPivot.transform.localRotation = Quaternion.identity;
+
+            // Arm visual — thick red bar, pivot at left end so Y-rotation swings outward
+            float armLength = slotWidth * 0.88f - 0.4f;
+            var armMesh = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            armMesh.name = "ArmMesh";
+            armMesh.transform.SetParent(armPivot.transform, false);
+            armMesh.transform.localPosition = new Vector3(armLength * 0.5f, 0f, 0f);
+            armMesh.transform.localScale = new Vector3(armLength, 0.1f, 0.1f);
+            SetColor(armMesh, SignRed);
+
+            // White tip for visibility
+            var armTip = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            armTip.name = "ArmTip";
+            armTip.transform.SetParent(armPivot.transform, false);
+            armTip.transform.localPosition = new Vector3(armLength - 0.08f, 0f, 0f);
+            armTip.transform.localScale = new Vector3(0.16f, 0.12f, 0.12f);
+            SetColor(armTip, Color.white);
+        }
+
         private static void CreateCubeLocal(Transform parent, string name, Vector3 localPos, Vector3 scale, Color color)
         {
             var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -953,6 +1002,31 @@ namespace ParkingSim.Parking
             var mat = r.material;
             if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", color);
             else mat.color = color;
+        }
+
+        private static Material _unlitOrangeShared;
+
+        /// <summary>
+        /// Gán material Unlit (không bị lighting/shadow ảnh hưởng) cho
+        /// divider slot — đảm bảo tất cả viền cam trên camera overview có
+        /// màu đồng nhất cho AI detection.
+        /// </summary>
+        private static void SetFlatOrange(GameObject go, Color color)
+        {
+            var r = go.GetComponent<Renderer>();
+            if (r == null) return;
+            if (_unlitOrangeShared == null)
+            {
+                var shader = Shader.Find("Universal Render Pipeline/Unlit")
+                             ?? Shader.Find("Unlit/Color")
+                             ?? Shader.Find("Standard");
+                _unlitOrangeShared = new Material(shader);
+                if (_unlitOrangeShared.HasProperty("_BaseColor"))
+                    _unlitOrangeShared.SetColor("_BaseColor", color);
+                else
+                    _unlitOrangeShared.color = color;
+            }
+            r.sharedMaterial = _unlitOrangeShared;
         }
 
         private static void SetEmissiveColor(GameObject go, Color baseColor, Color emissiveColor, float intensity = 2f)

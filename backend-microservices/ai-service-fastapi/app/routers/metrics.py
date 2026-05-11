@@ -44,19 +44,6 @@ async def get_metrics(db: Session = Depends(get_db)):
         .count()
     )
 
-    cash_count = (
-        db.query(PredictionLog)
-        .filter(PredictionLog.prediction_type == "cash_recognition")
-        .count()
-    )
-
-    cash_model = (
-        db.query(ModelVersion)
-        .filter(ModelVersion.model_type == "cash_recognition")
-        .order_by(ModelVersion.created_at.desc())
-        .first()
-    )
-
     bn_count = (
         db.query(PredictionLog)
         .filter(PredictionLog.prediction_type == "banknote_recognition")
@@ -69,17 +56,6 @@ async def get_metrics(db: Session = Depends(get_db)):
             "type": "pre-trained",
             "description": "YOLOv8 pre-trained on COCO dataset",
             "total_predictions": lp_count,
-        },
-        cash_recognition={
-            "version": "resnet50_v1",
-            "type": "custom-trained",
-            "description": "ResNet50 trained on Vietnamese cash dataset",
-            "accuracy": (
-                float(cash_model.accuracy)
-                if cash_model and cash_model.accuracy
-                else 0.0
-            ),
-            "total_predictions": cash_count,
         },
         banknote_recognition={
             "version": "bank-grade-v1",

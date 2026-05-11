@@ -1,26 +1,55 @@
 /**
  * WebLogger — captures ALL web activity (API calls, responses, errors, user actions)
- * to localStorage and lets you download as a .log file for debugging.
+ * to sessionStorage and lets you download as a .log file for debugging.
  *
- * Usage: webLogger.info / .warn / .error / .api / .action
- * Export: webLogger.download()  — triggers browser download of full session log
+ * SECURITY: Disabled in production. PII redacted in dev.
  */
 
+const IS_DEV = import.meta.env.DEV;
 const STORAGE_KEY = "parksmart_dev_log";
 const MAX_ENTRIES = 2000;
 
 export type LogLevel = "INFO" | "WARN" | "ERROR" | "API" | "ACTION";
 
 export interface LogEntry {
-  ts: string; // HH:mm:ss.SSS
+  ts: string;
   level: LogLevel;
   tag: string;
   message: string;
   data?: unknown;
 }
 
+const REDACT_KEYS = new Set([
+  "password",
+  "password_confirm",
+  "currentPassword",
+  "newPassword",
+  "token",
+  "refreshToken",
+  "refresh_token",
+  "access_token",
+  "authorization",
+  "cookie",
+  "session_id",
+  "sessionId",
+  "csrfToken",
+  "X-Gateway-Secret",
+  "qr_data",
+  "qr_code_data",
+]);
+
+function redact(obj: unknown): unknown {
+  if (obj == null || typeof obj !== "object") return obj;
+  if (Array.isArray(obj)) return obj.map(redact);
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
+    out[k] = REDACT_KEYS.has(k) ? "[REDACTED]" : redact(v);
+  }
+  return out;
+}
+
 function now(): string {
-  return new Date().toISOString().slice(11, 23); // HH:mm:ss.SSS
+  return new Date().toISOString().slice(11, 23);
 }
 
 function load(): LogEntry[] {
@@ -33,7 +62,6 @@ function load(): LogEntry[] {
 
 function save(entries: LogEntry[]): void {
   try {
-    // Keep only last MAX_ENTRIES to avoid storage overflow
     const trimmed = entries.slice(-MAX_ENTRIES);
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
   } catch {
@@ -42,6 +70,7 @@ function save(entries: LogEntry[]): void {
 }
 
 function append(entry: LogEntry): void {
+  if (!IS_DEV) return;
   const entries = load();
   entries.push(entry);
   save(entries);
@@ -55,35 +84,42 @@ function formatEntry(e: LogEntry): string {
   return `[${e.ts}] [${e.level.padEnd(6)}] [${e.tag}] ${e.message}${dataStr}`;
 }
 
+function isAuthUrl(url: string): boolean {
+  return /\/auth\/(login|register|forgot-password|reset-password)/.test(url);
+}
+
 const webLogger = {
   info(tag: string, message: string, data?: unknown) {
-    append({ ts: now(), level: "INFO", tag, message, data });
-    console.log(`[${tag}]`, message, data ?? "");
+    if (!IS_DEV) return;
+    append({ ts: now(), level: "INFO", tag, message, data: redact(data) });
+    console.log(`[${tag}]`, message, data != null ? redact(data) : "");
   },
 
   warn(tag: string, message: string, data?: unknown) {
-    append({ ts: now(), level: "WARN", tag, message, data });
-    console.warn(`[${tag}]`, message, data ?? "");
+    if (!IS_DEV) return;
+    append({ ts: now(), level: "WARN", tag, message, data: redact(data) });
+    console.warn(`[${tag}]`, message, data != null ? redact(data) : "");
   },
 
   error(tag: string, message: string, data?: unknown) {
-    append({ ts: now(), level: "ERROR", tag, message, data });
-    console.error(`[${tag}]`, message, data ?? "");
+    if (!IS_DEV) return;
+    append({ ts: now(), level: "ERROR", tag, message, data: redact(data) });
+    console.error(`[${tag}]`, message, data != null ? redact(data) : "");
   },
 
-  /** Log an API request about to be sent */
   apiReq(method: string, url: string, body?: unknown) {
+    if (!IS_DEV) return;
+    const safeData = isAuthUrl(url) ? "[AUTH-REDACTED]" : redact(body);
     append({
       ts: now(),
       level: "API",
       tag: "REQ",
       message: `→ ${method.toUpperCase()} ${url}`,
-      data: body,
+      data: safeData,
     });
-    console.log(`[API REQ] ${method.toUpperCase()} ${url}`, body ?? "");
+    console.log(`[API REQ] ${method.toUpperCase()} ${url}`, safeData ?? "");
   },
 
-  /** Log a successful API response */
   apiRes(
     method: string,
     url: string,
@@ -91,20 +127,21 @@ const webLogger = {
     duration: number,
     data?: unknown,
   ) {
+    if (!IS_DEV) return;
+    const safeData = isAuthUrl(url) ? "[AUTH-REDACTED]" : redact(data);
     append({
       ts: now(),
       level: "API",
       tag: "RSP",
       message: `← ${method.toUpperCase()} ${url} ${status} (${duration}ms)`,
-      data,
+      data: safeData,
     });
     console.log(
       `[API RSP] ${method.toUpperCase()} ${url} ${status} (${duration}ms)`,
-      data ?? "",
+      safeData ?? "",
     );
   },
 
-  /** Log a failed API response */
   apiErr(
     method: string,
     url: string,
@@ -112,32 +149,33 @@ const webLogger = {
     duration: number,
     data?: unknown,
   ) {
+    if (!IS_DEV) return;
+    const safeData = redact(data);
     append({
       ts: now(),
       level: "ERROR",
       tag: "RSP",
       message: `✗ ${method.toUpperCase()} ${url} ${status} (${duration}ms)`,
-      data,
+      data: safeData,
     });
     console.error(
       `[API ERR] ${method.toUpperCase()} ${url} ${status} (${duration}ms)`,
-      data ?? "",
+      safeData ?? "",
     );
   },
 
-  /** Log a user action (click, navigation, form submit) */
   action(action: string, detail?: unknown) {
+    if (!IS_DEV) return;
     append({
       ts: now(),
       level: "ACTION",
       tag: "UI",
       message: action,
-      data: detail,
+      data: redact(detail),
     });
-    console.log(`[ACTION]`, action, detail ?? "");
+    console.log(`[ACTION]`, action, detail != null ? redact(detail) : "");
   },
 
-  /** Return all entries as plain text */
   dump(): string {
     const entries = load();
     const header = [
@@ -150,8 +188,11 @@ const webLogger = {
     return header + entries.map(formatEntry).join("\n");
   },
 
-  /** Trigger browser download of the full log */
   download() {
+    if (!IS_DEV) {
+      console.warn("[webLogger] download disabled in production");
+      return;
+    }
     const text = this.dump();
     const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -162,12 +203,10 @@ const webLogger = {
     URL.revokeObjectURL(url);
   },
 
-  /** Clear all stored entries */
   clear() {
     sessionStorage.removeItem(STORAGE_KEY);
   },
 
-  /** Get count of stored entries */
   count(): number {
     return load().length;
   },

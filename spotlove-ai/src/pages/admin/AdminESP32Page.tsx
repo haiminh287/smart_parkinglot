@@ -28,10 +28,10 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
-  aiApi,
+  aiService,
   type ESP32DeviceInfo,
   type ESP32DeviceLog,
-} from "@/services/api/ai.api";
+} from "@/services/business";
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -269,7 +269,7 @@ function LogViewerPanel({
 
   const fetchLogs = useCallback(async () => {
     try {
-      const response = await aiApi.getESP32DeviceLogs(deviceId);
+      const response = await aiService.getESP32DeviceLogs(deviceId);
       setLogs(response.logs);
     } catch {
       toast.error(`Không thể tải logs cho ${deviceId}`);
@@ -458,7 +458,7 @@ export default function AdminESP32Page() {
 
   const fetchDevices = useCallback(async () => {
     try {
-      const response = await aiApi.getESP32Devices();
+      const response = await aiService.getESP32Devices();
       setDevices(response.devices);
       // Auto-select first device if none is selected yet
       if (response.devices.length > 0) {

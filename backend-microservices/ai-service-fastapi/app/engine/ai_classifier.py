@@ -22,12 +22,11 @@ from app.engine.feature_extractors import (EDGE_DIM, GABOR_DIM, LBP_DIM,
 
 logger = logging.getLogger(__name__)
 
-# 9 Vietnamese banknote denominations
+# 9 Vietnamese banknote denominations (match training class order)
 DENOMINATION_CLASSES: list[str] = [
     "1000", "2000", "5000", "10000", "20000",
-    "50000", "100000", "500000",
+    "50000", "100000", "200000", "500000",
 ]
-# NOTE: 200000 excluded from AI model (no training data) — handled by color classifier
 
 # Input size for MobileNetV3-Large
 INPUT_SIZE = (224, 224)

@@ -3,14 +3,14 @@ Comprehensive tests for payment-service-fastapi.
 Tests: Initiate, verify, list, get, get by booking_id.
 """
 
+import os
 import uuid
+
 import pytest
-from httpx import AsyncClient, ASGITransport
-
 from app.main import app
+from httpx import ASGITransport, AsyncClient
 
-
-GATEWAY_SECRET = "gateway-internal-secret-key"
+GATEWAY_SECRET = os.environ.get("GATEWAY_SECRET", "test-secret-for-ci")
 TEST_USER_ID = "test-user-uuid-payment"
 
 
@@ -34,6 +34,7 @@ async def anon_client():
 # HEALTH
 # ═══════════════════════════════════════════════════
 
+
 @pytest.mark.anyio
 async def test_health(client: AsyncClient):
     response = await client.get("/health/")
@@ -44,13 +45,17 @@ async def test_health(client: AsyncClient):
 # INITIATE PAYMENT
 # ═══════════════════════════════════════════════════
 
+
 @pytest.mark.anyio
 async def test_initiate_payment(client: AsyncClient):
-    response = await client.post("/api/payments/initiate/", json={
-        "bookingId": str(uuid.uuid4()),
-        "amount": 50000,
-        "paymentMethod": "momo",
-    })
+    response = await client.post(
+        "/api/payments/initiate/",
+        json={
+            "bookingId": str(uuid.uuid4()),
+            "amount": 50000,
+            "paymentMethod": "momo",
+        },
+    )
     assert response.status_code in [201, 200, 400, 404, 500]
 
 
@@ -64,6 +69,7 @@ async def test_initiate_payment_missing_fields(client: AsyncClient):
 # VERIFY PAYMENT
 # ═══════════════════════════════════════════════════
 
+
 @pytest.mark.anyio
 async def test_verify_payment_not_found(client: AsyncClient):
     fake_id = str(uuid.uuid4())
@@ -74,6 +80,7 @@ async def test_verify_payment_not_found(client: AsyncClient):
 # ═══════════════════════════════════════════════════
 # LIST PAYMENTS
 # ═══════════════════════════════════════════════════
+
 
 @pytest.mark.anyio
 async def test_list_payments(client: AsyncClient):
@@ -91,6 +98,7 @@ async def test_list_payments_paginated(client: AsyncClient):
 # GET PAYMENT
 # ═══════════════════════════════════════════════════
 
+
 @pytest.mark.anyio
 async def test_get_payment_not_found(client: AsyncClient):
     fake_id = str(uuid.uuid4())
@@ -102,6 +110,7 @@ async def test_get_payment_not_found(client: AsyncClient):
 # GET PAYMENT BY BOOKING
 # ═══════════════════════════════════════════════════
 
+
 @pytest.mark.anyio
 async def test_get_payment_by_booking(client: AsyncClient):
     fake_booking_id = str(uuid.uuid4())
@@ -112,6 +121,7 @@ async def test_get_payment_by_booking(client: AsyncClient):
 # ═══════════════════════════════════════════════════
 # AUTH ENFORCEMENT
 # ═══════════════════════════════════════════════════
+
 
 @pytest.mark.anyio
 async def test_protected_without_auth(anon_client: AsyncClient):

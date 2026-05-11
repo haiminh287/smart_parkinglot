@@ -102,6 +102,14 @@ VIRTUAL_CAMERAS = [
         "description": "Camera ảo cổng ra — giám sát xe check-out",
     },
     {
+        "id": "virtual-zone-garage",
+        "name": "Garage Zone (Virtual)",
+        "zone": "Garage G",
+        "floor": 1,
+        "type": "virtual",
+        "description": "Camera ảo khu garage G-01..G-05",
+    },
+    {
         "id": "virtual-zone-south",
         "name": "Zone South (Virtual)",
         "zone": "South",

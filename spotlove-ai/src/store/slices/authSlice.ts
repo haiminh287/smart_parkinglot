@@ -6,7 +6,7 @@
 
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import Cookies from "js-cookie";
-import { authApi } from "@/services/api/auth.api";
+import { authService } from "@/services/business";
 
 export type UserRole = "user" | "admin";
 
@@ -42,7 +42,10 @@ interface ApiErrorPayload {
 }
 
 const getErrorMessage = (error: unknown, fallbackMessage: string): string => {
-  if (error instanceof Error && error.message === "AUTH_ME_INVALID_CONTENT_TYPE") {
+  if (
+    error instanceof Error &&
+    error.message === "AUTH_ME_INVALID_CONTENT_TYPE"
+  ) {
     return "Lỗi cấu hình API production: endpoint auth trả về dữ liệu không hợp lệ";
   }
 
@@ -69,9 +72,11 @@ const getUserFromCookie = (): User | null => {
   return null;
 };
 
+const cachedUser = getUserFromCookie();
+
 const initialState: AuthState = {
-  user: getUserFromCookie(),
-  isAuthenticated: !!getUserFromCookie(),
+  user: cachedUser,
+  isAuthenticated: !!cachedUser,
   isLoading: false,
   error: null,
 };
@@ -84,7 +89,7 @@ export const login = createAsyncThunk(
     { rejectWithValue },
   ) => {
     try {
-      const response = await authApi.login(credentials);
+      const response = await authService.loginRaw(credentials);
       return response.user;
     } catch (error: unknown) {
       return rejectWithValue(getErrorMessage(error, "Đăng nhập thất bại"));
@@ -96,25 +101,11 @@ export const loginWithGoogle = createAsyncThunk(
   "auth/loginWithGoogle",
   async (_, { rejectWithValue }) => {
     try {
-      window.location.href = await authApi.getGoogleAuthUrl();
+      window.location.href = await authService.getGoogleAuthUrlRaw();
       return null; // Will redirect to Google
     } catch (error: unknown) {
       return rejectWithValue(
         getErrorMessage(error, "Đăng nhập Google thất bại"),
-      );
-    }
-  },
-);
-
-export const loginWithFacebook = createAsyncThunk(
-  "auth/loginWithFacebook",
-  async (_, { rejectWithValue }) => {
-    try {
-      window.location.href = await authApi.getFacebookAuthUrl();
-      return null; // Will redirect to Facebook
-    } catch (error: unknown) {
-      return rejectWithValue(
-        getErrorMessage(error, "Đăng nhập Facebook thất bại"),
       );
     }
   },
@@ -127,7 +118,7 @@ export const register = createAsyncThunk(
     { rejectWithValue },
   ) => {
     try {
-      const response = await authApi.register(data);
+      const response = await authService.registerRaw(data);
       return response.user;
     } catch (error: unknown) {
       return rejectWithValue(getErrorMessage(error, "Đăng ký thất bại"));
@@ -139,7 +130,7 @@ export const logout = createAsyncThunk(
   "auth/logout",
   async (_, { rejectWithValue }) => {
     try {
-      await authApi.logout();
+      await authService.logoutRaw();
       Cookies.remove("user_info");
     } catch (error: unknown) {
       return rejectWithValue(getErrorMessage(error, "Đăng xuất thất bại"));
@@ -159,7 +150,7 @@ export const initAuth = createAsyncThunk(
       }
 
       // Verify session with backend
-      const response = await authApi.getCurrentUser();
+      const response = await authService.getCurrentUserRaw();
       return response.user;
     } catch (error: unknown) {
       const status = getErrorStatus(error);
@@ -191,7 +182,7 @@ export const fetchCurrentUser = createAsyncThunk(
   "auth/fetchCurrentUser",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await authApi.getCurrentUser();
+      const response = await authService.getCurrentUserRaw();
       return response.user;
     } catch (error: unknown) {
       return rejectWithValue(
@@ -206,12 +197,7 @@ export const updateProfile = createAsyncThunk(
   async (data: Partial<User>, { rejectWithValue }) => {
     try {
       // FE-BUG 14 FIX: Use real API call instead of mock
-      const response = await authApi.getCurrentUser();
-      // For now use auth/me endpoint for profile update until dedicated endpoint exists
-      const { default: apiClient } =
-        await import("@/services/api/axios.client");
-      const updateResponse = await apiClient.patch("/auth/me/", data);
-      const updatedUser = updateResponse.data;
+      const updatedUser = await authService.updateProfileRaw(data);
       // Update cookie with non-sensitive data only
       Cookies.set(
         "user_info",
@@ -278,21 +264,6 @@ const authSlice = createSlice({
         state.isLoading = false;
       })
       .addCase(loginWithGoogle.rejected, (state, action) => {
-        state.isLoading = false;
-        state.error = action.payload as string;
-      });
-
-    // Login with Facebook
-    builder
-      .addCase(loginWithFacebook.pending, (state) => {
-        state.isLoading = true;
-        state.error = null;
-      })
-      .addCase(loginWithFacebook.fulfilled, (state) => {
-        // Redirecting to Facebook - don't set state
-        state.isLoading = false;
-      })
-      .addCase(loginWithFacebook.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
       });

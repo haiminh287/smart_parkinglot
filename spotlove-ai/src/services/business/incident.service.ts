@@ -9,14 +9,21 @@
 import { incidentApi } from "@/services/api/incident.api";
 import { websocketService } from "@/services/websocket.service";
 import type {
-  Incident,
-  IncidentType,
+  Incident as ApiIncident,
+  IncidentType as ApiIncidentType,
   ReportIncidentRequest,
 } from "@/services/api/incident.api";
 import type {
   DjangoPaginatedResponse,
   PaginationParams,
 } from "@/services/api/axios.client";
+
+// =====================
+// Re-export Types for consumers
+// =====================
+
+export type Incident = ApiIncident;
+export type IncidentType = ApiIncidentType;
 
 // =====================
 // Types

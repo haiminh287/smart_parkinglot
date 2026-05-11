@@ -26,8 +26,6 @@ urlpatterns = [
     # OAuth2
     path('google/', views.google_auth_url_view, name='google-auth-url'),
     path('google/callback/', views.google_callback_view, name='google-callback'),
-    path('facebook/', views.facebook_auth_url_view, name='facebook-auth-url'),
-    path('facebook/callback/', views.facebook_callback_view, name='facebook-callback'),
     
     # Admin endpoints
     path('admin/dashboard/stats/', admin_views.DashboardStatsView.as_view(), name='admin-dashboard-stats'),

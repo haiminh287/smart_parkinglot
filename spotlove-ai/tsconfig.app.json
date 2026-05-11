@@ -17,10 +17,12 @@
 
     /* Linting */
     "strict": false,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "alwaysStrict": true,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "noImplicitAny": false,
-    "noFallthroughCasesInSwitch": false,
     "ignoreDeprecations": "6.0",
 
     "baseUrl": ".",

@@ -114,6 +114,7 @@ services:
       - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
       - RABBITMQ_USER=${RABBITMQ_USER}
       - RABBITMQ_PASSWORD=${RABBITMQ_PASS}
+      - REALTIME_SERVICE_URL=http://realtime-service-go:8006
       - GATEWAY_SECRET=${GATEWAY_SECRET:?GATEWAY_SECRET must be set in .env}
       - PYTHONPATH=/app:/app/shared
     ports:
@@ -122,6 +123,8 @@ services:
       - ./shared:/app/shared
     depends_on:
       mysql:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     networks:
       - parksmart-network
@@ -229,7 +232,7 @@ services:
     build: ./booking-service
     container_name: booking-celery-beat
     restart: unless-stopped
-    command: celery -A booking_service beat --loglevel=info
+    command: celery -A booking_service beat --loglevel=info --schedule=/tmp/celerybeat-schedule
     healthcheck:
       disable: true
     environment:
@@ -241,6 +244,7 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:?DB_PASSWORD must be set in .env}
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - GATEWAY_SECRET=${GATEWAY_SECRET:?GATEWAY_SECRET must be set in .env}
       - PYTHONPATH=/app:/app/shared
     volumes:
       - ./shared:/app/shared
@@ -263,6 +267,14 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:?DB_PASSWORD must be set in .env}
       - GATEWAY_SECRET=${GATEWAY_SECRET:?GATEWAY_SECRET must be set in .env}
       - REALTIME_SERVICE_URL=http://realtime-service-go:8006
+      - AUTH_SERVICE_URL=http://auth-service:8000
+      # ─── Email (Gmail SMTP) — optional, no-op if blank ───
+      - EMAIL_HOST=${EMAIL_HOST:-smtp.gmail.com}
+      - EMAIL_PORT=${EMAIL_PORT:-587}
+      - EMAIL_HOST_USER=${EMAIL_HOST_USER:-}
+      - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD:-}
+      - EMAIL_FROM_NAME=${EMAIL_FROM_NAME:-ParkSmart}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-minhht2k4@gmail.com}
       - DEBUG=${DEBUG:-False}
     expose:
       - "8005"
@@ -336,7 +348,7 @@ services:
       - CAMERA_DROIDCAM_URL=${CAMERA_DROIDCAM_URL:-http://192.168.100.130:4747}
       - CAMERA_RTSP_URL=${CAMERA_RTSP_URL:-rtsp://user:password@192.168.1.100:554/H.264}
       - CAMERA_HTTP_URL=${CAMERA_HTTP_URL:-http://192.168.100.130:80}
-      - ESP32_DEVICE_TOKEN=${ESP32_DEVICE_TOKEN:-}
+      - ESP32_DEVICE_TOKEN=${ESP32_DEVICE_TOKEN:?ESP32_DEVICE_TOKEN must be set in .env}
       - DEBUG=${DEBUG:-False}
     ports:
       - "8009:8009"
@@ -369,6 +381,7 @@ services:
     build: ./chatbot-service-fastapi
     container_name: chatbot-service-fastapi
     restart: unless-stopped
+    user: root  # v3.1: RAG volumes (hf_cache, chroma_db) need write perms; app user blocked by volume root-ownership
     environment:
       - DB_HOST=mysql
       - DB_PORT=3306
@@ -383,7 +396,12 @@ services:
       - REALTIME_SERVICE_URL=http://realtime-service-go:8006
       # ─── LLM Config ───
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
-      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.0-flash}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-flash}
+      # LLM_BASE_URL disabled: local OpenAI-compat proxy at :8045 not running → falls back to keyword.
+      # Forcing empty routes via Gemini SDK directly (uses GEMINI_API_KEY).
+      - LLM_BASE_URL=
+      - LLM_API_KEY=${LLM_API_KEY:-}
+      - LLM_MODEL=${LLM_MODEL:-}
       # ─── Redis (chatbot uses DB 6) ───
       - REDIS_HOST=redis
       - REDIS_PORT=6379
@@ -391,8 +409,18 @@ services:
       # ─── RabbitMQ (proactive events) ───
       - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
       - DEBUG=${DEBUG:-False}
+      # ─── RAG cache (container runs as user app, HOME=/app) ───
+      - HF_HOME=/app/hf_cache
+      - TRANSFORMERS_CACHE=/app/hf_cache
+      - SENTENCE_TRANSFORMERS_HOME=/app/hf_cache
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     expose:
       - "8008"
+    volumes:
+      - ../docs/chatbot-knowledge:/app/knowledge:ro
+      - chatbot-chroma-data:/app/chroma_db
+      - chatbot-hf-cache-v2:/app/hf_cache
     depends_on:
       mysql:
         condition: service_healthy
@@ -424,7 +452,7 @@ services:
       - REALTIME_SERVICE_URL=http://realtime-service-go:8006
       - PAYMENT_SERVICE_URL=http://payment-service-fastapi:8007
       - CHATBOT_SERVICE_URL=http://chatbot-service-fastapi:8008
-      - AI_SERVICE_URL=http://ai-service-fastapi:8009
+      - AI_SERVICE_URL=${AI_SERVICE_URL_OVERRIDE:-http://ai-service-fastapi:8009}
     ports:
       - "8000:8000"
     depends_on:
@@ -432,6 +460,12 @@ services:
         condition: service_healthy
       auth-service:
         condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8000/health/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
     networks:
       - parksmart-network
 
@@ -446,3 +480,5 @@ volumes:
   ai_models:
   ai_datasets:
   parksmart_media:
+  chatbot-chroma-data:   # Vector DB persist giữa restart
+  chatbot-hf-cache-v2:      # HuggingFace model cache (sentence-transformers)

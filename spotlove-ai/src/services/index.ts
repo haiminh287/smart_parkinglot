@@ -38,16 +38,10 @@ export { default as apiClient } from "./api/axios.client";
 export { buildPaginationParams, extractErrorMessage } from "./api/axios.client";
 export { ENDPOINTS } from "./api/endpoints";
 
-// Individual API modules
-export { authApi, handleAuthError } from "./api/auth.api";
-export { bookingApi } from "./api/booking.api";
-export { parkingApi } from "./api/parking.api";
-export { vehicleApi } from "./api/vehicle.api";
-export { notificationApi } from "./api/notification.api";
-export { incidentApi } from "./api/incident.api";
-export { adminApi } from "./api/admin.api";
-export { chatbotApi } from "./api/chatbot.api";
-export { aiApi } from "./api/ai.api";
+// NOTE: Raw API objects (authApi, bookingApi, etc.) are intentionally NOT exported here.
+// Business services import directly from @/services/api/* files.
+// Pages/components/store should use business services only.
+// Types are still exported below for use by consumers.
 export type {
   BanknoteRecognitionResponse,
   BanknoteQualityInfo,

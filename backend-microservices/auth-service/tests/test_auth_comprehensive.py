@@ -3,12 +3,16 @@ Comprehensive tests for auth-service.
 Tests: User model, registration, login, logout, profile, password management, admin endpoints.
 """
 
+import os
 import uuid
+
 import pytest
 from django.test import TestCase, override_settings
-from rest_framework.test import APIClient
 from rest_framework import status
-from users.models import User, OAuthAccount, PasswordReset
+from rest_framework.test import APIClient
+from users.models import OAuthAccount, PasswordReset, User
+
+GATEWAY_SECRET = os.environ.get("GATEWAY_SECRET", "test-secret-for-ci")
 
 
 # ═══════════════════════════════════════════════════
@@ -91,14 +95,6 @@ class TestOAuthAccountModel(TestCase):
         assert oauth.provider == "google"
         assert oauth.provider_user_id == "google-12345"
 
-    def test_create_facebook_oauth(self):
-        oauth = OAuthAccount.objects.create(
-            user=self.user,
-            provider="facebook",
-            provider_user_id="fb-12345",
-        )
-        assert oauth.provider == "facebook"
-
 
 class TestPasswordResetModel(TestCase):
     """Test PasswordReset model."""
@@ -110,6 +106,7 @@ class TestPasswordResetModel(TestCase):
 
     def test_create_password_reset_token(self):
         from datetime import timedelta
+
         from django.utils import timezone
         reset = PasswordReset.objects.create(
             user=self.user,
@@ -121,6 +118,7 @@ class TestPasswordResetModel(TestCase):
 
     def test_reset_token_is_uuid(self):
         from datetime import timedelta
+
         from django.utils import timezone
         token_val = str(uuid.uuid4())
         reset = PasswordReset.objects.create(
@@ -266,7 +264,7 @@ class TestProfile(TestCase):
         )
         # Simulate gateway auth headers
         self.client.credentials(
-            HTTP_X_GATEWAY_SECRET="gateway-internal-secret-key",
+            HTTP_X_GATEWAY_SECRET=GATEWAY_SECRET,
             HTTP_X_USER_ID=str(self.user.id),
             HTTP_X_USER_EMAIL=self.user.email,
         )
@@ -305,7 +303,7 @@ class TestChangePassword(TestCase):
             password="OldPass123!",
         )
         self.client.credentials(
-            HTTP_X_GATEWAY_SECRET="gateway-internal-secret-key",
+            HTTP_X_GATEWAY_SECRET=GATEWAY_SECRET,
             HTTP_X_USER_ID=str(self.user.id),
             HTTP_X_USER_EMAIL=self.user.email,
         )
@@ -363,6 +361,7 @@ class TestForgotResetPassword(TestCase):
 
     def test_reset_password_with_valid_token(self):
         from datetime import timedelta
+
         from django.utils import timezone
         token_val = str(uuid.uuid4())
         reset = PasswordReset.objects.create(
@@ -407,7 +406,7 @@ class TestAdminEndpoints(TestCase):
         )
         # Gateway headers for admin
         self.client.credentials(
-            HTTP_X_GATEWAY_SECRET="gateway-internal-secret-key",
+            HTTP_X_GATEWAY_SECRET=GATEWAY_SECRET,
             HTTP_X_USER_ID=str(self.admin.id),
             HTTP_X_USER_EMAIL=self.admin.email,
             HTTP_X_USER_IS_STAFF="true",
@@ -439,8 +438,12 @@ class TestAdminEndpoints(TestCase):
     def test_regular_user_cannot_access_admin_stats(self):
         client = APIClient()
         client.credentials(
-            HTTP_X_GATEWAY_SECRET="gateway-internal-secret-key",
+            HTTP_X_GATEWAY_SECRET=GATEWAY_SECRET,
             HTTP_X_USER_ID=str(self.regular_user.id),
+            HTTP_X_USER_EMAIL=self.regular_user.email,
+        )
+        response = client.get("/auth/admin/dashboard/stats/")
+        assert response.status_code in [403, 404]
             HTTP_X_USER_EMAIL=self.regular_user.email,
         )
         response = client.get("/auth/admin/dashboard/stats/")

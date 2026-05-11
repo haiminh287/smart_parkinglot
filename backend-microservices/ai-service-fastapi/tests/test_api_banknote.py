@@ -4,15 +4,15 @@ Tests the /ai/detect/banknote/ endpoint via ASGI transport.
 """
 
 import io
-import pytest
-from httpx import AsyncClient, ASGITransport
-from unittest.mock import patch, MagicMock
+import os
+from unittest.mock import MagicMock, patch
+
 import numpy as np
-
+import pytest
 from app.main import app
+from httpx import ASGITransport, AsyncClient
 
-
-GATEWAY_SECRET = "gateway-internal-secret-key"
+GATEWAY_SECRET = os.environ.get("GATEWAY_SECRET", "test-secret-for-ci")
 
 
 @pytest.fixture
@@ -27,6 +27,7 @@ async def client():
 def make_test_image_bytes() -> bytes:
     """Create a valid PNG image in memory."""
     import cv2
+
     img = np.full((100, 100, 3), [55, 200, 200], dtype=np.uint8)  # green in HSV
     img_bgr = cv2.cvtColor(img, cv2.COLOR_HSV2BGR)
     _, buffer = cv2.imencode(".png", img_bgr)
@@ -34,6 +35,7 @@ def make_test_image_bytes() -> bytes:
 
 
 # ─── Route Prefix Tests ─────────────────────────
+
 
 class TestRoutePrefixes:
     """Verify all routes use /ai/ prefix for gateway compatibility."""
@@ -93,6 +95,7 @@ class TestRoutePrefixes:
 
 
 # ─── Banknote Detection Endpoint ────────────────
+
 
 class TestBanknoteEndpoint:
     """Tests for POST /ai/detect/banknote/ endpoint."""
@@ -199,6 +202,7 @@ class TestBanknoteEndpoint:
 
 
 # ─── Gateway Auth Tests ─────────────────────────
+
 
 class TestGatewayAuth:
     @pytest.mark.anyio

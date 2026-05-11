@@ -16,8 +16,13 @@ class Settings(BaseSettings):
     VEHICLE_SERVICE_URL: str = "http://vehicle-service:8000"
     PAYMENT_SERVICE_URL: str = "http://payment-service-fastapi:8007"
     REALTIME_SERVICE_URL: str = "http://realtime-service-go:8006"
-    GEMINI_API_KEY: str = "AIzaSyC6NTItetrCfK0TrY6DY6-u4YQ1GqYSD3E"
-    GEMINI_MODEL: str = "gemini-3-flash-preview"
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-2.5-flash"
+    # OpenAI-compat LLM endpoint (ưu tiên nếu set). Dùng cho local proxy
+    # kiểu LiteLLM / Ollama / OpenRouter đều OK.
+    LLM_BASE_URL: str = ""
+    LLM_API_KEY: str = ""
+    LLM_MODEL: str = ""
     REDIS_HOST: str = "redis"
     REDIS_PORT: int = 6379
     REDIS_DB: int = 3 

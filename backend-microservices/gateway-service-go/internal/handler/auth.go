@@ -106,15 +106,15 @@ func (h *AuthHandler) HandleLogin(c *gin.Context) {
 	role := "user"
 	isStaff := false
 	if r, ok := userData["role"].(string); ok {
-	role = r
-	isStaff = role == "admin"
+		role = r
+		isStaff = role == "admin"
 	}
 	// djangorestframework-camel-case renders is_staff as isStaff in JSON responses
 	if s, ok := userData["isStaff"].(bool); ok {
-	isStaff = s
-	if isStaff && role != "admin" {
-	role = "admin"
-	}
+		isStaff = s
+		if isStaff && role != "admin" {
+			role = "admin"
+		}
 	}
 
 	// Create gateway session in Redis
@@ -217,10 +217,10 @@ func (h *AuthHandler) HandleOAuthCallback(provider string, c *gin.Context) {
 		isStaff = role == "admin"
 	}
 	if s, ok := userData["isStaff"].(bool); ok {
-	isStaff = s
-	if isStaff && role != "admin" {
-	role = "admin"
-	}
+		isStaff = s
+		if isStaff && role != "admin" {
+			role = "admin"
+		}
 	}
 
 	sessionData := &session.SessionData{

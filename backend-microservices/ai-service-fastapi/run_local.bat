@@ -24,8 +24,11 @@ set DB_PASSWORD=parksmartpass
 REM -- Debug --
 set DEBUG=True
 
-REM -- Gateway Secret --
-set GATEWAY_SECRET=gateway-internal-secret-key
+REM -- Gateway Secret (load from .env or fail) --
+if "%GATEWAY_SECRET%"=="" (
+    echo ERROR: GATEWAY_SECRET env var not set. Set it before running.
+    exit /b 1
+)
 
 REM -- Media / ML paths --
 set MEDIA_ROOT=%AI_DIR%\media

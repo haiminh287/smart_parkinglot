@@ -61,10 +61,10 @@ namespace ParkingSim.API
         [JsonProperty("status")] public string Status;
         [JsonProperty("isAvailable")] public bool IsAvailable;
         [JsonProperty("camera")] public string Camera;
-        [JsonProperty("x1")] public int X1;
-        [JsonProperty("y1")] public int Y1;
-        [JsonProperty("x2")] public int X2;
-        [JsonProperty("y2")] public int Y2;
+        [JsonProperty("x1")] public int? X1;
+        [JsonProperty("y1")] public int? Y1;
+        [JsonProperty("x2")] public int? X2;
+        [JsonProperty("y2")] public int? Y2;
         [JsonProperty("createdAt")] public string CreatedAt;
         [JsonProperty("updatedAt")] public string UpdatedAt;
     }
@@ -336,6 +336,16 @@ namespace ParkingSim.API
         [JsonProperty("found")] public bool Found;
         [JsonProperty("qr_data")] public string QrData;
         [JsonProperty("booking_id")] public string BookingId;
+        [JsonProperty("error")] public string Error;
+    }
+
+    [Serializable]
+    public class BanknoteResult
+    {
+        [JsonProperty("decision")] public string Decision;          // accept|low_confidence|no_banknote|bad_quality|error
+        [JsonProperty("denomination")] public string Denomination;  // "1000","10000",...
+        [JsonProperty("confidence")] public float Confidence;
+        [JsonProperty("processingTime")] public float ProcessingTime;
         [JsonProperty("error")] public string Error;
     }
 

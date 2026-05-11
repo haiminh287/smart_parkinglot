@@ -22,8 +22,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { parkingApi, type Floor } from "@/services/api/parking.api";
-import { adminApi } from "@/services/api/admin.api";
+import { parkingService, adminService, type Floor } from "@/services/business";
 import { useToast } from "@/hooks/use-toast";
 import type { ParkingLot } from "@/types/parking";
 
@@ -74,7 +73,7 @@ export default function AdminZonesPage() {
   useEffect(() => {
     const fetchLots = async () => {
       try {
-        const resp = await parkingApi.getLots({ pageSize: 100 });
+        const resp = await parkingService.getLots({ pageSize: 100 });
         const items = resp.results ?? [];
         setLots(items);
         if (items.length > 0) setSelectedLotId(items[0].id);
@@ -90,7 +89,7 @@ export default function AdminZonesPage() {
     if (!selectedLotId) return;
     const fetchFloors = async () => {
       try {
-        const resp = await parkingApi.getFloors({ lot_id: selectedLotId });
+        const resp = await parkingService.getFloors(selectedLotId);
         setFloors(resp.results ?? []);
       } catch (err) {
         console.error("Failed to fetch floors:", err);
@@ -107,8 +106,8 @@ export default function AdminZonesPage() {
     try {
       setIsLoading(true);
       setError(null);
-      const resp = await parkingApi.getZones({
-        lot_id: selectedLotId,
+      const resp = await parkingService.getZones({
+        lotId: selectedLotId,
         pageSize: 200,
       });
       const mapped: ZoneRow[] = (resp.results ?? []).map((z) => ({
@@ -150,7 +149,7 @@ export default function AdminZonesPage() {
     }
     try {
       setIsSubmitting(true);
-      await adminApi.createZone({
+      await adminService.createZone({
         floor: addForm.floorId,
         name: addForm.name,
         vehicleType: addForm.vehicleType,
@@ -177,7 +176,7 @@ export default function AdminZonesPage() {
     if (!selectedZone) return;
     try {
       setIsSubmitting(true);
-      await adminApi.updateZone(selectedZone.id, {
+      await adminService.updateZone(selectedZone.id, {
         name: editForm.name,
         floor: editForm.floorId,
         vehicleType: editForm.vehicleType,
@@ -203,7 +202,7 @@ export default function AdminZonesPage() {
     if (!selectedZone) return;
     try {
       setIsSubmitting(true);
-      await adminApi.deleteZone(selectedZone.id);
+      await adminService.deleteZone(selectedZone.id);
       toast({ title: "Thành công", description: "Đã xóa zone" });
       await fetchZones();
       setShowDeleteDialog(false);

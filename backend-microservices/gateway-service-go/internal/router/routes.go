@@ -80,10 +80,6 @@ func Setup(
 				authHandler.HandleOAuthCallback("google", c)
 				return
 			}
-			if cleanPath == "auth/facebook/callback/" || cleanPath == "auth/facebook/callback" {
-				authHandler.HandleOAuthCallback("facebook", c)
-				return
-			}
 		}
 
 		// All other routes require JWT auth, then proxy

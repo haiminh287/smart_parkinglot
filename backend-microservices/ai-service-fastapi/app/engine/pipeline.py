@@ -10,29 +10,31 @@ Pipeline flow:
   Final Decision
 """
 
+import logging
 import os
 import time
-import logging
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
 
 import numpy as np
-
-from app.engine.preprocessing import preprocess, QualityResult, QualityStatus
-from app.engine.detector import BanknoteDetector, DetectionResult as DetResult
+from app.engine.ai_classifier import DENOMINATION_CLASSES
 from app.engine.color_classifier import (
+    ColorClassification,
     classify_by_color,
     meets_threshold,
-    ColorClassification,
 )
-from app.engine.ai_classifier import BanknoteAIClassifier, AIClassification, DENOMINATION_CLASSES
+from app.engine.detector import BanknoteDetector
+from app.engine.detector import DetectionResult as DetResult
+from app.engine.preprocessing import QualityResult, QualityStatus, preprocess
+from app.ml.inference.cash_recognition import CashRecognitionInference
 
 logger = logging.getLogger(__name__)
 
 
 class PipelineDecision(str, Enum):
     """Final decision of the pipeline."""
+
     ACCEPT = "accept"
     LOW_CONFIDENCE = "low_confidence"
     NO_BANKNOTE = "no_banknote"
@@ -42,6 +44,7 @@ class PipelineDecision(str, Enum):
 
 class ClassificationMethod(str, Enum):
     """Which method produced the final result."""
+
     COLOR = "color"
     AI_FALLBACK = "ai_fallback"
     NONE = "none"
@@ -50,6 +53,7 @@ class ClassificationMethod(str, Enum):
 @dataclass
 class PipelineResult:
     """Complete result from the banknote recognition pipeline."""
+
     decision: PipelineDecision
     denomination: Optional[str] = None
     confidence: float = 0.0
@@ -57,7 +61,7 @@ class PipelineResult:
     quality_result: Optional[QualityResult] = None
     detection_result: Optional[DetResult] = None
     color_result: Optional[ColorClassification] = None
-    ai_result: Optional[AIClassification] = None
+    ai_result: Optional[dict[str, str | float]] = None
     all_probabilities: Optional[dict[str, float]] = None
     processing_time_ms: float = 0.0
     stages_executed: list[str] = field(default_factory=list)
@@ -67,7 +71,9 @@ class PipelineResult:
 _pipeline_singleton: Optional["BanknoteRecognitionPipeline"] = None
 
 
-def get_banknote_pipeline(model_dir: str = "/app/ml/models") -> "BanknoteRecognitionPipeline":
+def get_banknote_pipeline(
+    model_dir: str = "/app/ml/models",
+) -> "BanknoteRecognitionPipeline":
     """Get or create the singleton BanknoteRecognitionPipeline.
 
     Args:
@@ -101,15 +107,13 @@ class BanknoteRecognitionPipeline:
         )
 
         # Initialize Stage 2B: AI Classifier
-        ai_path = os.path.join(model_dir, "banknote_mobilenetv3.pth")
-        self._ai_classifier = BanknoteAIClassifier(
-            model_path=ai_path if os.path.exists(ai_path) else None
-        )
+        ai_path = os.path.join(model_dir, "banknote_effv2s.pth")
+        self._cash_inference = CashRecognitionInference(model_path=ai_path)
 
         logger.info(
             f"Pipeline initialized (model_dir={model_dir}, "
             f"yolo={'loaded' if self._detector._model else 'fallback'}, "
-            f"ai={'loaded' if self._ai_classifier._model else 'stub'})"
+            "ai=loaded)"
         )
 
     def process(self, img: np.ndarray) -> PipelineResult:
@@ -133,7 +137,11 @@ class BanknoteRecognitionPipeline:
             )
 
         # If quality is too bad, we still try but warn
-        if quality.status in (QualityStatus.BLURRY, QualityStatus.UNDEREXPOSED, QualityStatus.OVEREXPOSED):
+        if quality.status in (
+            QualityStatus.BLURRY,
+            QualityStatus.UNDEREXPOSED,
+            QualityStatus.OVEREXPOSED,
+        ):
             logger.warning(f"Quality issue: {quality.message}")
 
         # ── Stage 1: Banknote Detection ─────────────
@@ -169,8 +177,12 @@ class BanknoteRecognitionPipeline:
         except Exception as e:
             logger.error(f"Color classification error: {e}", exc_info=True)
             color_result = ColorClassification(
-                denomination=None, confidence=0.0, dominant_hue=0.0,
-                group=None, all_scores={}, message=f"Color classification failed: {e}",
+                denomination=None,
+                confidence=0.0,
+                dominant_hue=0.0,
+                group=None,
+                all_scores={},
+                message=f"Color classification failed: {e}",
             )
 
         # ── Dynamic Confidence Check ────────────────
@@ -193,12 +205,16 @@ class BanknoteRecognitionPipeline:
         # ── Out-of-vocabulary guard ─────────────────
         # If color detected a denomination the AI model was not trained on,
         # AI fallback will only make the result worse. Trust color instead.
-        if (color_result.denomination
-                and color_result.denomination not in DENOMINATION_CLASSES):
+        if (
+            color_result.denomination
+            and color_result.denomination not in DENOMINATION_CLASSES
+        ):
             elapsed = (time.time() - start) * 1000
-            decision = (PipelineDecision.ACCEPT
-                        if color_result.confidence >= 0.5
-                        else PipelineDecision.LOW_CONFIDENCE)
+            decision = (
+                PipelineDecision.ACCEPT
+                if color_result.confidence >= 0.5
+                else PipelineDecision.LOW_CONFIDENCE
+            )
             return PipelineResult(
                 decision=decision,
                 denomination=color_result.denomination,
@@ -216,18 +232,15 @@ class BanknoteRecognitionPipeline:
         # ── Stage 2B: AI Fallback ───────────────────
         stages.append("ai_fallback")
         try:
-            ai_result = self._ai_classifier.classify(cropped)
+            ai_result = self._cash_inference.predict(cropped)
         except Exception as e:
             logger.error(f"AI classification error: {e}", exc_info=True)
-            ai_result = AIClassification(
-                denomination=None, confidence=0.0,
-                all_probabilities={}, message=f"AI classification failed: {e}",
-            )
+            ai_result = None
 
         # ── Final Decision ──────────────────────────
         elapsed = (time.time() - start) * 1000
 
-        if ai_result.denomination and ai_result.confidence > 0.3:
+        if ai_result is not None and ai_result.decision == "accept":
             decision = PipelineDecision.ACCEPT
             message = f"AI fallback accepted: {ai_result.denomination} VND"
         else:
@@ -236,14 +249,24 @@ class BanknoteRecognitionPipeline:
 
         return PipelineResult(
             decision=decision,
-            denomination=ai_result.denomination,
-            confidence=ai_result.confidence,
+            denomination=ai_result.denomination if ai_result is not None else None,
+            confidence=ai_result.confidence if ai_result is not None else 0.0,
             method=ClassificationMethod.AI_FALLBACK,
             quality_result=quality,
             detection_result=detection,
             color_result=color_result,
-            ai_result=ai_result,
-            all_probabilities=ai_result.all_probabilities,
+            ai_result=(
+                {
+                    "decision": ai_result.decision,
+                    "confidence": ai_result.confidence,
+                    "margin": ai_result.margin,
+                }
+                if ai_result is not None
+                else None
+            ),
+            all_probabilities=(
+                ai_result.all_probabilities if ai_result is not None else None
+            ),
             processing_time_ms=elapsed,
             stages_executed=stages,
             message=message,

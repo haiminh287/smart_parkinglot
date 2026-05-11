@@ -180,3 +180,13 @@ Final summary:
 ```
 📊 Agents: researcher→architect→implementer→reviewer→[cleanup→][migrate(devops)→]tester→security→qc→devops
 ```
+
+---
+
+## 13. Post-Fix Conventions (Sprint 2-3, 2026-04)
+
+Các convention bổ sung sau đợt fix pipeline:
+
+- **Secrets fail-fast:** Không đặt default fallback cho secrets/env vars. FastAPI config phải raise error nếu thiếu biến bắt buộc.
+- **FE layering:** `pages/`, `components/`, `store/` chỉ được import từ `services/business/*` — không import trực tiếp `services/api/*`. Enforce bằng ESLint `no-restricted-imports`.
+- **TypeScript strict:** `tsconfig.app.json` bật `strict: true`; `noUnusedLocals`, `noUnusedParameters` đều `true`.

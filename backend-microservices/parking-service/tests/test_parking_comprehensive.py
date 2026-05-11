@@ -3,21 +3,23 @@ Comprehensive tests for parking-service.
 Tests: ParkingLot, Floor, Zone, CarSlot, Camera models and ViewSet CRUD.
 """
 
+import os
 import uuid
+
 import pytest
 from django.test import TestCase
-from rest_framework.test import APIClient
+from infrastructure.models import Camera, CarSlot, Floor, ParkingLot, Zone
 from rest_framework import status
-from infrastructure.models import ParkingLot, Floor, Zone, CarSlot, Camera
-
+from rest_framework.test import APIClient
 
 # ═══════════════════════════════════════════════════
 # FIXTURE HELPERS
 # ═══════════════════════════════════════════════════
 
+
 def gateway_headers():
     return {
-        "HTTP_X_GATEWAY_SECRET": "gateway-internal-secret-key",
+        "HTTP_X_GATEWAY_SECRET": os.environ.get("GATEWAY_SECRET", "test-secret-for-ci"),
         "HTTP_X_USER_ID": "00000000-0000-0000-0000-000000000001",
         "HTTP_X_USER_EMAIL": "admin@parksmart.com",
     }
@@ -87,6 +89,7 @@ def create_camera(zone=None, **kwargs):
 # ═══════════════════════════════════════════════════
 # MODEL TESTS
 # ═══════════════════════════════════════════════════
+
 
 class TestParkingLotModel(TestCase):
     def test_create_lot(self):
@@ -173,6 +176,7 @@ class TestCameraModel(TestCase):
 # API TESTS — PARKING LOT
 # ═══════════════════════════════════════════════════
 
+
 class TestParkingLotAPI(TestCase):
     def setUp(self):
         self.client = APIClient()
@@ -185,14 +189,18 @@ class TestParkingLotAPI(TestCase):
         assert response.status_code == 200
 
     def test_create_lot(self):
-        response = self.client.post("/parking/lots/", {
-            "name": "New Lot",
-            "address": "456 Le Loi",
-            "latitude": 10.78,
-            "longitude": 106.70,
-            "total_slots": 100,
-            "is_open": True,
-        }, format="json")
+        response = self.client.post(
+            "/parking/lots/",
+            {
+                "name": "New Lot",
+                "address": "456 Le Loi",
+                "latitude": 10.78,
+                "longitude": 106.70,
+                "total_slots": 100,
+                "is_open": True,
+            },
+            format="json",
+        )
         assert response.status_code in [201, 200]
 
     def test_retrieve_lot(self):
@@ -203,9 +211,13 @@ class TestParkingLotAPI(TestCase):
 
     def test_update_lot(self):
         lot = create_lot()
-        response = self.client.patch(f"/parking/lots/{lot.id}/", {
-            "name": "Updated Lot",
-        }, format="json")
+        response = self.client.patch(
+            f"/parking/lots/{lot.id}/",
+            {
+                "name": "Updated Lot",
+            },
+            format="json",
+        )
         assert response.status_code == 200
         lot.refresh_from_db()
         assert lot.name == "Updated Lot"
@@ -220,6 +232,7 @@ class TestParkingLotAPI(TestCase):
 # API TESTS — FLOOR
 # ═══════════════════════════════════════════════════
 
+
 class TestFloorAPI(TestCase):
     def setUp(self):
         self.client = APIClient()
@@ -232,17 +245,22 @@ class TestFloorAPI(TestCase):
         assert response.status_code == 200
 
     def test_create_floor(self):
-        response = self.client.post("/parking/floors/", {
-            "parking_lot": str(self.lot.id),
-            "name": "F3",
-            "level": 3,
-        }, format="json")
+        response = self.client.post(
+            "/parking/floors/",
+            {
+                "parking_lot": str(self.lot.id),
+                "name": "F3",
+                "level": 3,
+            },
+            format="json",
+        )
         assert response.status_code in [201, 200]
 
 
 # ═══════════════════════════════════════════════════
 # API TESTS — ZONE
 # ═══════════════════════════════════════════════════
+
 
 class TestZoneAPI(TestCase):
     def setUp(self):
@@ -256,18 +274,23 @@ class TestZoneAPI(TestCase):
         assert response.status_code == 200
 
     def test_create_zone(self):
-        response = self.client.post("/parking/zones/", {
-            "floor": str(self.floor.id),
-            "name": "Zone Y",
-            "vehicle_type": "Motorbike",
-            "capacity": 30,
-        }, format="json")
+        response = self.client.post(
+            "/parking/zones/",
+            {
+                "floor": str(self.floor.id),
+                "name": "Zone Y",
+                "vehicle_type": "Motorbike",
+                "capacity": 30,
+            },
+            format="json",
+        )
         assert response.status_code in [201, 200]
 
 
 # ═══════════════════════════════════════════════════
 # API TESTS — CAR SLOT
 # ═══════════════════════════════════════════════════
+
 
 class TestCarSlotAPI(TestCase):
     def setUp(self):
@@ -281,18 +304,26 @@ class TestCarSlotAPI(TestCase):
         assert response.status_code == 200
 
     def test_create_slot(self):
-        response = self.client.post("/parking/slots/", {
-            "zone": str(self.zone.id),
-            "code": "B-99",
-            "status": "available",
-        }, format="json")
+        response = self.client.post(
+            "/parking/slots/",
+            {
+                "zone": str(self.zone.id),
+                "code": "B-99",
+                "status": "available",
+            },
+            format="json",
+        )
         assert response.status_code in [201, 200]
 
     def test_update_slot_status(self):
         slot = create_slot(self.zone, code="B-02")
-        response = self.client.patch(f"/parking/slots/{slot.id}/", {
-            "status": "maintenance",
-        }, format="json")
+        response = self.client.patch(
+            f"/parking/slots/{slot.id}/",
+            {
+                "status": "maintenance",
+            },
+            format="json",
+        )
         assert response.status_code == 200
         slot.refresh_from_db()
         assert slot.status == "maintenance"
@@ -301,6 +332,7 @@ class TestCarSlotAPI(TestCase):
 # ═══════════════════════════════════════════════════
 # API TESTS — CAMERA
 # ═══════════════════════════════════════════════════
+
 
 class TestCameraAPI(TestCase):
     def setUp(self):
@@ -314,21 +346,29 @@ class TestCameraAPI(TestCase):
         assert response.status_code == 200
 
     def test_create_camera(self):
-        response = self.client.post("/parking/cameras/", {
-            "name": "Entrance Cam",
-            "ip_address": "192.168.1.200",
-            "port": 554,
-            "zone": str(self.zone.id),
-            "stream_url": "rtsp://admin:pass@192.168.1.200:554",
-            "is_active": True,
-        }, format="json")
+        response = self.client.post(
+            "/parking/cameras/",
+            {
+                "name": "Entrance Cam",
+                "ip_address": "192.168.1.200",
+                "port": 554,
+                "zone": str(self.zone.id),
+                "stream_url": "rtsp://admin:pass@192.168.1.200:554",
+                "is_active": True,
+            },
+            format="json",
+        )
         assert response.status_code in [201, 200]
 
     def test_deactivate_camera(self):
         camera = create_camera(self.zone)
-        response = self.client.patch(f"/parking/cameras/{camera.id}/", {
-            "is_active": False,
-        }, format="json")
+        response = self.client.patch(
+            f"/parking/cameras/{camera.id}/",
+            {
+                "is_active": False,
+            },
+            format="json",
+        )
         assert response.status_code == 200
         camera.refresh_from_db()
         assert camera.is_active is False

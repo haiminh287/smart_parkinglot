@@ -17,7 +17,7 @@ import { DirectionsPanel } from "@/components/map/DirectionsPanel";
 import type { DirectionStep } from "@/types/parking";
 import { useBooking, useParking } from "@/hooks";
 import { useNavigate } from "react-router-dom";
-import { parkingApi } from "@/services/api/parking.api";
+import { parkingService } from "@/services/business";
 import {
   findPathToSlot,
   type GraphNode,
@@ -456,8 +456,9 @@ export default function MapPage() {
         const accumulated: ParkingSlot[] = [];
         for (const zone of zones) {
           try {
-            const response = await parkingApi.getSlots({ zone_id: zone.id });
-            const zoneSlots: ParkingSlot[] = response.results.map(
+            const zoneSlots: ParkingSlot[] = (
+              await parkingService.getSlotsForZone(zone.id)
+            ).map(
               (slot) =>
                 ({
                   ...slot,

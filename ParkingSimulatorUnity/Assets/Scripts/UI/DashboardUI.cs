@@ -1,10 +1,10 @@
 using System;
-using System.Collections.Generic;
 using UnityEngine;
 using ParkingSim.Core;
 using ParkingSim.API;
 using ParkingSim.Parking;
 using ParkingSim.Vehicle;
+using ParkingSim.UI.Dashboard;
 
 namespace ParkingSim.UI
 {
@@ -18,135 +18,61 @@ namespace ParkingSim.UI
 
         private VehicleQueue vehicleQueue;
         private CameraMonitorUI cameraMonitorUI;
+        private ParkingLotGenerator cachedGenerator;
 
-        private List<EventEntry> eventLog = new List<EventEntry>();
-        private int maxLogEntries = 50;
-        private int maxVisibleEntries = 20;
-        private Vector2 logScrollPos;
         private Rect windowRect;
         private bool showDashboard = true;
 
-        private float statsRefreshTimer;
-        private const float STATS_REFRESH_INTERVAL = 0.5f;
-        private int statTotal, statAvailable, statOccupied, statReserved, statMaintenance;
+        // Sub-panels
+        private EventLogPanel eventLogPanel;
+        private StatsPanel statsPanel;
 
-        // Animated display values
-        private float displayAvailable, displayOccupied, displayReserved;
-        private float targetAvailable, targetOccupied, targetReserved;
-        private const float LERP_SPEED = 4f;
-
-        // FPS
-        private int currentFps;
-        private float fpsTimer;
-        private int fpsFrameCount;
-
-        // Custom styles
-        private GUIStyle headerStyle, statLabelStyle, eventStyle, sectionStyle;
-        private GUIStyle bgBoxStyle, eventGreenStyle, eventRedStyle, eventYellowStyle;
+        // Shared styles
+        private GUIStyle headerStyle, sectionStyle, bgBoxStyle;
         private bool stylesCreated;
         private Texture2D darkBgTex;
 
-        private struct EventEntry
-        {
-            public string timestamp;
-            public string message;
-            public EventType type;
-        }
-
-        private enum EventType
-        {
-            Info, Success, Warning, Error, Connection
-        }
-
         private void Start()
         {
+            if (config == null)
+                config = Resources.Load<ApiConfig>("ApiConfig");
+            if (apiService == null)
+                apiService = ApiService.Instance ?? FindObjectOfType<ApiService>();
+            if (authManager == null)
+                authManager = AuthManager.Instance ?? FindObjectOfType<AuthManager>();
+
             float w = 700f, h = 350f;
             windowRect = new Rect((Screen.width - w) / 2f, Screen.height - h - 10f, w, h);
 
             vehicleQueue = FindObjectOfType<VehicleQueue>();
             cameraMonitorUI = FindObjectOfType<CameraMonitorUI>();
+            cachedGenerator = FindObjectOfType<ParkingLotGenerator>();
+
+            eventLogPanel = new EventLogPanel();
+            statsPanel = new StatsPanel();
 
             if (parkingManager != null)
             {
-                parkingManager.OnStatusMessage += msg => AddEvent(msg, EventType.Info);
-                parkingManager.OnInitComplete += () => AddEvent("Parking system initialized", EventType.Success);
+                parkingManager.OnStatusMessage += msg => eventLogPanel.AddEvent(msg, Dashboard.EventType.Info);
+                parkingManager.OnInitComplete += () => eventLogPanel.AddEvent("Parking system initialized", Dashboard.EventType.Success);
             }
 
             if (apiService != null)
             {
-                apiService.OnWsConnected += () => AddEvent("WebSocket connected", EventType.Connection);
-                apiService.OnWsDisconnected += () => AddEvent("WebSocket disconnected", EventType.Warning);
-                apiService.OnWsError += err => AddEvent($"WS error: {err}", EventType.Error);
+                apiService.OnWsConnected += () => eventLogPanel.AddEvent("WebSocket connected", Dashboard.EventType.Connection);
+                apiService.OnWsDisconnected += () => eventLogPanel.AddEvent("WebSocket disconnected", Dashboard.EventType.Warning);
+                apiService.OnWsError += err => eventLogPanel.AddEvent($"WS error: {err}", Dashboard.EventType.Error);
                 apiService.OnSlotStatusUpdate += update =>
-                    AddEvent($"Slot {update.SlotId} → {update.Status}", EventType.Info);
+                    eventLogPanel.AddEvent($"Slot {update.SlotId} → {update.Status}", Dashboard.EventType.Info);
             }
 
-            AddEvent("Dashboard started", EventType.Success);
+            eventLogPanel.AddEvent("Dashboard started", Dashboard.EventType.Success);
         }
 
         private void Update()
         {
-            statsRefreshTimer += Time.deltaTime;
-            if (statsRefreshTimer >= STATS_REFRESH_INTERVAL)
-            {
-                statsRefreshTimer = 0f;
-                RefreshStats();
-            }
-
-            // Animate stat display values
-            displayAvailable = Mathf.Lerp(displayAvailable, targetAvailable, LERP_SPEED * Time.deltaTime);
-            displayOccupied = Mathf.Lerp(displayOccupied, targetOccupied, LERP_SPEED * Time.deltaTime);
-            displayReserved = Mathf.Lerp(displayReserved, targetReserved, LERP_SPEED * Time.deltaTime);
-
-            // FPS counter
-            fpsFrameCount++;
-            fpsTimer += Time.unscaledDeltaTime;
-            if (fpsTimer >= 0.5f)
-            {
-                currentFps = Mathf.RoundToInt(fpsFrameCount / fpsTimer);
-                fpsFrameCount = 0;
-                fpsTimer = 0f;
-            }
-        }
-
-        private void RefreshStats()
-        {
-            if (parkingManager == null) return;
-            var stats = parkingManager.GetSlotStats();
-            statTotal = stats.total;
-            statAvailable = stats.available;
-            statOccupied = stats.occupied;
-            statReserved = stats.reserved;
-            statMaintenance = stats.maintenance;
-
-            targetAvailable = statAvailable;
-            targetOccupied = statOccupied;
-            targetReserved = statReserved;
-        }
-
-        private void AddEvent(string message, EventType type = EventType.Info)
-        {
-            string emoji = type switch
-            {
-                EventType.Success => "[OK]",
-                EventType.Warning => "[!]",
-                EventType.Error => "[ERR]",
-                EventType.Connection => "[WS]",
-                _ => "[i]"
-            };
-
-            eventLog.Add(new EventEntry
-            {
-                timestamp = DateTime.Now.ToString("HH:mm:ss"),
-                message = $"{emoji} {message}",
-                type = type
-            });
-
-            if (eventLog.Count > maxLogEntries)
-                eventLog.RemoveAt(0);
-
-            // Auto-scroll to bottom
-            logScrollPos.y = float.MaxValue;
+            if (statsPanel == null) return;
+            statsPanel.Update(Time.deltaTime, Time.unscaledDeltaTime, parkingManager);
         }
 
         private void EnsureStyles()
@@ -168,13 +94,6 @@ namespace ParkingSim.UI
             };
             headerStyle.normal.textColor = new Color(0.85f, 0.9f, 1f);
 
-            statLabelStyle = new GUIStyle(GUI.skin.label)
-            {
-                fontSize = 13,
-                fontStyle = FontStyle.Bold,
-                alignment = TextAnchor.MiddleCenter
-            };
-
             sectionStyle = new GUIStyle(GUI.skin.label)
             {
                 fontSize = 12,
@@ -182,31 +101,21 @@ namespace ParkingSim.UI
             };
             sectionStyle.normal.textColor = new Color(0.6f, 0.7f, 0.85f);
 
-            eventStyle = new GUIStyle(GUI.skin.label) { fontSize = 11, richText = true };
-            eventStyle.normal.textColor = new Color(0.75f, 0.75f, 0.78f);
-
-            eventGreenStyle = new GUIStyle(eventStyle);
-            eventGreenStyle.normal.textColor = new Color(0.4f, 0.9f, 0.4f);
-
-            eventRedStyle = new GUIStyle(eventStyle);
-            eventRedStyle.normal.textColor = new Color(0.95f, 0.4f, 0.4f);
-
-            eventYellowStyle = new GUIStyle(eventStyle);
-            eventYellowStyle.normal.textColor = new Color(0.95f, 0.85f, 0.3f);
+            eventLogPanel?.EnsureStyles();
+            statsPanel?.EnsureStyles();
         }
 
         private void OnGUI()
         {
+            if (statsPanel == null || eventLogPanel == null) return;
             EnsureStyles();
 
-            // Always-visible toggle button at top-right corner (plain ASCII - IMGUI safe)
             var btnStyle = new GUIStyle(GUI.skin.button) { fontSize = 12, fontStyle = FontStyle.Bold };
             string btnLabel = showDashboard ? "[H] AN" : "[H] DASHBOARD";
             float btnW = showDashboard ? 70f : 130f;
             if (GUI.Button(new Rect(Screen.width - btnW - 8f, 8f, btnW, 26f), btnLabel, btnStyle))
                 showDashboard = !showDashboard;
 
-            // Keyboard toggle
             if (Event.current.type == UnityEngine.EventType.KeyDown && Event.current.keyCode == KeyCode.H)
                 showDashboard = !showDashboard;
 
@@ -219,15 +128,15 @@ namespace ParkingSim.UI
         {
             DrawHeaderBar();
             GUILayout.Space(4);
-            DrawStatsBar();
+            statsPanel.DrawStats(sectionStyle);
             GUILayout.Space(4);
-            DrawVehicleActivity();
+            statsPanel.DrawVehicleActivity(sectionStyle, vehicleQueue);
             GUILayout.Space(4);
-            DrawConnectionStatus();
+            statsPanel.DrawConnectionStatus(sectionStyle, authManager, apiService, config);
             GUILayout.Space(4);
             DrawFloorControls();
             GUILayout.Space(4);
-            DrawEventLog();
+            eventLogPanel.Draw(sectionStyle);
             GUILayout.Space(4);
             DrawControlsRow();
 
@@ -251,100 +160,20 @@ namespace ParkingSim.UI
 
             GUILayout.Label(DateTime.Now.ToString("HH:mm:ss"), clockStyle, GUILayout.Width(65));
 
-            string fpsColor = currentFps >= 50 ? "lime" : currentFps >= 30 ? "yellow" : "red";
+            int fps = statsPanel.CurrentFps;
+            string fpsColor = fps >= 50 ? "lime" : fps >= 30 ? "yellow" : "red";
             var fpsStyle = new GUIStyle(GUI.skin.label)
             {
                 fontSize = 12,
                 richText = true,
                 alignment = TextAnchor.MiddleRight
             };
-            GUILayout.Label($"<color={fpsColor}>{currentFps} FPS</color>", fpsStyle, GUILayout.Width(65));
+            GUILayout.Label($"<color={fpsColor}>{fps} FPS</color>", fpsStyle, GUILayout.Width(65));
 
-            // Close button in header (plain ASCII)
             var closeStyle = new GUIStyle(GUI.skin.button) { fontSize = 13, fontStyle = FontStyle.Bold };
             closeStyle.normal.textColor = new Color(1f, 0.5f, 0.5f);
             if (GUILayout.Button("X", closeStyle, GUILayout.Width(28), GUILayout.Height(22)))
                 showDashboard = false;
-
-            GUILayout.EndHorizontal();
-        }
-
-        private void DrawStatsBar()
-        {
-            GUILayout.Label("── Statistics ──", sectionStyle);
-            GUILayout.BeginHorizontal();
-
-            var prev = GUI.contentColor;
-
-            GUILayout.Label($"Total: {statTotal}", statLabelStyle, GUILayout.Width(70));
-
-            GUI.contentColor = Color.green;
-            GUILayout.Label($"[+] Available: {Mathf.RoundToInt(displayAvailable)}", statLabelStyle, GUILayout.Width(120));
-
-            GUI.contentColor = new Color(1f, 0.35f, 0.35f);
-            GUILayout.Label($"[x] Occupied: {Mathf.RoundToInt(displayOccupied)}", statLabelStyle, GUILayout.Width(115));
-
-            GUI.contentColor = Color.yellow;
-            GUILayout.Label($"[R] Reserved: {Mathf.RoundToInt(displayReserved)}", statLabelStyle, GUILayout.Width(115));
-
-            GUI.contentColor = Color.grey;
-            GUILayout.Label($"Maint: {statMaintenance}", statLabelStyle, GUILayout.Width(70));
-
-            // Occupancy with color coding
-            float occupancy = statTotal > 0 ? (1f - (float)statAvailable / statTotal) * 100f : 0f;
-            if (occupancy >= 80f) GUI.contentColor = new Color(1f, 0.3f, 0.3f);
-            else if (occupancy >= 50f) GUI.contentColor = Color.yellow;
-            else GUI.contentColor = Color.green;
-            GUILayout.Label($"{occupancy:F0}%", statLabelStyle, GUILayout.Width(45));
-
-            GUI.contentColor = prev;
-            GUILayout.EndHorizontal();
-        }
-
-        private void DrawVehicleActivity()
-        {
-            GUILayout.Label("── Vehicle Activity ──", sectionStyle);
-            GUILayout.BeginHorizontal();
-
-            if (vehicleQueue != null)
-            {
-                var prev = GUI.contentColor;
-
-                GUI.contentColor = Color.cyan;
-                GUILayout.Label($"[CAR] Active: {vehicleQueue.ActiveVehicles}", GUILayout.Width(100));
-
-                GUI.contentColor = new Color(0.7f, 0.85f, 1f);
-                GUILayout.Label($"Spawned: {vehicleQueue.TotalSpawned}", GUILayout.Width(100));
-
-                GUI.contentColor = new Color(0.8f, 0.8f, 0.8f);
-                GUILayout.Label($"Departed: {vehicleQueue.TotalDeparted}", GUILayout.Width(110));
-
-                GUI.contentColor = prev;
-
-                GUILayout.Label(
-                    $"Entry Q: {vehicleQueue.GetEntryQueueSize()} | Exit Q: {vehicleQueue.GetExitQueueSize()}");
-            }
-            else
-            {
-                GUILayout.Label("VehicleQueue not found");
-            }
-
-            GUILayout.EndHorizontal();
-        }
-
-        private void DrawConnectionStatus()
-        {
-            GUILayout.Label("── Connection ──", sectionStyle);
-            GUILayout.BeginHorizontal();
-
-            bool apiOk = authManager != null && authManager.IsAuthenticated;
-            GUILayout.Label($"API: {(apiOk ? "✅ Connected" : "❌ Disconnected")}");
-
-            bool wsOk = apiService != null && apiService.IsWsConnected;
-            GUILayout.Label($"WS: {(wsOk ? "✅ Connected" : "❌ Disconnected")}");
-
-            bool isMock = config != null && config.useMockData;
-            GUILayout.Label($"Mode: [{(isMock ? "MOCK" : "LIVE")}]");
 
             GUILayout.EndHorizontal();
         }
@@ -378,31 +207,14 @@ namespace ParkingSim.UI
 
         private int GetFloorCount()
         {
-            var gen = floorManager.GetComponentInParent<ParkingLotGenerator>();
-            if (gen == null) gen = FindObjectOfType<ParkingLotGenerator>();
-            return gen != null ? gen.numberOfFloors : 2;
-        }
-
-        private void DrawEventLog()
-        {
-            GUILayout.Label("── Events ──", sectionStyle);
-            logScrollPos = GUILayout.BeginScrollView(logScrollPos, GUILayout.Height(80));
-
-            int start = Mathf.Max(0, eventLog.Count - maxVisibleEntries);
-            for (int i = start; i < eventLog.Count; i++)
+            if (cachedGenerator == null)
             {
-                var entry = eventLog[i];
-                GUIStyle style = entry.type switch
-                {
-                    EventType.Success => eventGreenStyle,
-                    EventType.Error => eventRedStyle,
-                    EventType.Warning => eventYellowStyle,
-                    _ => eventStyle
-                };
-                GUILayout.Label($"[{entry.timestamp}] {entry.message}", style);
+                if (floorManager != null)
+                    cachedGenerator = floorManager.GetComponentInParent<ParkingLotGenerator>();
+                if (cachedGenerator == null)
+                    cachedGenerator = FindObjectOfType<ParkingLotGenerator>();
             }
-
-            GUILayout.EndScrollView();
+            return cachedGenerator != null ? cachedGenerator.numberOfFloors : 2;
         }
 
         private void DrawControlsRow()

@@ -28,12 +28,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { aiApi } from "@/services/api/ai.api";
-import type {
-  ESP32Response,
-  GateEvent,
-  BarrierAction,
-} from "@/services/api/ai.api";
+import {
+  aiService,
+  type ESP32Response,
+  type GateEvent,
+  type BarrierAction,
+} from "@/services/business";
 
 type KioskMode = "idle" | "check-in" | "check-out" | "cash-payment" | "result";
 
@@ -94,7 +94,7 @@ export default function KioskPage() {
     setMode("check-in");
     setIsProcessing(true);
     try {
-      const response = await aiApi.esp32CheckIn({ gateId });
+      const response = await aiService.esp32CheckIn({ gateId });
       setLastResult(response);
       addLog(response);
       setMode("result");
@@ -124,7 +124,7 @@ export default function KioskPage() {
     setMode("check-out");
     setIsProcessing(true);
     try {
-      const response = await aiApi.esp32CheckOut({ gateId });
+      const response = await aiService.esp32CheckOut({ gateId });
       setLastResult(response);
       addLog(response);
 
@@ -169,7 +169,7 @@ export default function KioskPage() {
     setIsProcessing(true);
     try {
       // First detect banknote denomination
-      const banknoteResult = await aiApi.detectBanknote(file);
+      const banknoteResult = await aiService.detectBanknote(file);
       if (banknoteResult.decision === "accept" && banknoteResult.denomination) {
         const insertedAmount = parseInt(banknoteResult.denomination, 10);
         setCashTotal((prev) => prev + insertedAmount);
@@ -179,7 +179,7 @@ export default function KioskPage() {
         reader.onloadend = async () => {
           const base64 = (reader.result as string).split(",")[1];
           try {
-            const cashResponse = await aiApi.esp32CashPayment({
+            const cashResponse = await aiService.esp32CashPayment({
               bookingId: lastResult.bookingId!,
               imageBase64: base64,
               gateId,

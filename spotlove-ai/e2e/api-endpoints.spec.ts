@@ -6,9 +6,15 @@
  */
 
 import { test, expect } from "@playwright/test";
+import * as dotenv from "dotenv";
 
-const GATEWAY_URL = "http://localhost:8000";
-const GATEWAY_SECRET = "gateway-internal-secret-key";
+dotenv.config({ path: ".env.test" });
+
+const GATEWAY_URL = process.env.E2E_GATEWAY_URL || "http://localhost:8000";
+const GATEWAY_SECRET = process.env.E2E_GATEWAY_SECRET;
+if (!GATEWAY_SECRET) {
+  throw new Error("E2E_GATEWAY_SECRET must be set in .env.test or environment");
+}
 
 test.describe("API: Parking Lots", () => {
   test("should fetch parking lots", async ({ request }) => {

@@ -7,6 +7,13 @@
  */
 
 import { bookingApi } from "@/services/api/booking.api";
+import type {
+  PackagePricingResponse,
+  RevenueSummary as ApiRevenueSummary,
+  DailyRevenueItem as ApiDailyRevenueItem,
+  HourlyRevenueItem as ApiHourlyRevenueItem,
+  ExtendBookingResponse,
+} from "@/services/api/booking.api";
 import { websocketService } from "@/services/websocket.service";
 import { store } from "@/store";
 import {
@@ -60,6 +67,12 @@ export interface CheckInOutResult {
   message: string;
 }
 
+// Re-export types for consumers
+export type PackagePricing = PackagePricingResponse;
+export type RevenueSummary = ApiRevenueSummary;
+export type DailyRevenueItem = ApiDailyRevenueItem;
+export type HourlyRevenueItem = ApiHourlyRevenueItem;
+
 interface ApiErrorPayload {
   response?: {
     data?: {
@@ -97,6 +110,13 @@ export const bookingService = {
       end_date: filters?.endDate,
     });
     return response;
+  },
+
+  /**
+   * Get single booking by ID
+   */
+  async getById(bookingId: string): Promise<Booking> {
+    return bookingApi.getBooking(bookingId);
   },
 
   /**
@@ -295,5 +315,125 @@ export const bookingService = {
    */
   selectBooking(booking: Booking | null): void {
     store.dispatch(setSelectedBooking(booking));
+  },
+
+  // =====================
+  // Package Pricing
+  // =====================
+
+  /**
+   * Get package pricing from booking-service
+   */
+  async getPackagePricing(): Promise<PackagePricing[]> {
+    return bookingApi.getPackagePricing();
+  },
+
+  /**
+   * Get booking by slot ID (for slot verification)
+   */
+  async getBookingBySlot(slotId: string): Promise<Booking | null> {
+    return bookingApi.getBookingBySlot(slotId);
+  },
+
+  /**
+   * Poll payment status for a booking
+   */
+  async pollPaymentStatus(
+    bookingId: string,
+  ): Promise<{ paymentStatus: string; booking: Booking }> {
+    return bookingApi.pollPaymentStatus(bookingId);
+  },
+
+  /**
+   * Extend an active booking's duration
+   */
+  async extendBooking(
+    bookingId: string,
+    additionalHours: number,
+  ): Promise<ExtendBookingResponse> {
+    return bookingApi.extendBooking({ bookingId, additionalHours });
+  },
+
+  // =====================
+  // Revenue Admin
+  // =====================
+
+  /**
+   * Get revenue summary (admin)
+   */
+  async getRevenueSummary(): Promise<RevenueSummary> {
+    return bookingApi.getRevenueSummary();
+  },
+
+  /**
+   * Get daily revenue data (admin)
+   */
+  async getDailyRevenue(days?: number): Promise<DailyRevenueItem[]> {
+    return bookingApi.getDailyRevenue(days);
+  },
+
+  /**
+   * Get hourly revenue data (admin)
+   */
+  async getHourlyRevenue(date?: string): Promise<HourlyRevenueItem[]> {
+    return bookingApi.getHourlyRevenue(date);
+  },
+
+  // =====================
+  // Raw API Wrappers (for Store Thunks)
+  // These methods just call API without Redux side effects,
+  // allowing thunks to handle state updates via extraReducers.
+  // =====================
+
+  /**
+   * Get bookings (raw API call)
+   * For use by Redux async thunks
+   */
+  async getBookingsRaw(params?: {
+    page?: number;
+    status?: string;
+    paymentStatus?: string;
+    vehicleType?: "Car" | "Motorbike";
+    startDate?: string;
+    endDate?: string;
+  }): Promise<DjangoPaginatedResponse<Booking>> {
+    return bookingApi.getBookings({
+      page: params?.page,
+      status: params?.status,
+      payment_status: params?.paymentStatus,
+      vehicle_type: params?.vehicleType,
+      start_date: params?.startDate,
+      end_date: params?.endDate,
+    });
+  },
+
+  /**
+   * Get current parking (raw API call)
+   * For use by Redux async thunks
+   */
+  async getCurrentParkingRaw(): Promise<{
+    booking: Booking;
+    duration: number;
+    currentCost: number;
+  } | null> {
+    return bookingApi.getCurrentParking();
+  },
+
+  /**
+   * Create booking (raw API call)
+   * For use by Redux async thunks
+   */
+  async createBookingRaw(
+    data: CreateBookingRequest,
+  ): Promise<CreateBookingResponse> {
+    return bookingApi.createBooking(data);
+  },
+
+  /**
+   * Cancel booking (raw API call)
+   * For use by Redux async thunks
+   */
+  async cancelBookingRaw(bookingId: string, reason?: string): Promise<void> {
+    return bookingApi.cancelBooking(bookingId, reason);
   },
 };
