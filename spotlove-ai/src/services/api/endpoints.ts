@@ -12,7 +12,6 @@ export const ENDPOINTS = {
     REGISTER: "/auth/register/",
     LOGOUT: "/auth/logout/",
     GOOGLE: "/auth/google/",
-    FACEBOOK: "/auth/facebook/",
     ME: "/auth/me/",
     CHANGE_PASSWORD: "/auth/change-password/",
     FORGOT_PASSWORD: "/auth/forgot-password/",

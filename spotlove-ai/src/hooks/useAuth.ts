@@ -9,7 +9,6 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
   login as loginAction,
   loginWithGoogle as loginWithGoogleAction,
-  loginWithFacebook as loginWithFacebookAction,
   register as registerAction,
   logout as logoutAction,
   fetchCurrentUser,
@@ -40,14 +39,6 @@ export function useAuth() {
   const loginWithGoogle = useCallback(async () => {
     const result = await dispatch(loginWithGoogleAction());
     if (loginWithGoogleAction.fulfilled.match(result)) {
-      navigate('/');
-    }
-    return result;
-  }, [dispatch, navigate]);
-
-  const loginWithFacebook = useCallback(async () => {
-    const result = await dispatch(loginWithFacebookAction());
-    if (loginWithFacebookAction.fulfilled.match(result)) {
       navigate('/');
     }
     return result;
@@ -92,7 +83,6 @@ export function useAuth() {
     isAdmin: user?.role === 'admin',
     login,
     loginWithGoogle,
-    loginWithFacebook,
     register,
     logout,
     checkAuth,

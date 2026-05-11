@@ -140,11 +140,6 @@ GOOGLE_CLIENT_SECRET = config("GOOGLE_CLIENT_SECRET", default="")
 GOOGLE_REDIRECT_URI = config(
     "GOOGLE_REDIRECT_URI", default="http://localhost:8001/api/auth/google/callback/"
 )
-FACEBOOK_APP_ID = config("FACEBOOK_APP_ID", default="")
-FACEBOOK_APP_SECRET = config("FACEBOOK_APP_SECRET", default="")
-FACEBOOK_REDIRECT_URI = config(
-    "FACEBOOK_REDIRECT_URI", default="http://localhost:8001/api/auth/facebook/callback/"
-)
 OAUTH_STATE_SECRET = config("OAUTH_STATE_SECRET", default=SECRET_KEY)
 OAUTH_STATE_TTL_SECONDS = config("OAUTH_STATE_TTL_SECONDS", default=300, cast=int)
 

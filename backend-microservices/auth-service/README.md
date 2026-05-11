@@ -5,7 +5,7 @@ Authentication and authorization microservice.
 ## Features
 
 - Gateway-managed session authentication
-- OAuth2 (Google, Facebook)
+- OAuth2 (Google)
 - User registration/login
 - Password reset
 - Session management
@@ -16,7 +16,6 @@ Authentication and authorization microservice.
 - `POST /auth/register/` - Register new user
 - `POST /auth/logout/` - Logout
 - `GET /auth/google/` - Get Google OAuth2 URL
-- `GET /auth/facebook/` - Get Facebook OAuth2 URL
 - `GET /auth/me/` - Get current user info
 - `POST /auth/change-password/` - Change password
 - `POST /auth/forgot-password/` - Send password reset email
@@ -58,8 +57,6 @@ REDIS_URL=redis://redis:6379/1
 GATEWAY_SECRET=<shared-secret-with-gateway>
 GOOGLE_CLIENT_ID=<google-oauth-client-id>
 GOOGLE_CLIENT_SECRET=<google-oauth-secret>
-FACEBOOK_APP_ID=<facebook-app-id>
-FACEBOOK_APP_SECRET=<facebook-app-secret>
 ```
 
 **Lưu ý:** Runtime hiện tại dùng **MySQL** (không phải PostgreSQL) và

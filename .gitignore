@@ -187,3 +187,9 @@ infra/cloudflare/cloudflared/config.yml
 # AI service dev launcher (auto-generated)
 backend-microservices/ai-service-fastapi/run_local.bat
 .claude/
+
+# PowerPoint temp/lock files
+~$*.pptx
+~$*.docx
+# Slide build backups
+docs/slides/ParkSmart_KLTN_Slides_v*.pptx

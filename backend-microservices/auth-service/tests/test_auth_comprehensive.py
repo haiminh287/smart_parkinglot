@@ -95,14 +95,6 @@ class TestOAuthAccountModel(TestCase):
         assert oauth.provider == "google"
         assert oauth.provider_user_id == "google-12345"
 
-    def test_create_facebook_oauth(self):
-        oauth = OAuthAccount.objects.create(
-            user=self.user,
-            provider="facebook",
-            provider_user_id="fb-12345",
-        )
-        assert oauth.provider == "facebook"
-
 
 class TestPasswordResetModel(TestCase):
     """Test PasswordReset model."""

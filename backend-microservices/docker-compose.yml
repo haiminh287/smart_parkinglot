@@ -267,6 +267,14 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:?DB_PASSWORD must be set in .env}
       - GATEWAY_SECRET=${GATEWAY_SECRET:?GATEWAY_SECRET must be set in .env}
       - REALTIME_SERVICE_URL=http://realtime-service-go:8006
+      - AUTH_SERVICE_URL=http://auth-service:8000
+      # ─── Email (Gmail SMTP) — optional, no-op if blank ───
+      - EMAIL_HOST=${EMAIL_HOST:-smtp.gmail.com}
+      - EMAIL_PORT=${EMAIL_PORT:-587}
+      - EMAIL_HOST_USER=${EMAIL_HOST_USER:-}
+      - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD:-}
+      - EMAIL_FROM_NAME=${EMAIL_FROM_NAME:-ParkSmart}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-minhht2k4@gmail.com}
       - DEBUG=${DEBUG:-False}
     expose:
       - "8005"

@@ -21,7 +21,6 @@ from .serializers import (
     ChangePasswordSerializer, ForgotPasswordSerializer, ResetPasswordSerializer
 )
 from .oauth.google import get_google_auth_url, exchange_google_code
-from .oauth.facebook import get_facebook_auth_url, exchange_facebook_code
 
 from shared.gateway_permissions import IsGatewayAuthenticated
 
@@ -356,70 +355,6 @@ def google_callback_view(request):
     
     except Exception:
         logger.exception('google_callback_failed')
-        return Response({
-            'error': OAUTH_ERROR_PROVIDER
-        }, status=status.HTTP_400_BAD_REQUEST)
-
-
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def facebook_auth_url_view(request):
-    """Get Facebook OAuth2 authorization URL."""
-
-    return_to = sanitize_return_to(request.GET.get('return_to'))
-    state = create_oauth_state(request, 'facebook', return_to)
-    auth_url = get_facebook_auth_url(state)
-    
-    return Response({
-        'authorization_url': auth_url
-    })
-
-
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def facebook_callback_view(request):
-    """Handle Facebook OAuth2 callback."""
-
-    code = request.GET.get('code')
-    raw_state = request.GET.get('state')
-    
-    if not code:
-        return Response({
-            'error': OAUTH_ERROR_INVALID_REQUEST
-        }, status=status.HTTP_400_BAD_REQUEST)
-
-    if not raw_state:
-        return Response({
-            'error': OAUTH_ERROR_INVALID_STATE
-        }, status=status.HTTP_400_BAD_REQUEST)
-
-    state_payload, state_error = validate_oauth_state(request, raw_state, 'facebook')
-    if state_error:
-        return Response({
-            'error': state_error
-        }, status=status.HTTP_400_BAD_REQUEST)
-    
-    try:
-        user = exchange_facebook_code(code)
-
-        # Django session login
-        login(request, user)
-
-        user.last_login = timezone.now()
-        user.save(update_fields=['last_login'])
-
-        response = Response({
-            'user': UserSerializer(user).data,
-            'message': 'Facebook login successful',
-            'provider': 'facebook',
-        })
-
-        attach_csrf_cookie(request, response)
-
-        return response
-    
-    except Exception:
-        logger.exception('facebook_callback_failed')
         return Response({
             'error': OAUTH_ERROR_PROVIDER
         }, status=status.HTTP_400_BAD_REQUEST)

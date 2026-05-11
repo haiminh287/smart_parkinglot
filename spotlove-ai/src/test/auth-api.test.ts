@@ -81,19 +81,12 @@ describe("authApi", () => {
     apiClient.get.mockResolvedValueOnce({
       data: { authorization_url: "https://google.example/oauth" },
     });
-    apiClient.get.mockResolvedValueOnce({
-      data: { authorization_url: "https://facebook.example/oauth" },
-    });
 
     await expect(authApi.getGoogleAuthUrl()).resolves.toBe(
       "https://google.example/oauth",
     );
-    await expect(authApi.getFacebookAuthUrl()).resolves.toBe(
-      "https://facebook.example/oauth",
-    );
 
     expect(apiClient.get).toHaveBeenNthCalledWith(1, "/auth/google/");
-    expect(apiClient.get).toHaveBeenNthCalledWith(2, "/auth/facebook/");
   });
 });
 

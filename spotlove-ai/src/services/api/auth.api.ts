@@ -49,7 +49,8 @@ export interface RegisterResponse {
 }
 
 export interface OAuthUrlResponse {
-  authorization_url: string;
+  authorizationUrl?: string;
+  authorization_url?: string;
 }
 
 // =====================
@@ -89,15 +90,8 @@ export const authApi = {
    */
   getGoogleAuthUrl: async (): Promise<string> => {
     const response = await apiClient.get<OAuthUrlResponse>("/auth/google/");
-    return response.data.authorization_url;
-  },
-
-  /**
-   * Get Facebook OAuth2 authorization URL
-   */
-  getFacebookAuthUrl: async (): Promise<string> => {
-    const response = await apiClient.get<OAuthUrlResponse>("/auth/facebook/");
-    return response.data.authorization_url;
+    // Gateway middleware chuyển snake_case → camelCase
+    return response.data.authorizationUrl ?? response.data.authorization_url;
   },
 
   /**

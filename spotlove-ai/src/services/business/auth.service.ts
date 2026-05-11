@@ -126,20 +126,6 @@ export const authService = {
   },
 
   /**
-   * Initiate Facebook OAuth flow
-   */
-  async initiateFacebookAuth(): Promise<AuthResult> {
-    try {
-      const authUrl = await authApi.getFacebookAuthUrl();
-      window.location.href = authUrl;
-      return { success: true, message: "Redirecting to Facebook..." };
-    } catch (error) {
-      const message = handleAuthError(error as AxiosError<ApiErrorResponse>);
-      return { success: false, message };
-    }
-  },
-
-  /**
    * Restore session from cookie (on app load)
    */
   async restoreSession(): Promise<boolean> {
@@ -228,14 +214,6 @@ export const authService = {
    */
   async getGoogleAuthUrlRaw() {
     return authApi.getGoogleAuthUrl();
-  },
-
-  /**
-   * Get Facebook OAuth URL (raw API call)
-   * For use by Redux async thunks
-   */
-  async getFacebookAuthUrlRaw() {
-    return authApi.getFacebookAuthUrl();
   },
 
   /**

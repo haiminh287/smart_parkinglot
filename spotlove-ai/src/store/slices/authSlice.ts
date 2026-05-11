@@ -111,20 +111,6 @@ export const loginWithGoogle = createAsyncThunk(
   },
 );
 
-export const loginWithFacebook = createAsyncThunk(
-  "auth/loginWithFacebook",
-  async (_, { rejectWithValue }) => {
-    try {
-      window.location.href = await authService.getFacebookAuthUrlRaw();
-      return null; // Will redirect to Facebook
-    } catch (error: unknown) {
-      return rejectWithValue(
-        getErrorMessage(error, "Đăng nhập Facebook thất bại"),
-      );
-    }
-  },
-);
-
 export const register = createAsyncThunk(
   "auth/register",
   async (
@@ -278,21 +264,6 @@ const authSlice = createSlice({
         state.isLoading = false;
       })
       .addCase(loginWithGoogle.rejected, (state, action) => {
-        state.isLoading = false;
-        state.error = action.payload as string;
-      });
-
-    // Login with Facebook
-    builder
-      .addCase(loginWithFacebook.pending, (state) => {
-        state.isLoading = true;
-        state.error = null;
-      })
-      .addCase(loginWithFacebook.fulfilled, (state) => {
-        // Redirecting to Facebook - don't set state
-        state.isLoading = false;
-      })
-      .addCase(loginWithFacebook.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
       });

@@ -2,6 +2,8 @@
 Notification Service - FastAPI Application
 """
 
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -9,6 +11,14 @@ from app.config import settings
 from app.database import engine, Base
 from app.routers import notification as notification_router
 from app.middleware.gateway_auth import GatewayAuthMiddleware
+
+# ─── Logging config — đảm bảo app.services loggers xuất hiện trong uvicorn stdout ──
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%H:%M:%S",
+)
+logging.getLogger("app").setLevel(logging.INFO)
 
 app = FastAPI(
     title="ParkSmart Notification Service",
